@@ -50,6 +50,8 @@ Med br0 fungerer port-mapping ikke – containeren lytter direkte på 7575 på s
 
 Secrets kan også legges inn senere på **☰ → Secrets** i dashbordet i stedet for som variabler.
 
+**Ikon:** templaten setter ikonet automatisk. Har du lagt til containeren manuelt: rediger containeren → *Show more settings* → **Icon URL** = `https://raw.githubusercontent.com/sebastiankristo/glass-dash/main/public/icon.png` → Apply.
+
 **Oppdatere:** Docker-fanen → klikk ikonet → *Force update* (eller *Check for updates*).
 
 ## Data
