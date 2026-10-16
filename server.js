@@ -7,7 +7,7 @@ const rd=(f,d)=>{try{return JSON.parse(fs.readFileSync(f,'utf8'))}catch(e){retur
 const wr=(f,o)=>{fs.writeFileSync(f+'.tmp',JSON.stringify(o,null,2));fs.renameSync(f+'.tmp',f)};
 let kv=rd(KV_FILE,{}),secrets=rd(SEC_FILE,{});
 // Miljøvariabler (f.eks. fra Unraid-template) brukes som fallback, men kun for kjente secret-navn
-const DEF=['PLEX_URL','PLEX_TOKEN','SONARR_URL','SONARR_KEY','RADARR_URL','RADARR_KEY','SPEEDTEST_URL','SPEEDTEST_TRACKER_API_TOKEN','CLOUDFLARE_API_TOKEN','CLOUDFLARE_ZONE_ID','IMMICH_URL','IMMICH_API_KEY','QBITTORRENT_IP','PROWLARR_URL','PROWLARR_API_URL','PROWLARR_KEY','PORTAINER_URL','PORTAINER_ENDPOINT_ID','PORTAINER_API_KEY','SONARR_API_URL','RADARR_API_URL','PROWLARR_COLLAPSE_AFTER','CLOUDFLARE_API_KEY','CLOUDFLARE_ACCOUNT_ID','CLOUDFLARE_TUNNEL_ID','ADGUARD_PASSWORD','DNS_URL','DNS_USER','DNS_PASSWORD','GLANCES_URL','PROXMOX_URL','PROXMOX_TOKEN'];
+const DEF=['PLEX_URL','PLEX_TOKEN','SONARR_URL','SONARR_KEY','RADARR_URL','RADARR_KEY','SPEEDTEST_URL','SPEEDTEST_TRACKER_API_TOKEN','CLOUDFLARE_API_TOKEN','CLOUDFLARE_ZONE_ID','IMMICH_URL','IMMICH_API_KEY','QBITTORRENT_IP','PROWLARR_URL','PROWLARR_API_URL','PROWLARR_KEY','PORTAINER_URL','PORTAINER_ENDPOINT_ID','PORTAINER_API_KEY','SONARR_API_URL','RADARR_API_URL','PROWLARR_COLLAPSE_AFTER','CLOUDFLARE_API_KEY','CLOUDFLARE_ACCOUNT_ID','CLOUDFLARE_TUNNEL_ID','ADGUARD_PASSWORD','DNS_URL','DNS_USER','DNS_PASSWORD','GLANCES_URL','PROXMOX_URL','PROXMOX_TOKEN','MINECRAFT_HOST','MINECRAFT_CONSOLE_URL'];
 const known=n=>DEF.includes(n)||n in secrets;
 const sec=n=>!known(n)?'':secrets[n]!=null&&secrets[n]!==''?secrets[n]:(process.env[n]||'');
 const sub=s=>String(s).replace(/\$\{(\w+)\}/g,(_,n)=>sec(n));
@@ -40,6 +40,33 @@ async function ping(res,u){
     json(res,200,{ok:r.status<500,status:r.status,ms:Date.now()-t0})}
   catch(e){json(res,200,{ok:false,error:e.name==='TimeoutError'?'timeout':'down'})}
 }
+
+// Minecraft Java Server List Ping (protokoll -1), med SRV-oppslag og 30 s cache
+const net=require('net'),dns=require('dns').promises;
+const varint=n=>{const b=[];do{let x=n&0x7f;n>>>=7;if(n)x|=0x80;b.push(x)}while(n);return Buffer.from(b)};
+const pkt=(id,...parts)=>{const body=Buffer.concat([varint(id),...parts]);return Buffer.concat([varint(body.length),body])};
+const mcStr=s=>{const b=Buffer.from(s,'utf8');return Buffer.concat([varint(b.length),b])};
+function readVarint(buf,o){let n=0,shift=0,b;do{if(o>=buf.length)return null;b=buf[o++];n|=(b&0x7f)<<shift;shift+=7}while(b&0x80);return[n,o]}
+function slp(host,port){return new Promise((resolve,reject)=>{
+  const sock=net.createConnection({host,port});let buf=Buffer.alloc(0);const done=(e,v)=>{sock.destroy();e?reject(e):resolve(v)};
+  sock.setTimeout(5000,()=>done(new Error('timeout')));sock.on('error',done);
+  sock.on('connect',()=>{const p=Buffer.alloc(2);p.writeUInt16BE(port);sock.write(pkt(0,Buffer.from([0xff,0xff,0xff,0xff,0x0f]),mcStr(host),p,varint(1)));sock.write(pkt(0))});
+  sock.on('data',d=>{buf=Buffer.concat([buf,d]);const a=readVarint(buf,0);if(!a)return;const[len,o]=a;if(buf.length<o+len)return;
+    const b=readVarint(buf,o),c=readVarint(buf,b[1]);const json=buf.slice(c[1],c[1]+c[0]).toString('utf8');try{done(null,JSON.parse(json))}catch(e){done(e)}});
+})}
+const flat=c=>typeof c==='string'?c:c?(c.text||'')+(c.extra||[]).map(flat).join(''):'';
+const mcCache=new Map();
+async function minecraft(res,raw){
+  raw=sub(raw||'${MINECRAFT_HOST}').replace(/^\w+:\/\//,'').replace(/\/.*$/,'');
+  if(!raw)return json(res,400,{error:'MINECRAFT_HOST mangler'});
+  const hit=mcCache.get(raw);if(hit&&Date.now()-hit.t<30000)return json(res,200,hit.v);
+  let[host,p]=raw.split(':'),port=+p||25565,v;
+  if(!p){try{const r=await dns.resolveSrv('_minecraft._tcp.'+host);if(r[0]){host=r[0].name;port=r[0].port}}catch(e){}}
+  try{const s=await slp(host,port);
+    v={host:raw,online:true,now:s.players?.online||0,max:s.players?.max||0,version:s.version?.name||'—',motd:flat(s.description).replace(/§./g,'').replace(/\n/g,' · ').trim(),icon:s.favicon||'',list:(s.players?.sample||[]).map(x=>x.name)}}
+  catch(e){v={host:raw,online:false,now:0,max:0,version:'—',motd:'',icon:'',list:[]}}
+  mcCache.set(raw,{t:Date.now(),v});json(res,200,v);
+}
 http.createServer(async(req,res)=>{
   const url=new URL(req.url,'http://x'),p=url.pathname;
   try{
@@ -56,6 +83,7 @@ http.createServer(async(req,res)=>{
     }
     if(p==='/api/proxy')return proxy(req,res,url.searchParams.get('url')||'');
     if(p==='/api/ping')return ping(res,url.searchParams.get('url')||'');
+    if(p==='/api/widgets/minecraft')return minecraft(res,url.searchParams.get('host'));
     if(p==='/api/health')return json(res,200,{ok:true});
     let f=path.normalize(path.join(PUB,p==='/'?'index.html':p));
     if(!f.startsWith(PUB)||!fs.existsSync(f)||fs.statSync(f).isDirectory())f=path.join(PUB,'index.html');
