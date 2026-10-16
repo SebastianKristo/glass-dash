@@ -1,0 +1,10 @@
+services:
+  labdeck:
+    build: .
+    image: labdeck:local
+    container_name: labdeck
+    ports:
+      - "7575:7575"
+    volumes:
+      - /mnt/user/appdata/labdeck:/app/data
+    restart: unless-stopped
