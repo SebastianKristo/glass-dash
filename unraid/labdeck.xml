@@ -11,6 +11,35 @@
   <Overview>Labdeck – selvhostet homelab-dashboard med GUI-editor.</Overview>
   <Category>Tools: Productivity:</Category>
   <WebUI>http://[IP]:[PORT:7575]/</WebUI>
+  <Icon>https://raw.githubusercontent.com/sebastiankristo/glass-dash/main/public/favicon.svg</Icon>
   <Config Name="WebUI" Target="7575" Default="7575" Mode="tcp" Type="Port" Display="always" Required="true">7575</Config>
   <Config Name="Data" Target="/app/data" Default="/mnt/user/appdata/labdeck" Mode="rw" Type="Path" Display="always" Required="true">/mnt/user/appdata/labdeck</Config>
+  <Config Name="PLEX_URL" Target="PLEX_URL" Default="" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="PLEX_TOKEN" Target="PLEX_TOKEN" Default="" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="SONARR_URL" Target="SONARR_URL" Default="" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="SONARR_API_URL" Target="SONARR_API_URL" Default="" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="SONARR_KEY" Target="SONARR_KEY" Default="" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="RADARR_URL" Target="RADARR_URL" Default="" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="RADARR_API_URL" Target="RADARR_API_URL" Default="" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="RADARR_KEY" Target="RADARR_KEY" Default="" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="PROWLARR_URL" Target="PROWLARR_URL" Default="" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="PROWLARR_API_URL" Target="PROWLARR_API_URL" Default="" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="PROWLARR_KEY" Target="PROWLARR_KEY" Default="" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="PROWLARR_COLLAPSE_AFTER" Target="PROWLARR_COLLAPSE_AFTER" Default="" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="QBITTORRENT_IP" Target="QBITTORRENT_IP" Default="" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="SPEEDTEST_URL" Target="SPEEDTEST_URL" Default="" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="SPEEDTEST_TRACKER_API_TOKEN" Target="SPEEDTEST_TRACKER_API_TOKEN" Default="" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="IMMICH_URL" Target="IMMICH_URL" Default="" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="IMMICH_API_KEY" Target="IMMICH_API_KEY" Default="" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="CLOUDFLARE_ACCOUNT_ID" Target="CLOUDFLARE_ACCOUNT_ID" Default="" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="CLOUDFLARE_TUNNEL_ID" Target="CLOUDFLARE_TUNNEL_ID" Default="" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="CLOUDFLARE_API_KEY" Target="CLOUDFLARE_API_KEY" Default="" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="DNS_URL" Target="DNS_URL" Default="" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="ADGUARD_PASSWORD" Target="ADGUARD_PASSWORD" Default="" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="PORTAINER_URL" Target="PORTAINER_URL" Default="" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="PORTAINER_ENDPOINT_ID" Target="PORTAINER_ENDPOINT_ID" Default="" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="PORTAINER_API_KEY" Target="PORTAINER_API_KEY" Default="" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="GLANCES_URL" Target="GLANCES_URL" Default="" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="PROXMOX_URL" Target="PROXMOX_URL" Default="" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="PROXMOX_TOKEN" Target="PROXMOX_TOKEN" Default="" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
 </Container>
