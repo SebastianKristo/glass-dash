@@ -12,7 +12,7 @@
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <title>Labdeck</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<style>:root{--bg:#141416;--bg2:#18181a;--card:#1b1b1e;--line:#232326;--line2:#2a2a2e;--line3:#3a3a3e;--accent:#e8c46a;--text:#e6e4df;--text2:#c9c7c2;--soft:#a9a7a2;--muted:#8a877f;--dim:#6d6b66;--dim2:#55544f;--neg:#e0716a;--stripe1:#1f1f23;--stripe2:#232327;--hover:#212124}body{margin:0;background:var(--bg);color:var(--text2);font-family:'JetBrains Mono',monospace}a{color:var(--accent)}a:hover{color:#f3d68e}input,textarea,select,button{font:inherit}</style>
+<style>:root{--bg:#141416;--bg2:#18181a;--card:#1b1b1e;--line:#232326;--line2:#2a2a2e;--line3:#3a3a3e;--accent:#e8c46a;--text:#e6e4df;--text2:#c9c7c2;--soft:#a9a7a2;--muted:#8a877f;--dim:#6d6b66;--dim2:#55544f;--neg:#e0716a;--stripe1:#1f1f23;--stripe2:#232327;--hover:#212124}body{margin:0;background:var(--bg);color:var(--text2);font-family:'JetBrains Mono',monospace}.noscroll{scrollbar-width:none;-ms-overflow-style:none}.noscroll::-webkit-scrollbar{display:none}a{color:var(--accent)}a:hover{color:#f3d68e}input,textarea,select,button{font:inherit}</style>
 </helmet>
 <div style="min-height:100vh;background:var(--bg);font-size:11px">
 <div style="zoom:{{zoom}};max-width:{{maxW}};margin:0 auto;padding:16px;box-sizing:border-box;display:flex;flex-direction:column;gap:18px">
@@ -338,7 +338,7 @@
   </sc-if>
   <sc-if value="{{w.isProgress}}">
     <div style="display:flex;flex-direction:column;gap:10px">
-      <div style="display:flex;gap:14px;font-size:9.5px;color:var(--dim2);padding-left:4px"><span style="color:var(--text2);border-bottom:1px solid var(--text2)">DAY</span><span>MONTH</span><span>YEAR</span></div>
+      <div style="display:flex;gap:14px;font-size:9.5px;padding-left:4px"><sc-for list="{{progTabs}}" as="p"><button onClick="{{p.pick}}" style="background:none;border:0;padding:0;cursor:pointer;font-size:9.5px;color:{{p.color}};border-bottom:1px solid {{p.line}}">{{p.label}}</button></sc-for></div>
       <div style="background:var(--card);border:1px solid var(--line);border-radius:4px;padding:12px;display:flex;flex-direction:column;gap:8px;align-items:center">
         <div style="width:100%;height:6px;border:1px solid var(--line3);border-radius:4px;overflow:hidden"><div style="height:100%;width:{{dayPct}};background:linear-gradient(90deg,var(--neg),var(--accent),#7fd3c9)"></div></div>
         <span style="font-family:sans-serif;font-size:11.5px;color:var(--soft)">{{dayLabel}}</span>
@@ -371,7 +371,7 @@
     <sc-if value="{{w.d.err}}"><div style="background:var(--card);border:1px solid var(--line);border-radius:4px;overflow:hidden"><div style="display:flex;justify-content:space-between;padding:8px 10px;background:color-mix(in srgb,var(--neg) 14%,var(--card));color:var(--neg)"><span>ERROR</span><span>⚠</span></div><div style="padding:10px;color:var(--soft);font-size:9.5px;line-height:1.6;word-break:break-all">{{w.d.err}}</div></div></sc-if>
     <sc-if value="{{w.d.demo}}"><span style="font-size:9px;color:var(--dim);padding-left:4px">Demo-data · koble til i ⚙</span></sc-if>
     <sc-if value="{{w.d.empty}}"><span style="color:var(--muted);padding-left:4px">Nothing has been played. Start streaming something!</span></sc-if>
-    <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:10px">
+    <div class="noscroll" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none">
       <sc-for list="{{w.d.items}}" as="h">
         <div style="flex:0 0 130px;background:var(--card);border:1px solid var(--line);border-radius:4px;overflow:hidden">
           <sc-if value="{{h.showThumb}}"><div style="height:190px;background:repeating-linear-gradient(135deg,var(--stripe1) 0 6px,var(--stripe2) 6px 12px);display:flex;align-items:center;justify-content:center;color:var(--dim2);font-size:9px;position:relative"><span>poster</span><sc-if value="{{h.hasCover}}"><img src="{{h.cover}}" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></sc-if></div></sc-if>
@@ -659,7 +659,7 @@ class Component extends DCLogic{
    onDrop:e=>{if(!this.svcDrag)return;e.preventDefault();e.stopPropagation();const f=this.svcDrag;this.svcDrag=null;this.setState({svcDrop:null});
     this.mut(cs=>{const fw=cs.flat().find(x=>x.id===f.wid),tw=cs.flat().find(x=>x.id===w.id);const[it]=fw.apps.splice(f.i,1);let ti=i;if(fw===tw&&f.i<i)ti--;tw.apps.splice(ti,0,it)})}}}
  svcMut(wid,f){this.mut(cs=>{const w=cs.flat().find(x=>x.id===wid);w.apps=(w.apps||[]).map(toSvc);f(w.apps)})}
- state={engine:localStorage.getItem('labdeck-engine')||'',_:0,theme:+(localStorage.getItem('labdeck-theme')||0),menuOpen:false,themeOpen:false,secrets:(()=>{try{return{...SEC_DEF,...JSON.parse(localStorage.getItem(SEC_KEY))}}catch(e){return SEC_DEF}})(),page:'board',showSec:{},boards:(()=>{try{return JSON.parse(localStorage.getItem(KEY))||seed()}catch(e){return seed()}})(),tab:'Hjem',editing:false,libCol:null,selId:null,install:false,plat:'Unraid',mobile:false};
+ state={engine:localStorage.getItem('labdeck-engine')||'',_:0,theme:+(localStorage.getItem('labdeck-theme')||0),menuOpen:false,themeOpen:false,secrets:(()=>{try{return{...SEC_DEF,...JSON.parse(localStorage.getItem(SEC_KEY))}}catch(e){return SEC_DEF}})(),page:'board',showSec:{},boards:(()=>{try{return JSON.parse(localStorage.getItem(KEY))||seed()}catch(e){return seed()}})(),tab:'Hjem',progMode:localStorage.getItem('labdeck-prog')||'day',editing:false,libCol:null,selId:null,install:false,plat:'Unraid',mobile:false};
  wx={};dc={};
  getData(w){const o={...DEFOPT[w.type],...(w.opts||{})},ro=this.res(o);if(!ro.url||(!['qbit','server'].includes(w.type)&&!ro.key)||(w.type==='server'&&o.source==='proxmox'&&!ro.key))return{o,items:{dns:DEMO_DNS,server:DEMO_SV,prowlarr:DEMO_P,portainer:DEMO_PT,qbit:DEMO_Q,history:DEMO_H,releases:DEMO_R,speed:DEMO_S,nowplaying:DEMO_N,immich:DEMO_I,tunnels:DEMO_T}[w.type],demo:true};const k=w.type+JSON.stringify(ro);
   if(!this.dc[k]){this.dc[k]={o,items:[],loading:true};clearTimeout(this['t'+w.id]);this['t'+w.id]=setTimeout(()=>LOADERS[w.type](ro).then(items=>{this.dc[k]={o,items};this.forceUpdate()}).catch(e=>{this.dc[k]={o,items:[],err:'Could not fetch '+(o.server||o.service||'speedtest')+' API. '+(e.message||e)+' (CORS? kjør via Docker-backend)'};this.forceUpdate()}),700)}return this.dc[k]}
@@ -806,7 +806,8 @@ class Component extends DCLogic{
    closeAll:()=>this.setState({selSvc:null,libCol:null,selId:null,install:false}),reset:()=>{if(confirm('Tilbakestill fanen «'+s.tab+'»?'))this.save({...s.boards,[s.tab]:s.tab==='Hjem'?tag(home):tag([[],[W('search','Search')],[]])})},openInstall:()=>this.setState({install:true}),installOpen:s.install,
    dows:['Mo','Tu','We','Th','Fr','Sa','Su'],days,
    speed:[['DOWNLOAD','0.0'],['UPLOAD','0.0'],['PING','0 ms']].map(([k,v])=>({k,v,d:'+0.0%'})),
-   dayPct:day.toFixed(0)+'%',dayLabel:day.toFixed(2)+'% of the day has passed',
+   ...(()=>{const mode=s.progMode||'day',n=new Date(),y=n.getFullYear(),mo=n.getMonth();const[a,b]=mode==='month'?[new Date(y,mo,1),new Date(y,mo+1,1)]:mode==='year'?[new Date(y,0,1),new Date(y+1,0,1)]:[new Date(y,mo,n.getDate()),new Date(y,mo,n.getDate()+1)];const pct=(n-a)/(b-a)*100;
+     return{dayPct:pct.toFixed(2)+'%',dayLabel:pct.toFixed(2)+'% of the '+mode+' has passed',progTabs:['day','month','year'].map(k=>({label:k.toUpperCase(),pick:()=>{try{localStorage.setItem('labdeck-prog',k)}catch(e){}this.setState({progMode:k})},color:k===mode?'var(--text2)':'var(--dim2)',line:k===mode?'var(--text2)':'transparent'}))}})(),
    history:[['Season 8 Episode 12','Daybreak'],['Season 8 Episode 11','Confetti'],['Season 8 Episode 10','Wolf Pack (2)'],['Season 8 Episode 10','Wolf Pack (2)'],['Season 8 Episode 9','Lone Wolf']].map(([ep,t])=>({ep,t})),
    temps:[20,22,18,24,28,40,62,70,64,55,40,32].map(v=>v+'%'),
    stats:[['CPU',55],['RAM',33],['DISK',55]].map(([k,v])=>({k,v,p:v+'%'})),
