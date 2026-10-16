@@ -2,8 +2,6 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Labdeck</title>
-<link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="./shim.js"></script>
 <script src="./support.js"></script>
@@ -11,6 +9,8 @@
 <body>
 <x-dc>
 <helmet>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<title>Labdeck</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>:root{--bg:#141416;--bg2:#18181a;--card:#1b1b1e;--line:#232326;--line2:#2a2a2e;--line3:#3a3a3e;--accent:#e8c46a;--text:#e6e4df;--text2:#c9c7c2;--soft:#a9a7a2;--muted:#8a877f;--dim:#6d6b66;--dim2:#55544f;--neg:#e0716a;--stripe1:#1f1f23;--stripe2:#232327;--hover:#212124}body{margin:0;background:var(--bg);color:var(--text2);font-family:'JetBrains Mono',monospace}a{color:var(--accent)}a:hover{color:#f3d68e}input,textarea,select,button{font:inherit}</style>
 </helmet>
@@ -18,7 +18,7 @@
 <div style="zoom:{{zoom}};max-width:{{maxW}};margin:0 auto;padding:16px;box-sizing:border-box;display:flex;flex-direction:column;gap:18px">
 
 <header style="display:flex;align-items:center;gap:20px;padding:0 12px;height:40px;border:1px solid var(--line);border-radius:4px;background:var(--bg2)">
-  <div style="width:14px;height:14px;display:grid;grid-template-columns:1fr 1fr;gap:1px"><span style="background:var(--muted)"></span><span style="background:var(--accent)"></span><span style="background:var(--accent)"></span><span style="background:var(--muted)"></span></div>
+  <div onClick="{{goHome}}" title="Hjem" style="width:14px;height:14px;display:grid;grid-template-columns:1fr 1fr;gap:1px;cursor:pointer"><span style="background:var(--muted)"></span><span style="background:var(--accent)"></span><span style="background:var(--accent)"></span><span style="background:var(--muted)"></span></div>
   <nav style="display:flex;gap:16px;height:100%;overflow-x:auto">
     <sc-for list="{{tabs}}" as="t" hint-placeholder-count="4">
       <button onClick="{{t.select}}" style="background:none;border:0;border-bottom:2px solid {{t.line}};color:{{t.color}};padding:0 2px;cursor:pointer;font-size:11px;white-space:nowrap">{{t.name}}</button>
@@ -49,6 +49,12 @@
             <span>{{m.label}}</span><span style="color:var(--dim)">{{m.hint}}</span>
           </button>
         </sc-for>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 10px;border-top:1px solid var(--line);margin-top:2px;color:var(--text2)">
+          <span>Søkemotor</span>
+          <select value="{{srch.engine}}" onChange="{{srch.setEngine}}" onClick="{{stop}}" style="background:var(--bg);border:1px solid var(--line2);border-radius:3px;padding:2px 4px;font-size:10px;color:var(--text2);outline:none;cursor:pointer">
+            <sc-for list="{{srch.engines}}" as="e"><option value="{{e.v}}">{{e.n}}</option></sc-for>
+          </select>
+        </div>
       </div>
     </sc-if>
   </div>
@@ -69,7 +75,12 @@
 
 <sc-if value="{{onSecrets}}" hint-placeholder-val="{{false}}">
   <div style="display:flex;flex-direction:column;gap:12px;max-width:760px;width:100%;margin:0 auto">
-    <span style="font-size:10.5px;letter-spacing:.06em;color:var(--muted);padding-left:4px">SECRETS</span>
+    <div style="display:flex;align-items:center;gap:8px;padding-left:4px">
+      <span style="font-size:10.5px;letter-spacing:.06em;color:var(--muted);flex:1">SECRETS</span>
+      <span style="font-size:9.5px;color:var(--accent)">{{secStatus}}</span>
+      <button onClick="{{closeSecrets}}" style="background:none;border:1px solid var(--line2);color:var(--muted);border-radius:3px;padding:4px 10px;cursor:pointer;font-size:10px">lukk</button>
+      <button onClick="{{saveSecrets}}" style="background:var(--accent);border:0;color:var(--bg);border-radius:3px;padding:5px 12px;cursor:pointer;font-size:10px;font-weight:700">lagre</button>
+    </div>
     <span style="color:var(--muted);line-height:1.6;padding-left:4px;text-wrap:pretty">Bruk verdiene i widget-innstillinger som ${NAVN}. I Docker lagres de i /app/data/secrets.env og sendes aldri til nettleseren.</span>
     <div style="background:var(--card);border:1px solid var(--line);border-radius:4px;padding:6px 12px;display:flex;flex-direction:column">
       <sc-for list="{{secrets}}" as="x">
@@ -106,6 +117,7 @@
       <div style="display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid {{srch.border}};border-radius:4px;padding:12px 14px">
         <span style="color:var(--dim)">⌕</span>
         <input ref="{{srch.ref}}" value="{{srch.q}}" onChange="{{srch.onChange}}" onKeyDown="{{srch.onKey}}" onFocus="{{srch.onFocus}}" onBlur="{{srch.onBlur}}" placeholder="Type here to search…" style="flex:1;background:none;border:0;outline:none;color:var(--text);font-size:10.5px;min-width:0">
+        
         <span style="border:1px solid var(--line2);border-radius:3px;padding:1px 5px;font-size:9px;color:var(--dim)">S</span>
       </div>
       <sc-if value="{{srch.open}}" hint-placeholder-val="{{false}}">
@@ -273,6 +285,33 @@
       </div>
     </div>
   </sc-if>
+  <sc-if value="{{w.isDns}}">
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <sc-if value="{{w.d.err}}"><div style="background:var(--card);border:1px solid var(--line);border-radius:4px;overflow:hidden"><div style="display:flex;justify-content:space-between;padding:8px 10px;background:color-mix(in srgb,var(--neg) 14%,var(--card));color:var(--neg)"><span>ERROR</span><span>⚠</span></div><div style="padding:10px;color:var(--soft);font-size:9.5px;line-height:1.6;word-break:break-all">{{w.d.err}}</div></div></sc-if>
+    <sc-if value="{{w.d.demo}}"><span style="font-size:9px;color:var(--dim);padding-left:4px">Demo-data · sett secrets for å koble til</span></sc-if>
+      <div style="background:var(--card);border:1px solid var(--line);border-radius:4px;padding:12px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;justify-content:space-between;text-align:center;gap:6px">
+          <sc-for list="{{w.d.v.stats}}" as="s"><div style="display:flex;flex-direction:column;gap:3px;flex:1"><span style="color:{{s.c}};font-size:13px">{{s.v}}</span><span style="color:var(--dim);font-size:8px">{{s.k}}</span></div></sc-for>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div style="display:flex;align-items:flex-end;gap:2px;height:44px">
+            <sc-for list="{{w.d.v.bars}}" as="b">
+              <div title="{{b.tip}}" onMouseEnter="{{b.enter}}" onMouseLeave="{{b.leave}}" style="flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;cursor:default">
+                <div style="height:{{b.h}};background:{{b.qc}};border-radius:1px 1px 0 0;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden"><div style="height:{{b.bh}};background:{{b.bc}}"></div></div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:8px;color:{{w.d.v.footC}};height:10px"><span>{{w.d.v.f1}}</span><span>{{w.d.v.f2}}</span><span>{{w.d.v.f3}}</span></div>
+        </div>
+        <sc-if value="{{w.d.v.hasTop}}">
+          <div style="display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:10px">
+            <span style="font-size:8.5px;color:var(--muted);letter-spacing:.05em">TOP BLOCKED</span>
+            <sc-for list="{{w.d.v.top}}" as="t"><div style="display:flex;gap:8px;font-size:9.5px"><span style="flex:1;min-width:0;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{t.d}}</span><span style="color:var(--muted)">{{t.n}}</span></div></sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
   <sc-if value="{{w.isTunnels}}">
     <div style="display:flex;flex-direction:column;gap:8px">
       <sc-if value="{{w.d.err}}"><div style="background:var(--card);border:1px solid var(--line);border-radius:4px;overflow:hidden"><div style="display:flex;justify-content:space-between;padding:8px 10px;background:color-mix(in srgb,var(--neg) 14%,var(--card));color:var(--neg)"><span>ERROR</span><span>⚠</span></div><div style="padding:10px;color:var(--soft);font-size:9.5px;line-height:1.6;word-break:break-all">{{w.d.err}}</div></div></sc-if>
@@ -354,25 +393,29 @@
       <span style="color:var(--text);font-size:12px">{{w.wx.desc}}</span><span style="color:var(--muted);font-size:10px">{{w.wx.feels}}</span>
       <div style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));width:100%;margin-top:10px">
         <sc-for list="{{w.wx.cols}}" as="c">
-          <div style="display:flex;flex-direction:column;align-items:center;gap:5px">
+          <div onMouseEnter="{{c.enter}}" onMouseLeave="{{c.leave}}" style="display:flex;flex-direction:column;align-items:center;gap:5px;cursor:default">
             <div style="height:70px;width:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px;background-color:{{c.day}};background-image:{{c.rain}};background-size:5px 5px;border-radius:{{c.rad}}">
               <span style="font-size:8.5px;color:var(--text);visibility:{{c.lblVis}}">{{c.temp}}</span>
               <div style="width:4px;height:{{c.h}};background:{{c.bar}};border-radius:3px 3px 0 0"></div>
             </div>
-            <span style="font-size:8px;color:var(--dim);height:10px;white-space:nowrap">{{c.lbl}}</span>
+            <span style="font-size:8px;color:{{c.lblColor}};height:10px;white-space:nowrap">{{c.lblShow}}</span>
           </div>
         </sc-for>
       </div>
-      <span style="font-size:9.5px;color:var(--muted);margin-top:6px">⌖ {{w.wx.place}}</span>
+      <span style="font-size:9.5px;color:var(--muted);margin-top:6px;height:12px">{{w.wx.foot}}</span>
     </div>
   </sc-if>
 
   <sc-if value="{{w.isServer}}">
+    <div style="display:flex;flex-direction:column;gap:8px">
+    <sc-if value="{{w.d.err}}"><div style="background:var(--card);border:1px solid var(--line);border-radius:4px;overflow:hidden"><div style="display:flex;justify-content:space-between;padding:8px 10px;background:color-mix(in srgb,var(--neg) 14%,var(--card));color:var(--neg)"><span>ERROR</span><span>⚠</span></div><div style="padding:10px;color:var(--soft);font-size:9.5px;line-height:1.6;word-break:break-all">{{w.d.err}}</div></div></sc-if>
+    <sc-if value="{{w.d.demo}}"><span style="font-size:9px;color:var(--dim);padding-left:4px">Demo-data · sett secrets for å koble til</span></sc-if>
     <div style="background:var(--card);border:1px solid var(--line);border-radius:4px;padding:12px;display:flex;flex-direction:column;gap:12px">
-      <div style="display:flex;align-items:center"><div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="color:var(--text)">Services</span><span style="color:var(--muted);font-size:9.5px">13d uptime</span></div><span style="color:var(--accent)">▭</span></div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-        <sc-for list="{{stats}}" as="s"><div style="display:flex;flex-direction:column;gap:3px"><div style="display:flex;justify-content:space-between;font-size:8.5px;color:var(--muted)"><span>{{s.k}}</span><span style="color:var(--text)">{{s.v}} %</span></div><div style="height:14px;border:1px solid var(--line3);border-radius:2px;padding:2px;box-sizing:border-box"><div style="height:100%;width:{{s.p}};background:#55565c"></div></div></div></sc-for>
+      <div style="display:flex;align-items:center;gap:8px"><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="color:var(--text);display:flex;align-items:center;gap:6px">{{w.d.s.name}}<span style="width:7px;height:7px;border-radius:50%;background:{{w.d.s.dot}}"></span></span><span style="color:var(--muted);font-size:9.5px">{{w.d.s.up}}</span></div><span style="color:var(--accent)">▭</span></div>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+        <sc-for list="{{w.d.s.bars}}" as="s"><div title="{{s.tip}}" style="display:flex;flex-direction:column;gap:3px;min-width:0"><div style="display:flex;justify-content:space-between;font-size:8.5px;color:var(--muted)"><span>{{s.k}}</span><span style="color:var(--text)">{{s.v}} %</span></div><div style="height:14px;border:1px solid var(--line3);border-radius:2px;padding:2px;box-sizing:border-box"><div style="height:100%;width:{{s.p}};background:{{s.c}};transition:width .4s"></div></div><span style="font-size:8px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{s.sub}}</span></div></sc-for>
       </div>
+    </div>
     </div>
   </sc-if>
 
@@ -481,7 +524,7 @@ const ST={o:['OK · ',Y,'✓'],e:['ERROR',R,'!'],t:['Timed Out',R,'!']};
 const SLUG={'HomeAssistant':'home-assistant','ESP Home':'esphome','Qbittorrent':'qbittorrent','SUB/WAVE':'subwave','n8n':'n8n','Zigbee2mqtt':'zigbee2mqtt','UniFi':'unifi','UniFi Protect':'unifi-protect','Homey':'homey','Silo':'silo','Yuball':'youtube'};
 const toSvc=s=>{if(typeof s!=='string')return s;const[n,c='o',ms='3ms']=s.split('|');return{name:n,url:'',icon:'',status:'auto',demo:c,ms}};
 const mkApp0=(s,i)=>{const [n,c='o',ms='3ms']=s.split('|');const st=ST[c]||ST.o;const slug=/^ny tjeneste/i.test(n)?'':SLUG[n]||n.toLowerCase().replace(/[^a-z0-9]+/g,'-');return{icon:slug?`https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/${slug}.svg`:'',imgRef:el=>{if(el&&!el.onerror){el.onerror=()=>{const t=el;if(t.src.endsWith('.svg'))t.src=t.src.replace('/svg/','/png/').replace('.svg','.png');else t.style.display='none'};if(el.complete&&!el.naturalWidth)el.onerror()}},_x:e=>{const t=e.target;if(t.src.endsWith('.svg'))t.src=t.src.replace('/svg/','/png/').replace('.svg','.png');else t.style.display='none'},name:n,ini:n.slice(0,2),bg:`oklch(0.72 0.1 ${hues[(n.charCodeAt(0)+n.length)%7]})`,status:c==='o'?st[0]+ms:st[0],sc:c==='o'?'var(--muted)':R,ic:st[1],mark:st[2]}};
-const LIB={search:'Search',apps:'Tjenestegruppe',calendar:'Calendar',speed:'Internet speed',text:'Tekst / fact',progress:'Day progress',error:'Statuskort',empty:'Tom',tunnels:'Cloudflared tunnels',cloudflare:'Cloudflare analytics',fact:'Random fact (API)',prowlarr:'Prowlarr indexers',portainer:'Portainer',qbit:'qBittorrent',nowplaying:'Media server (now playing)',immich:'Immich stats',verse:'Random bible verse (API)',history:'Media server history',weather:'Weather',server:'Server stats',releases:'Media releases',indexers:'Prowlarr indexers'};
+const LIB={search:'Search',apps:'Tjenestegruppe',calendar:'Calendar',speed:'Internet speed',text:'Tekst / fact',progress:'Day progress',error:'Statuskort',empty:'Tom',tunnels:'Cloudflared tunnels',cloudflare:'Cloudflare analytics',fact:'Random fact (API)',dns:'DNS stats',prowlarr:'Prowlarr indexers',portainer:'Portainer',qbit:'qBittorrent',nowplaying:'Media server (now playing)',immich:'Immich stats',verse:'Random bible verse (API)',history:'Media server history',weather:'Weather',server:'Server stats',releases:'Media releases',indexers:'Prowlarr indexers'};
 const W=(type,title,extra={})=>({type,title,...extra});
 const home=[[
  W('calendar','Calendar'),W('speed','Internet Speed'),W('fact','Random Fact'),W('progress','Day progress'),
@@ -496,7 +539,7 @@ const home=[[
  W('history','Media Server History'),
  W('qbit','qBittorrent',{opts:{view:'detailed',mode:'upload'}})],
 [W('weather','Weather',{opts:{location:'Oslo, Norway',units:'metric',hour:'24h'}}),W('server','Server stats'),
- W('nowplaying','Media Server',{opts:{compact:true,thumb:true,fullThumb:true,showPaused:true,bar:true,info:true}}),
+ W('dns','DNS stats',{opts:{service:'adguard',url:'${DNS_URL}',user:'admin',key:'${ADGUARD_PASSWORD}',top:true}}),W('nowplaying','Media Server',{opts:{compact:true,thumb:true,fullThumb:true,showPaused:true,bar:true,info:true}}),
  W('releases','Media Releases',{opts:{url:'${SONARR_API_URL}',key:'${SONARR_KEY}',service:'sonarr',type:'upcoming',size:'medium',collapse:'3',interval:'60'}}),
  W('prowlarr','Prowlarr Indexers',{opts:{collapse:'${PROWLARR_COLLAPSE_AFTER}'}})]];
 const uid=()=>Math.random().toString(36).slice(2,9);
@@ -511,12 +554,14 @@ const THEMES=[
  {name:'Paper',v:{bg:'#f4f2ee',bg2:'#ece9e3',card:'#fbfaf8',line:'#e2ded6',line2:'#d6d1c7',line3:'#c2bcb0',accent:'#b07a12',text:'#1e1d1a',text2:'#34322e',soft:'#55524c',muted:'#6f6b63',dim:'#8a867d',dim2:'#a6a197',neg:'#c2453a',stripe1:'#efece6',stripe2:'#e8e4dc',hover:'#f0ede7'}}];
 const applyTheme=t=>{const r=document.documentElement.style;Object.entries(t.v).forEach(([k,v])=>r.setProperty('--'+k,v))};
 const SEC_KEY='labdeck-secrets';
-const SEC_DEF={SONARR_API_URL:'',RADARR_API_URL:'',PROWLARR_COLLAPSE_AFTER:'',CLOUDFLARE_API_KEY:'',CLOUDFLARE_ACCOUNT_ID:'',CLOUDFLARE_TUNNEL_ID:'',ADGUARD_PASSWORD:'',PLEX_URL:'',PLEX_TOKEN:'',SONARR_URL:'',SONARR_KEY:'',RADARR_URL:'',RADARR_KEY:'',SPEEDTEST_URL:'',SPEEDTEST_TRACKER_API_TOKEN:'',CLOUDFLARE_API_TOKEN:'',IMMICH_URL:'',QBITTORRENT_IP:'',PROWLARR_URL:'',PROWLARR_API_URL:'',PROWLARR_KEY:'',PORTAINER_URL:'',PORTAINER_ENDPOINT_ID:'',PORTAINER_API_KEY:'',IMMICH_API_KEY:'',CLOUDFLARE_ZONE_ID:''};
+const SEC_DEF={SONARR_API_URL:'',RADARR_API_URL:'',PROWLARR_COLLAPSE_AFTER:'',CLOUDFLARE_API_KEY:'',CLOUDFLARE_ACCOUNT_ID:'',CLOUDFLARE_TUNNEL_ID:'',ADGUARD_PASSWORD:'',PLEX_URL:'',PLEX_TOKEN:'',SONARR_URL:'',SONARR_KEY:'',RADARR_URL:'',RADARR_KEY:'',SPEEDTEST_URL:'',SPEEDTEST_TRACKER_API_TOKEN:'',CLOUDFLARE_API_TOKEN:'',IMMICH_URL:'',QBITTORRENT_IP:'',DNS_URL:'',DNS_USER:'',DNS_PASSWORD:'',GLANCES_URL:'',PROXMOX_URL:'',PROXMOX_TOKEN:'',PROWLARR_URL:'',PROWLARR_API_URL:'',PROWLARR_KEY:'',PORTAINER_URL:'',PORTAINER_ENDPOINT_ID:'',PORTAINER_API_KEY:'',IMMICH_API_KEY:'',CLOUDFLARE_ZONE_ID:''};
 const OPTS0={tunnels:[['url','Account ID','text','${CLOUDFLARE_ACCOUNT_ID}'],['tunnel','Tunnel ID','text','${CLOUDFLARE_TUNNEL_ID}'],['key','API-token','text','${CLOUDFLARE_API_KEY}'],['domain','Domene å skjule (f.eks. .example.com)','text',''],['lan','Erstatt localhost med','text','']],speed:[['url','Speedtest URL','text','${SPEEDTEST_URL}'],['key','API-token','text','${SPEEDTEST_TRACKER_API_TOKEN}'],['showPct','Vis prosentendring','bool']],
  weather:[['location','Location','text','London, United Kingdom'],['units','Units','select',['metric','imperial']],['hour','Hour format','select',['24h','12h']]]};
 const ENGINES={duckduckgo:'https://duckduckgo.com/?q=',google:'https://www.google.com/search?q=',bing:'https://www.bing.com/search?q=',startpage:'https://www.startpage.com/do/search?q='};
 const BANGS={'!yt':['YouTube','https://www.youtube.com/results?search_query='],'!gh':['GitHub','https://github.com/search?q='],'!r':['Reddit','https://www.reddit.com/search/?q='],'!w':['Wikipedia','https://en.wikipedia.org/w/index.php?search=']};
 const OPTS={...OPTS0,
+ dns:[['service','Tjeneste','select',['adguard','pihole']],['url','URL','text','${DNS_URL}'],['user','Brukernavn (AdGuard)','text','${DNS_USER}'],['key','Passord / app-passord','text','${DNS_PASSWORD}'],['top','Vis top blocked','bool']],
+ server:[['source','Kilde','select',['glances','proxmox']],['url','URL','text','${GLANCES_URL}'],['key','API-token (Proxmox: user@pam!id=secret)','text',''],['node','Proxmox node','text','pve'],['name','Visningsnavn','text','unraid-01'],['disk','Disk mountpoint (Glances)','text','/']],
  search:[['engine','Søkemotor','select',Object.keys(ENGINES)],['newTab','Åpne i ny fane','bool']],
  apps:[['cols','Kolonner','select',['auto','1','2','3','4']]],
  prowlarr:[['url','Prowlarr URL (lenke)','text','${PROWLARR_URL}'],['apiUrl','API base URL','text','${PROWLARR_API_URL}'],['key','API-nøkkel','text','${PROWLARR_KEY}'],['collapse','Skjul etter','text','5']],
@@ -526,7 +571,7 @@ const OPTS={...OPTS0,
  nowplaying:[['server','Medieserver','select',['plex','jellyfin','emby','tautulli']],['url','Base URL','text','${PLEX_URL}'],['key','API-nøkkel / token','text','${PLEX_TOKEN}'],['compact','Kompakt','bool'],['playState','Play state','select',['indicator','text','none']],['thumb','Vis thumbnail','bool'],['fullThumb','Full thumbnail','bool'],['showPaused','Vis pauset','bool'],['bar','Vis progress bar','bool'],['info','Vis sluttid','bool'],['hour','Tidsformat','select',['24h','12h']]],
  immich:[['url','Immich URL','text','${IMMICH_URL}'],['key','API-nøkkel','text','${IMMICH_API_KEY}']],history:[['server','Medieserver','select',['plex','jellyfin','emby','tautulli']],['url','Base URL','text','http://10.69.1.126:32400'],['key','API-nøkkel / token','text',''],['user','Brukernavn (Jellyfin/Emby)','text',''],['length','Antall','text','10'],['compact','Kompakt','bool'],['thumb','Vis thumbnail','bool'],['showUser','Vis bruker','bool']],
  releases:[['service','Tjeneste','select',['sonarr','radarr','lidarr']],['type','Type','select',['upcoming','recent','missing']],['size','Størrelse','select',['small','medium','large','huge']],['collapse','Skjul etter','text','3'],['interval','Intervall (dager)','text','20'],['url','API base URL','text','http://10.69.1.126:8989'],['key','API-nøkkel','text','']]};
-const DEFOPT={tunnels:{url:'${CLOUDFLARE_ACCOUNT_ID}',tunnel:'${CLOUDFLARE_TUNNEL_ID}',key:'${CLOUDFLARE_API_KEY}',domain:'',lan:''},search:{engine:'duckduckgo',newTab:true},apps:{cols:'auto'},prowlarr:{url:'${PROWLARR_URL}',apiUrl:'${PROWLARR_API_URL}',key:'${PROWLARR_KEY}',collapse:'5'},portainer:{url:'${PORTAINER_URL}',endpoint:'${PORTAINER_ENDPOINT_ID}',key:'${PORTAINER_API_KEY}'},qbit:{url:'${QBITTORRENT_IP}',view:'detailed',mode:'default'},calendar:{sonarrUrl:'${SONARR_URL}',sonarrKey:'${SONARR_KEY}',radarrUrl:'${RADARR_URL}',radarrKey:'${RADARR_KEY}'},nowplaying:{server:'plex',url:'${PLEX_URL}',key:'${PLEX_TOKEN}',compact:true,playState:'indicator',thumb:false,fullThumb:false,showPaused:false,bar:true,info:true,hour:'24h'},immich:{url:'${IMMICH_URL}',key:'${IMMICH_API_KEY}'},speed:{url:'${SPEEDTEST_URL}',key:'${SPEEDTEST_TRACKER_API_TOKEN}',showPct:true},weather:{location:'Oslo, Norway',units:'metric',hour:'24h'},history:{url:'${PLEX_URL}',key:'${PLEX_TOKEN}',server:'plex',length:'10',compact:false,thumb:true,showUser:true},releases:{url:'${SONARR_URL}',key:'${SONARR_KEY}',service:'sonarr',type:'upcoming',size:'medium',collapse:'3',interval:'20'}};
+const DEFOPT={tunnels:{url:'${CLOUDFLARE_ACCOUNT_ID}',tunnel:'${CLOUDFLARE_TUNNEL_ID}',key:'${CLOUDFLARE_API_KEY}',domain:'',lan:''},dns:{service:'adguard',url:'${DNS_URL}',user:'${DNS_USER}',key:'${DNS_PASSWORD}',top:true},server:{source:'glances',url:'${GLANCES_URL}',key:'',node:'pve',name:'unraid-01',disk:'/'},search:{engine:'duckduckgo',newTab:true},apps:{cols:'auto'},prowlarr:{url:'${PROWLARR_URL}',apiUrl:'${PROWLARR_API_URL}',key:'${PROWLARR_KEY}',collapse:'5'},portainer:{url:'${PORTAINER_URL}',endpoint:'${PORTAINER_ENDPOINT_ID}',key:'${PORTAINER_API_KEY}'},qbit:{url:'${QBITTORRENT_IP}',view:'detailed',mode:'default'},calendar:{sonarrUrl:'${SONARR_URL}',sonarrKey:'${SONARR_KEY}',radarrUrl:'${RADARR_URL}',radarrKey:'${RADARR_KEY}'},nowplaying:{server:'plex',url:'${PLEX_URL}',key:'${PLEX_TOKEN}',compact:true,playState:'indicator',thumb:false,fullThumb:false,showPaused:false,bar:true,info:true,hour:'24h'},immich:{url:'${IMMICH_URL}',key:'${IMMICH_API_KEY}'},speed:{url:'${SPEEDTEST_URL}',key:'${SPEEDTEST_TRACKER_API_TOKEN}',showPct:true},weather:{location:'Oslo, Norway',units:'metric',hour:'24h'},history:{url:'${PLEX_URL}',key:'${PLEX_TOKEN}',server:'plex',length:'10',compact:false,thumb:true,showUser:true},releases:{url:'${SONARR_URL}',key:'${SONARR_KEY}',service:'sonarr',type:'upcoming',size:'medium',collapse:'3',interval:'20'}};
 const SIZES={small:['40px','60px'],medium:['52px','80px'],large:['66px','100px'],huge:['80px','120px']};
 const DEMO_H=[['FBI',8,12,'Daybreak'],['FBI',8,11,'Confetti'],['FBI',8,10,'Wolf Pack (2)'],['FBI',8,10,'Wolf Pack (2)'],['FBI',8,9,'Lone Wolf']].map(([show,s,e,title])=>({user:'sebastiankristo',ts:Date.now()-172800000,show,s,e,title,cover:''}));
 const DEMO_R=[['Marshals','Off the Rails','S02E09','2026-11-30T02:00'],['Marshals','Bad Medicine','S02E08','2026-11-23T02:00'],['9-1-1: Nashville','TBA','S02E06','2026-11-20T03:00'],['Tracker','Echo','S03E07','2026-11-18T02:00'],['Dune: Part Three','','','2026-12-18T00:00']].map(([t,n,se,d])=>({t,n,se,date:new Date(d),cover:''}));
@@ -574,9 +619,26 @@ async function loadPortainer(o){const j=await J(o.url.replace(/\/$/,'')+'/api/en
  return{name:j.Name,containers:s.ContainerCount||0,volumes:s.VolumeCount||0,networks:(raw.Networks||[]).length,running:s.RunningContainerCount||0,healthy:s.HealthyContainerCount||0,stopped:s.StoppedContainerCount||0,unhealthy:(raw.Containers||[]).filter(c=>c.Health==='unhealthy').length}}
 const DEMO_P=[['1337x','public',true],['The Pirate Bay','public',true],['TorrentDownload','public',true],['IPTorrents','private',true],['TorrentLeech','private',false],['Nyaa','public',true]].map(([name,privacy,enable])=>({name,privacy,enable}));
 const DEMO_PT={name:'unraid-01',containers:34,volumes:21,networks:6,running:31,healthy:18,stopped:3,unhealthy:1};
+async function loadServer(o){const b=o.url.replace(/\/$/,'');
+ if(o.source==='proxmox'){const j=await J(b+'/api2/json/nodes/'+(o.node||'pve')+'/status',{Authorization:'PVEAPIToken='+o.key});const d=j.data;
+  return{cpu:d.cpu*100,mem:d.memory.used/d.memory.total*100,memU:d.memory.used,memT:d.memory.total,disk:d.rootfs.used/d.rootfs.total*100,diskU:d.rootfs.used,diskT:d.rootfs.total,uptime:d.uptime,cores:d.cpuinfo&&d.cpuinfo.cpus,load:(d.loadavg||[])[0]}}
+ const g=p=>J(b+'/api/4/'+p).catch(()=>J(b+'/api/3/'+p));const[q,m,fs,up,l]=await Promise.all([g('quicklook'),g('mem'),g('fs'),g('uptime').catch(()=>''),g('load').catch(()=>({}))]);
+ const f=(fs||[]).find(x=>x.mnt_point===(o.disk||'/'))||fs[0]||{percent:0};
+ let us=0;if(typeof up==='string'){const mm=up.match(/(?:(\d+) days?, )?(\d+):(\d+)/);if(mm)us=(+mm[1]||0)*86400+mm[2]*3600+mm[3]*60}
+ return{cpu:q.cpu,mem:m.percent,memU:m.used,memT:m.total,disk:f.percent,diskU:f.used,diskT:f.size,uptime:us,cores:q.cpu_log_core||q.cpu_number,load:l.min1}}
+const DEMO_SV={cpu:42,mem:61,memU:39e9,memT:64e9,disk:77,diskU:18.4e12,diskT:24e12,uptime:13*86400+4*3600,cores:16,load:2.4};
+async function loadDns(o){const b=o.url.replace(/\/$/,'');
+ if(o.service==='pihole'){const a=await fetch(b+'/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:o.key})}).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json()});const sid={sid:a.session.sid};
+  const[s,hi,tp]=await Promise.all([J(b+'/api/stats/summary',sid),J(b+'/api/history',sid),J(b+'/api/stats/top_domains?blocked=true&count=5',sid).catch(()=>({domains:[]}))]);
+  const hs=(hi.history||[]).slice(-144),hrs=[];for(let i=0;i<24;i++){const c=hs.slice(i*6,i*6+6);hrs.push({q:c.reduce((x,y)=>x+y.total,0),b:c.reduce((x,y)=>x+y.blocked,0),t:c[0]?c[0].timestamp*1000:0})}
+  return{total:s.queries.total,blocked:s.queries.blocked,lat:null,hours:hrs,top:(tp.domains||[]).map(x=>({d:x.domain,n:x.count}))}}
+ const j=await J(b+'/control/stats',{Authorization:'Basic '+btoa(o.user+':'+o.key)}),now=Date.now();
+ return{total:j.num_dns_queries,blocked:j.num_blocked_filtering,lat:j.avg_processing_time*1000,hours:(j.dns_queries||[]).map((q,i,a)=>({q,b:(j.blocked_filtering||[])[i]||0,t:now-(a.length-1-i)*3600e3})),top:(j.top_blocked_domains||[]).slice(0,5).map(x=>{const[d,n]=Object.entries(x)[0];return{d,n}})}}
+const DEMO_DNS=(()=>{const now=Date.now(),hours=[...Array(24)].map((_,i)=>{const t=now-(23-i)*3600e3,hr=new Date(t).getHours(),q=Math.round(900+Math.sin((hr-4)/24*Math.PI*2-Math.PI/2)*700+((i*37)%11)*40+700);return{q,b:Math.round(q*(.14+((i*13)%7)/100)),t}});
+ return{total:hours.reduce((a,x)=>a+x.q,0),blocked:hours.reduce((a,x)=>a+x.b,0),lat:4.2,hours,top:[['doubleclick.net',1284],['app-measurement.com',902],['graph.facebook.com',611],['telemetry.microsoft.com',433],['ads.tiktok.com',219]].map(([d,n])=>({d,n}))}})();
 async function loadTunnels(o){const j=await J('https://api.cloudflare.com/client/v4/accounts/'+o.url+'/cfd_tunnel/'+o.tunnel+'/configurations',{Authorization:'Bearer '+o.key});if(!j.success)throw new Error((j.errors||[]).map(e=>e.message).join(', ')||'Cloudflare-feil');
  return(((j.result||{}).config||{}).ingress||[]).filter(i=>i.hostname).map((i,n)=>{const svc=String(i.service||''),lan=o.lan?svc.replace('localhost',o.lan):svc;return{name:o.domain&&i.hostname.endsWith(o.domain)?i.hostname.slice(0,-o.domain.length):i.hostname,href:'https://'+i.hostname,svc,svcHref:/^https?:/.test(lan)?lan:undefined,sep:n?'var(--line)':'transparent'}})}
-const LOADERS={tunnels:loadTunnels,prowlarr:loadProwlarr,portainer:loadPortainer,qbit:loadQbit,history:loadHistory,releases:loadReleases,speed:loadSpeed,nowplaying:loadNow,immich:loadImmich};
+const LOADERS={tunnels:loadTunnels,dns:loadDns,server:loadServer,prowlarr:loadProwlarr,portainer:loadPortainer,qbit:loadQbit,history:loadHistory,releases:loadReleases,speed:loadSpeed,nowplaying:loadNow,immich:loadImmich};
 const DEMO_S=[{k:'DOWNLOAD',v:'912.4',p:3.2},{k:'UPLOAD',v:'488.1',p:-1.4},{k:'PING',v:'4 ms',p:-8.0,inv:true}];
 const NAMES=['venstre kolonne','midtkolonne','høyre kolonne'];
 const fileToData=f=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f)});
@@ -597,12 +659,23 @@ class Component extends DCLogic{
    onDrop:e=>{if(!this.svcDrag)return;e.preventDefault();e.stopPropagation();const f=this.svcDrag;this.svcDrag=null;this.setState({svcDrop:null});
     this.mut(cs=>{const fw=cs.flat().find(x=>x.id===f.wid),tw=cs.flat().find(x=>x.id===w.id);const[it]=fw.apps.splice(f.i,1);let ti=i;if(fw===tw&&f.i<i)ti--;tw.apps.splice(ti,0,it)})}}}
  svcMut(wid,f){this.mut(cs=>{const w=cs.flat().find(x=>x.id===wid);w.apps=(w.apps||[]).map(toSvc);f(w.apps)})}
- state={_:0,theme:+(localStorage.getItem('labdeck-theme')||0),menuOpen:false,themeOpen:false,secrets:(()=>{try{return{...SEC_DEF,...JSON.parse(localStorage.getItem(SEC_KEY))}}catch(e){return SEC_DEF}})(),page:'board',showSec:{},boards:(()=>{try{return JSON.parse(localStorage.getItem(KEY))||seed()}catch(e){return seed()}})(),tab:'Hjem',editing:false,libCol:null,selId:null,install:false,plat:'Unraid',mobile:false};
+ state={engine:localStorage.getItem('labdeck-engine')||'',_:0,theme:+(localStorage.getItem('labdeck-theme')||0),menuOpen:false,themeOpen:false,secrets:(()=>{try{return{...SEC_DEF,...JSON.parse(localStorage.getItem(SEC_KEY))}}catch(e){return SEC_DEF}})(),page:'board',showSec:{},boards:(()=>{try{return JSON.parse(localStorage.getItem(KEY))||seed()}catch(e){return seed()}})(),tab:'Hjem',editing:false,libCol:null,selId:null,install:false,plat:'Unraid',mobile:false};
  wx={};dc={};
- getData(w){const o={...DEFOPT[w.type],...(w.opts||{})},ro=this.res(o);if(!ro.url||(w.type!=='qbit'&&!ro.key))return{o,items:{prowlarr:DEMO_P,portainer:DEMO_PT,qbit:DEMO_Q,history:DEMO_H,releases:DEMO_R,speed:DEMO_S,nowplaying:DEMO_N,immich:DEMO_I,tunnels:DEMO_T}[w.type],demo:true};const k=w.type+JSON.stringify(ro);
+ getData(w){const o={...DEFOPT[w.type],...(w.opts||{})},ro=this.res(o);if(!ro.url||(!['qbit','server'].includes(w.type)&&!ro.key)||(w.type==='server'&&o.source==='proxmox'&&!ro.key))return{o,items:{dns:DEMO_DNS,server:DEMO_SV,prowlarr:DEMO_P,portainer:DEMO_PT,qbit:DEMO_Q,history:DEMO_H,releases:DEMO_R,speed:DEMO_S,nowplaying:DEMO_N,immich:DEMO_I,tunnels:DEMO_T}[w.type],demo:true};const k=w.type+JSON.stringify(ro);
   if(!this.dc[k]){this.dc[k]={o,items:[],loading:true};clearTimeout(this['t'+w.id]);this['t'+w.id]=setTimeout(()=>LOADERS[w.type](ro).then(items=>{this.dc[k]={o,items};this.forceUpdate()}).catch(e=>{this.dc[k]={o,items:[],err:'Could not fetch '+(o.server||o.service||'speedtest')+' API. '+(e.message||e)+' (CORS? kjør via Docker-backend)'};this.forceUpdate()}),700)}return this.dc[k]}
  res(o){const s=this.state.secrets||{},r={};for(const k in o)r[k]=typeof o[k]==='string'?o[k].replace(/\$\{(\w+)\}/g,(_,n)=>s[n]??''):o[k];return r}
  fmtData(w){const d=this.getData(w),o=d.o;if(w.type==='immich'||w.type==='tunnels')return d;
+  if(w.type==='dns'){const v=Array.isArray(d.items)?{total:0,blocked:0,lat:null,hours:[],top:[]}:d.items,nf=n=>n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e4?(n/1e3).toFixed(1)+'k':Math.round(n).toLocaleString('nb-NO');
+   const pct=v.total?v.blocked/v.total*100:0,mx=Math.max(1,...v.hours.map(x=>x.q)),hv=(this.state.dnsH||{})[w.id],set=x=>this.setState({dnsH:{...(this.state.dnsH||{}),[w.id]:x}}),hh=hv!=null&&v.hours[hv];
+   const tm=t=>String(new Date(t).getHours()).padStart(2,'0')+':00';
+   return{...d,v:{stats:[{k:'QUERIES',v:nf(v.total),c:'var(--text)'},{k:'BLOCKED',v:pct.toFixed(1)+'%',c:R},...(v.lat!=null?[{k:'LATENCY',v:v.lat.toFixed(1)+' ms',c:'var(--text)'}]:[{k:'BLOCKED #',v:nf(v.blocked),c:'var(--text)'}])],
+    bars:v.hours.map((x,i)=>({h:(x.q/mx*100)+'%',bh:(x.q?x.b/x.q*100:0)+'%',qc:hv===i?'var(--line3)':'var(--line2)',bc:hv===i?R:'color-mix(in srgb,'+R+' 70%,transparent)',tip:tm(x.t)+' · '+x.q+' spørringer · '+x.b+' blokkert',enter:()=>set(i),leave:()=>set(null)})),
+    f1:hh?tm(hh.t):v.hours[0]?tm(v.hours[0].t):'',f2:hh?nf(hh.q)+' spørringer':'',f3:hh?nf(hh.b)+' blokkert':'nå',footC:hh?'var(--text2)':'var(--dim)',
+    hasTop:!!o.top&&v.top.length>0,top:v.top.map(t=>({d:t.d,n:nf(t.n)}))}}}
+  if(w.type==='server'){const v=Array.isArray(d.items)?null:d.items,gb=x=>x>=1e12?(x/1e12).toFixed(1)+' TB':(x/1e9).toFixed(1)+' GB',sh=(u,t)=>t>=1e12?(u/1e12).toFixed(1)+'/'+(t/1e12).toFixed(0)+' TB':Math.round(u/1e9)+'/'+Math.round(t/1e9)+' GB';
+   const col=p=>p>90?R:p>75?Y:'#55565c',up=v?(v.uptime>=86400?Math.floor(v.uptime/86400)+'d ':'')+Math.floor(v.uptime%86400/3600)+'h uptime':'Laster…';
+   const bar=(k,p,sub,tip)=>({k,v:Math.round(p||0),p:Math.min(100,p||0)+'%',c:col(p),sub,tip});
+   return{...d,s:{name:o.name||'Server',dot:d.err?R:v?'#7fc98a':'var(--dim)',up,bars:v?[bar('CPU',v.cpu,v.cores?v.cores+' cores':'','CPU '+v.cpu.toFixed(1)+'%'),bar('RAM',v.mem,sh(v.memU,v.memT),'RAM '+gb(v.memU)+' av '+gb(v.memT)),bar('DISK',v.disk,sh(v.diskU,v.diskT),'Disk '+gb(v.diskU)+' av '+gb(v.diskT))]:[]}}}
   if(w.type==='portainer'){const p=Array.isArray(d.items)?{name:'…',containers:0,volumes:0,networks:0,running:0,healthy:0,stopped:0,unhealthy:0}:d.items;
    return{...d,p:{...p,grid:[['Running',p.running,'var(--text)'],['Healthy',p.healthy,'var(--text)'],['Stopped',p.stopped,'var(--text)'],['Unhealthy',p.unhealthy,p.unhealthy?R:'var(--text)']].map(([k,v,c])=>({k,v,c}))}}}
   if(w.type==='prowlarr'){const ex=(this.state.exp||{})[w.id],n=+o.collapse||5,all=d.items||[];
@@ -630,8 +703,12 @@ class Component extends DCLogic{
  srchRef=React.createRef();
  openUrl(u,nt=true){u=/^https?:\/\//.test(u)?u:'http://'+u;if(nt)window.open(u,'_blank','noopener');else location.href=u}
  zoom(){const w=window.innerWidth||0;return w?Math.max(1,Math.min(1.6,w/1180)):1}
- componentDidMount(){this._key=e=>{const t=e.target.tagName;if((e.key==='/'||e.key==='s'||e.key==='S')&&!/INPUT|TEXTAREA|SELECT/.test(t)&&this.srchRef.current){e.preventDefault();this.srchRef.current.focus()}};window.addEventListener('keydown',this._key);this._rs=()=>this.forceUpdate();window.addEventListener('resize',this._rs);requestAnimationFrame(this._rs);try{this._ro=new ResizeObserver(this._rs);this._ro.observe(document.documentElement)}catch(e){}applyTheme(THEMES[this.state.theme]||THEMES[0]);this.migrate();this.forceUpdate();fetch('https://uselessfacts.jsph.pl/api/v2/facts/random').then(r=>r.json()).then(j=>this.setState({fact:j.text})).catch(()=>this.setState({fact:'Kunne ikke hente fakta.'}));
+ componentDidMount(){this._srv=setInterval(()=>{for(const k in this.dc)if(k.startsWith('server'))delete this.dc[k];this.forceUpdate()},15000);this._key=e=>{const t=e.target.tagName;if((e.key==='/'||e.key==='s'||e.key==='S')&&!/INPUT|TEXTAREA|SELECT/.test(t)&&this.srchRef.current){e.preventDefault();this.srchRef.current.focus()}};window.addEventListener('keydown',this._key);this._rs=()=>this.forceUpdate();window.addEventListener('resize',this._rs);requestAnimationFrame(this._rs);try{this._ro=new ResizeObserver(this._rs);this._ro.observe(document.documentElement)}catch(e){}applyTheme(THEMES[this.state.theme]||THEMES[0]);this.migrate();this.forceUpdate();fetch('https://uselessfacts.jsph.pl/api/v2/facts/random').then(r=>r.json()).then(j=>this.setState({fact:j.text})).catch(()=>this.setState({fact:'Kunne ikke hente fakta.'}));
   fetch('https://bible-api.com/data/web/random').then(r=>r.json()).then(j=>{const v=j.random_verse;this.setState({verse:{ref:`${v.book} ${v.chapter}:${v.verse}`,text:v.text.trim()}})}).catch(()=>this.setState({verse:{ref:'',text:'Kunne ikke hente vers.'}}))}
+ wxView(id,x){const hv=(this.state.wxH||{})[id],set=v=>this.setState({wxH:{...(this.state.wxH||{}),[id]:v}});const hc=hv!=null&&x.cols[hv];
+  return{...x,foot:hc?hc.time+' · '+hc.temp+(hc.rainP?' · '+hc.rainP+'% nedbør':''):'⌖ '+x.place,
+   cols:(x.cols||[]).map((c,i)=>{const on=hv!=null?i===hv:c.cur;return{...c,lblVis:on?'visible':'hidden',lblShow:hv===i?c.time:c.lbl,lblColor:hv===i?'var(--text)':'var(--dim)',
+    bar:on?'linear-gradient(#d4d4de,#d4d4de55)':'linear-gradient(#6a6a72,#6a6a7222)',enter:()=>set(i),leave:()=>set(null)}})}}
  getWx(o){const k=JSON.stringify(o);if(this.wx[k])return this.wx[k];this.wx[k]={desc:'Laster…',feels:'',cols:[],place:o.location};
   const parts=o.location.split(',').map(x=>x.trim()).filter(Boolean),name=parts[0]||'Oslo',rest=parts.slice(1).map(x=>x.toLowerCase()),imp=o.units==='imperial';
   fetch('https://geocoding-api.open-meteo.com/v1/search?count=10&name='+encodeURIComponent(name)).then(r=>r.json()).then(g=>{const rs=g.results||[];const p=rs.find(x=>rest.every(q=>[x.country,x.admin1,x.country_code].some(v=>v&&v.toLowerCase()===q)))||rs[0];if(!p)throw 0;
@@ -641,7 +718,7 @@ class Component extends DCLogic{
     const isDay=x=>x>=sr&&x<=ss,fd=hrs.findIndex(isDay),ld=hrs.length-1-[...hrs].reverse().findIndex(isDay);
     const fmt=x=>o.hour==='12h'?((x%12)||12)+(x<12?'am':'pm'):String(x).padStart(2,'0')+':00';
     this.wx[k]={desc:WMO[f.current.weather_code]||'—',feels:'Feels like '+Math.round(f.current.apparent_temperature)+(imp?'°F':'°C'),place:p.name+', '+p.country,
-     cols:hrs.map((x,i)=>({h:(18+(vals[i]-mn)/((mx-mn)||1)*42)+'px',bar:i===cur?'linear-gradient(#d4d4de,#d4d4de55)':'linear-gradient(#6a6a72,#6a6a7222)',temp:Math.round(vals[i])+'°',lblVis:i===cur?'visible':'hidden',
+     cols:hrs.map((x,i)=>({h:(18+(vals[i]-mn)/((mx-mn)||1)*42)+'px',bar:i===cur?'linear-gradient(#d4d4de,#d4d4de55)':'linear-gradient(#6a6a72,#6a6a7222)',temp:Math.round(vals[i])+'°',time:fmt(x),rainP:Math.max(P[x]||0,P[x+1]||0),cur:i===cur,lblVis:i===cur?'visible':'hidden',
       lbl:[3,7,11].includes(i)?fmt(x):'',day:isDay(x)?'color-mix(in srgb,var(--accent) 5%,transparent)':'transparent',rad:i===fd&&i===ld?'10px 10px 0 0':i===fd?'10px 0 0 0':i===ld?'0 10px 0 0':'0',
       rain:Math.max(P[x]||0,P[x+1]||0)>40?'radial-gradient(#5b7a9a 1px, transparent 1.3px)':'none'}))};this.forceUpdate()})})
   .catch(()=>{this.wx[k]={desc:'Fant ikke stedet',feels:'',cols:[],place:o.location};this.forceUpdate()});return this.wx[k]}
@@ -652,12 +729,13 @@ class Component extends DCLogic{
   const by={};ev.forEach(e=>{const k=dkey(e.date);(by[k]=by[k]||[]).push(e)});const sel=(s.calSel||{})[w.id],today=dkey(now);
   const setSel=v=>this.setState({calSel:{...(s.calSel||{}),[w.id]:v}}),setOff=d=>this.setState({calOff:{...(s.calOff||{}),[w.id]:off+d},calSel:{...(s.calSel||{}),[w.id]:null}});
   const days=[...Array(42)].map((_,i)=>{const d=new Date(y,m,1-lead+i),k=dkey(d),out=d.getMonth()!==m,list=by[k]||[];
-   return{n:d.getDate(),color:out?'var(--dim2)':k===today?'var(--text)':'var(--text2)',bg:k===sel?'var(--line2)':k===today?'#26262a':'transparent',border:k===sel?'color-mix(in srgb,var(--accent) 40%,transparent)':'transparent',cur:list.length?'pointer':'default',
+   return{n:d.getDate(),color:out?'var(--dim2)':k===today?'var(--text)':'var(--text2)',bg:k===sel?'var(--line2)':k===today?'var(--line)':'transparent',border:k===sel?'color-mix(in srgb,var(--accent) 40%,transparent)':'transparent',cur:list.length?'pointer':'default',
     dots:[...new Set(list.map(e=>e.src))].map(x=>x==='sonarr'?BLUE:Y),onClick:()=>setSel(k===sel?null:k)}});
   const sl=sel?(by[sel]||[]).sort((a,b)=>a.date-b.date):[];
   return{label:first.toLocaleDateString('en-US',{month:'long',year:'numeric'}),mn:m+1,days,prev:()=>setOff(-1),next:()=>setOff(1),demo:!live,err,
    hasSel:!!sel,selEmpty:!!sel&&!sl.length,selLabel:sel?new Date(sel+'T12:00').toLocaleDateString('nb-NO',{weekday:'long',day:'numeric',month:'long'}).toUpperCase():'',
    selItems:sl.map(e=>({hasCover:!!e.cover,cover:e.cover,c:e.src==='sonarr'?BLUE:Y,t:e.t,n:e.n,meta:e.se+' · '+(e.src==='sonarr'?e.date.toLocaleTimeString('nb-NO',{hour:'2-digit',minute:'2-digit'}):'Radarr')+(e.has?' · ✓ lastet ned':'')}))}}
+ setDraft(o){this.setState({secDraft:o,secSaved:false})}
  saveSec(secrets){this.setState({secrets});localStorage.setItem(SEC_KEY,JSON.stringify(secrets))}
  save(boards){this.setState({boards});localStorage.setItem(KEY,JSON.stringify(boards))}
  mut(f){const b=JSON.parse(JSON.stringify(this.state.boards));f(b[this.state.tab]);this.save(b)}
@@ -665,7 +743,7 @@ class Component extends DCLogic{
  move(id,dc,di){this.mut(cols=>{const[c,i]=this.find(cols,id);const nc=c+dc;if(nc<0||nc>2)return;const[w]=cols[c].splice(i,1);
   if(dc)cols[nc].splice(Math.min(i,cols[nc].length),0,w);else cols[c].splice(Math.max(0,Math.min(cols[c].length,i+di)),0,w)})}
  upd(f){this.mut(cols=>{const[c,i]=this.find(cols,this.state.selId);Object.assign(cols[c][i],f)})}
- migrate(){if(localStorage.getItem('labdeck-tabs-v')!=='1'){const b0=this.state.boards;const nb={Hjem:b0.Hjem||tag(home)};this.state.boards=nb;localStorage.setItem(KEY,JSON.stringify(nb));localStorage.setItem('labdeck-tabs-v','1')}if(localStorage.getItem('labdeck-hjem-v')!=='2'){const nb={...this.state.boards,Hjem:tag(home)};this.state.boards=nb;localStorage.setItem(KEY,JSON.stringify(nb));localStorage.setItem('labdeck-hjem-v','2')}const b=this.state.boards;let ch=false;Object.values(b).flat(2).forEach(w=>{if(w.type==='error'&&w.title==='Immich stats'){w.type='immich';delete w.text;ch=true}if(w.type==='empty'&&/cloudflared/i.test(w.title||'')){w.type='tunnels';ch=true}if(w.type==='indexers'){w.type='prowlarr';ch=true}if(w.type==='error'&&/^qbittorrent$/i.test(w.title)){w.type='qbit';w.title='qBittorrent';delete w.text;ch=true}if(w.type==='text'&&w.title==='Media server'){w.type='nowplaying';delete w.text;ch=true}});if(ch)localStorage.setItem(KEY,JSON.stringify(b))}
+ migrate(){if(localStorage.getItem('labdeck-dns-v')!=='1'){const h=this.state.boards.Hjem;if(h&&!h.flat().some(w=>w.type==='dns')){h[2].splice(Math.min(3,h[2].length),0,{id:uid(),type:'dns',title:'DNS stats',opts:{service:'adguard',url:'${DNS_URL}',user:'admin',key:'${ADGUARD_PASSWORD}',top:true}});localStorage.setItem(KEY,JSON.stringify(this.state.boards))}localStorage.setItem('labdeck-dns-v','1')}if(localStorage.getItem('labdeck-tabs-v')!=='1'){const b0=this.state.boards;const nb={Hjem:b0.Hjem||tag(home)};this.state.boards=nb;localStorage.setItem(KEY,JSON.stringify(nb));localStorage.setItem('labdeck-tabs-v','1')}if(localStorage.getItem('labdeck-hjem-v')!=='2'){const nb={...this.state.boards,Hjem:tag(home)};this.state.boards=nb;localStorage.setItem(KEY,JSON.stringify(nb));localStorage.setItem('labdeck-hjem-v','2')}const b=this.state.boards;let ch=false;Object.values(b).flat(2).forEach(w=>{if(w.type==='error'&&w.title==='Immich stats'){w.type='immich';delete w.text;ch=true}if(w.type==='error'&&/^dns stats$/i.test(w.title)){w.type='dns';delete w.text;ch=true}if(w.type==='empty'&&/cloudflared/i.test(w.title||'')){w.type='tunnels';ch=true}if(w.type==='indexers'){w.type='prowlarr';ch=true}if(w.type==='error'&&/^qbittorrent$/i.test(w.title)){w.type='qbit';w.title='qBittorrent';delete w.text;ch=true}if(w.type==='text'&&w.title==='Media server'){w.type='nowplaying';delete w.text;ch=true}});if(ch)localStorage.setItem(KEY,JSON.stringify(b))}
  renderVals(){
   const s=this.state,m=s.mobile,cols=s.boards[s.tab]||s.boards[Object.keys(s.boards)[0]]||[[],[],[]];if(!s.boards[s.tab]&&Object.keys(s.boards)[0])s.tab=Object.keys(s.boards)[0];
   const day=(()=>{const n=new Date();return((n.getHours()*60+n.getMinutes())/1440*100)})();
@@ -674,7 +752,7 @@ class Component extends DCLogic{
    onDragStart:e=>{if(this.svcDrag)return;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',w.id);this.setState({dragW:w.id})},
    onOver:e=>{if(!s.dragW||this.svcDrag)return;e.preventDefault();e.stopPropagation();const r=e.currentTarget.getBoundingClientRect(),after=e.clientY>r.top+r.height/2;const d=s.dropW;if(!d||d.id!==w.id||d.after!==after)this.setState({dropW:{id:w.id,after}})},
    onDrop:e=>{if(!s.dragW||this.svcDrag)return;e.preventDefault();e.stopPropagation();const after=s.dropW&&s.dropW.after,src=s.dragW;this.setState({dragW:null,dropW:null});if(src===w.id)return;
-    this.mut(cs=>{const[c,i]=this.find(cs,src);const[it]=cs[c].splice(i,1);const[tc,ti]=this.find(cs,w.id);cs[tc].splice(ti+(after?1:0),0,it)})},wx:w.type==='weather'?this.getWx({...DEFOPT.weather,...(w.city?{location:w.city}:{}),...(w.opts||{})}):null,d:LOADERS[w.type]?this.fmtData(w):null,cal:w.type==='calendar'?this.getCal(w):null,outline:s.editing?'1px dashed var(--line3)':'none',
+    this.mut(cs=>{const[c,i]=this.find(cs,src);const[it]=cs[c].splice(i,1);const[tc,ti]=this.find(cs,w.id);cs[tc].splice(ti+(after?1:0),0,it)})},wx:w.type==='weather'?this.wxView(w.id,this.getWx({...DEFOPT.weather,...(w.city?{location:w.city}:{}),...(w.opts||{})})):null,d:LOADERS[w.type]?this.fmtData(w):null,cal:w.type==='calendar'?this.getCal(w):null,outline:s.editing?'1px dashed var(--line3)':'none',
    ctrls:[['⚙',()=>this.setState({selId:w.id,selSvc:null})],['✕',()=>this.mut(cs=>{const[c,i]=this.find(cs,w.id);cs[c].splice(i,1)}),R]].map(([icon,fn,color])=>({icon,fn,color:color||'var(--text2)'}))});
   const columns=m?[{items:[...cols[1].slice(0,1),...cols[2],...cols[1].slice(1),...cols[0]].map(mk)}]:cols.map((c,ci)=>({items:c.map(mk),minH:s.editing?'120px':'0',bg:s.dragW&&!c.length?'color-mix(in srgb,var(--accent) 6%,transparent)':'transparent',
    onOver:e=>{if(s.dragW&&!this.svcDrag)e.preventDefault()},onDrop:e=>{if(!s.dragW||this.svcDrag)return;e.preventDefault();const src=s.dragW;this.setState({dragW:null,dropW:null});this.mut(cs=>{const[c0,i]=this.find(cs,src);const[it]=cs[c0].splice(i,1);cs[ci].push(it)})}}));
@@ -682,15 +760,19 @@ class Component extends DCLogic{
   const days=[];for(let i=0;i<42;i++){const d=i-2,out=d<1||d>31;days.push({n:d<1?30+d:d>31?d-31:d,color:out?'var(--dim2)':'var(--text2)',bg:d===16?'var(--line2)':'transparent'})}
   return{
    zoom:m?1:this.zoom(),maxW:m?'420px':(this.zoom()>1?(window.innerWidth/this.zoom())+'px':'100%'),colTpl:m?'minmax(0,1fr)':'minmax(200px,1fr) minmax(0,2.75fr) minmax(200px,1fr)',columns,editing:s.editing,stop:e=>e.stopPropagation(),
-   tabs:Object.keys(s.boards).map(n=>({name:n,select:()=>this.setState({tab:n}),line:n===s.tab?Y:'transparent',color:n===s.tab?'var(--text)':'var(--muted)'})),
-   addTab:()=>{const n=(prompt('Navn på ny fane (f.eks. Toten):')||'').trim();if(!n)return;if(s.boards[n])return alert('Fanen finnes allerede');this.save({...s.boards,[n]:tag([[],[W('search','Search')],[]])});this.setState({tab:n})},
+   tabs:Object.keys(s.boards).map(n=>({name:n,select:()=>this.setState({tab:n,page:'board',secDraft:null}),line:n===s.tab?Y:'transparent',color:n===s.tab?'var(--text)':'var(--muted)'})),
+   secDirty:!!s.secDraft,secStatus:s.secDraft?'Ulagrede endringer':(s.secSaved?'Lagret ✓':''),
+    saveSecrets:()=>{if(s.secDraft)this.saveSec(s.secDraft);this.setState({secDraft:null,secSaved:true});clearTimeout(this._ss);this._ss=setTimeout(()=>this.setState({secSaved:false}),2000)},
+    closeSecrets:()=>this.setState({secDraft:null,page:'board'}),
+    goHome:()=>this.setState({tab:'Hjem',page:'board',secDraft:null}),
+    addTab:()=>{const n=(prompt('Navn på ny fane (f.eks. Toten):')||'').trim();if(!n)return;if(s.boards[n])return alert('Fanen finnes allerede');this.save({...s.boards,[n]:tag([[],[W('search','Search')],[]])});this.setState({tab:n})},
     renameTab:()=>{const o=s.tab,n=(prompt('Nytt navn på «'+o+'»:',o)||'').trim();if(!n||n===o)return;if(s.boards[n])return alert('Fanen finnes allerede');const nb={};Object.keys(s.boards).forEach(k=>nb[k===o?n:k]=s.boards[k]);this.save(nb);this.setState({tab:n})},
     delTab:()=>{const ks=Object.keys(s.boards);if(ks.length<2)return alert('Du må ha minst én fane');if(!confirm('Slette fanen «'+s.tab+'» og alle widgets i den?'))return;const nb={...s.boards};delete nb[s.tab];this.save(nb);this.setState({tab:Object.keys(nb)[0]})},
     toggleEdit:()=>this.setState({editing:!s.editing}),editLabel:s.editing?'lagre':'✎ rediger',editBg:s.editing?Y:'transparent',editColor:s.editing?'var(--bg)':'var(--muted)',
    toggleMobile:()=>this.setState({mobile:!m}),mobileLabel:m?'desktop':'mobil',
    addBtns:NAMES.map((l,i)=>({label:['venstre','midt','høyre'][i],open:()=>this.setState({libCol:i})})),libOpen:s.libCol!==null,libCol:NAMES[s.libCol],
    library:Object.entries(LIB).map(([t,name])=>({name,add:()=>{const vars=(JSON.stringify(DEFOPT[t]||{}).match(/\$\{(\w+)\}/g)||[]).map(v=>v.slice(2,-1)),miss=vars.filter(v=>!(v in s.secrets));if(miss.length){const o={...s.secrets};miss.forEach(v=>o[v]='');this.saveSec(o)}const c=s.libCol;this.mut(cs=>cs[c].push({id:uid(),type:t,title:name,apps:t==='apps'?['Ny tjeneste|o|1ms']:undefined,text:t==='text'||t==='error'?'Rediger teksten i ⚙':undefined}));this.setState({libCol:null})}})),
-   srch:(()=>{const q=(s.q||'').trim(),ql=q.toLowerCase(),sw=Object.values(s.boards).flat(2).find(w=>w.type==='search')||{},o={...DEFOPT.search,...(sw.opts||{})},eng=ENGINES[o.engine]||ENGINES.duckduckgo;
+   srch:(()=>{const q=(s.q||'').trim(),ql=q.toLowerCase(),sw=Object.values(s.boards).flat(2).find(w=>w.type==='search')||{},o={...DEFOPT.search,...(sw.opts||{}),...(s.engine?{engine:s.engine}:{})},eng=ENGINES[o.engine]||ENGINES.duckduckgo;
     const res=[];if(q){const bang=Object.keys(BANGS).find(b=>ql.startsWith(b+' '));
      if(bang){const[n,u]=BANGS[bang],rest=q.slice(bang.length+1);res.push({name:n+': '+rest,sub:bang,url:u+encodeURIComponent(rest),ini:'!'})}
      else{const seen=new Set();Object.entries(s.boards).forEach(([tab,cols])=>cols.flat().filter(w=>w.type==='apps').forEach(w=>(w.apps||[]).map(toSvc).forEach((v,i)=>{const k=v.name+v.url;if(seen.has(k))return;if(v.name.toLowerCase().includes(ql)||(v.url||'').toLowerCase().includes(ql)){seen.add(k);const b=mkApp0(v.name+'|o',i);res.push({name:v.name,sub:(v.url||'ingen URL')+' · '+tab+' / '+w.title,url:v.url,ini:b.ini,tint:b.bg,icon:v.icon||b.icon,imgRef:b.imgRef,hasIcon:!!(v.icon||b.icon)})}})));
@@ -698,7 +780,7 @@ class Component extends DCLogic{
       res.push({name:'Søk etter «'+q+'»',sub:o.engine,url:eng+encodeURIComponent(q),ini:'⌕'})}}
     const sel=Math.min(s.qi||0,Math.max(0,res.length-1));
     const go=r=>{if(!r||!r.url)return;this.openUrl(r.url,o.newTab!==false);this.setState({q:'',qi:0});this.srchRef.current&&this.srchRef.current.blur()};
-    return{ref:this.srchRef,q:s.q||'',open:!!(s.qFocus&&q),border:s.qFocus?'color-mix(in srgb,var(--accent) 50%,var(--line))':'var(--line)',
+    return{engine:o.engine,engines:[['google','Google'],['duckduckgo','DuckDuckGo'],['bing','Bing'],['startpage','Startpage']].map(([v,n])=>({v,n})),setEngine:e=>{localStorage.setItem('labdeck-engine',e.target.value);this.setState({engine:e.target.value})},ref:this.srchRef,q:s.q||'',open:!!(s.qFocus&&q),border:s.qFocus?'color-mix(in srgb,var(--accent) 50%,var(--line))':'var(--line)',
      onChange:e=>this.setState({q:e.target.value,qi:0}),onFocus:()=>this.setState({qFocus:true}),onBlur:()=>this.setState({qFocus:false}),
      onKey:e=>{if(e.key==='ArrowDown'){e.preventDefault();this.setState({qi:Math.min(sel+1,res.length-1)})}else if(e.key==='ArrowUp'){e.preventDefault();this.setState({qi:Math.max(sel-1,0)})}else if(e.key==='Enter'){e.preventDefault();go(res[sel])}else if(e.key==='Escape'){this.setState({q:''});e.target.blur()}},
      results:res.map((r,i)=>({...r,tint:r.tint||'var(--line2)',hasIcon:!!r.hasIcon,bg:i===sel?'var(--card)':'transparent',hover:()=>this.setState({qi:i}),go:e=>{e.preventDefault();go(r)}}))}})(),
