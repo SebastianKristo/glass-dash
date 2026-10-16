@@ -44,3 +44,45 @@ Prototypen `Homelab Dashboard.dc.html` i denne mappen er oppdatert og er fasit. 
 - Alle widgets fungerer i alle 5 temaer (Amber, Frost, Moss, Rose, Paper) uten hardkodede farger.
 - Ingen secrets i nettleseren etter lagring (maskert visning, backend erstatter `${...}`).
 - Ingen layout-overflow i sidekolonner på 200px.
+
+
+## Minecraft Java server-widget (type: `minecraft`)
+
+**Secret:** `MINECRAFT_HOST` (host eller host:port, default port 25565).
+**Opts:** `url` (default `${MINECRAFT_HOST}`), `name` (visningsnavn, tom = host), `players` (bool, vis spillerliste).
+**Viser:** server-ikon (favicon fra status), navn, MOTD, ONLINE/OFFLINE-prikk, spillere nå/maks + progressbar, versjon, spillerliste med hoder (`https://mc-heads.net/avatar/<navn>/16`).
+**Demo:** vises når MINECRAFT_HOST er tom.
+
+### Backend (må implementeres)
+Prototypen bruker `https://api.mcsrvstat.us/3/<host>`, som ikke når servere på LAN. I Docker: backend-endepunkt `GET /api/widgets/minecraft?host=...` som pinger serveren direkte med Minecraft Server List Ping (TCP, handshake + status-request, protokoll -1). Node: f.eks. `minecraft-server-util` (`status(host, port, {timeout:5000})`). Håndter SRV-oppslag (`_minecraft._tcp.<host>`). Cache 30–60 s.
+
+Respons (det frontend forventer):
+```json
+{"host":"mc.example.no","online":true,"now":3,"max":20,"version":"Paper 1.21.4","motd":"A Minecraft Server","icon":"data:image/png;base64,...","list":["sebastiankristo","Notch"]}
+```
+Offline/timeout → `{"host":"...","online":false,"now":0,"max":0,"version":"—","motd":"","icon":"","list":[]}` (ikke feil).
+
+### Referanse-backend (Node/Express)
+```js
+import { status } from 'minecraft-server-util';
+const cache = new Map();
+app.get('/api/widgets/minecraft', async (req, res) => {
+  const raw = (req.query.host || process.env.MINECRAFT_HOST || '').replace(/^\w+:\/\//, '');
+  const [host, p] = raw.split(':'); const port = +p || 25565;
+  const hit = cache.get(raw); if (hit && Date.now() - hit.t < 30000) return res.json(hit.v);
+  let v;
+  try {
+    const s = await status(host, port, { timeout: 5000, enableSRV: true });
+    v = { host: raw, online: true, now: s.players.online, max: s.players.max, version: s.version.name,
+      motd: s.motd.clean.replace(/\n/g, ' · '), icon: s.favicon || '', list: (s.players.sample || []).map(x => x.name) };
+  } catch { v = { host: raw, online: false, now: 0, max: 0, version: '—', motd: '', icon: '', list: [] }; }
+  cache.set(raw, { t: Date.now(), v }); res.json(v);
+});
+```
+Merk: `players.sample` er maks ~12 navn og kan være tom hvis serveren skjuler den.
+
+### Frontend-loader (bytt i produksjon)
+```js
+async function loadMc(o){ const r = await fetch('/api/widgets/minecraft?host=' + encodeURIComponent(o.url)); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
+```
+Template-blokk: `<sc-if value="{{w.isMinecraft}}">` i Homelab Dashboard.dc.html; formattering i `fmtData` (`w.type==='minecraft'`).

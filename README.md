@@ -291,6 +291,8 @@ Verdier i dashbordet går foran miljøvariabler.
 | `CLOUDFLARE_ACCOUNT_ID` | Cloudflared Tunnels | Account ID |
 | `CLOUDFLARE_TUNNEL_ID` | Cloudflared Tunnels | Tunnel ID |
 | `CLOUDFLARE_API_KEY` | Cloudflared Tunnels | Token med *Cloudflare Tunnel: Read* |
+| `MINECRAFT_HOST` | Minecraft | `10.69.1.126:25565` |
+| `MINECRAFT_CONSOLE_URL` | Minecraft (lenke) | `http://10.69.1.126:8222` |
 | `DNS_URL` | DNS stats | `http://10.69.1.x:3000` |
 | `ADGUARD_PASSWORD` | DNS stats | AdGuard-passord |
 | `PORTAINER_URL` / `PORTAINER_ENDPOINT_ID` / `PORTAINER_API_KEY` | Portainer | |
@@ -316,6 +318,7 @@ Verdier i dashbordet går foran miljøvariabler.
 | **qBittorrent** | qBittorrent Web UI | Krever *Bypass authentication for clients on localhost/whitelist*. |
 | **Prowlarr Indexers** | Prowlarr | Privacy-merke og status. |
 | **Cloudflared Tunnels** | Cloudflare API | Hostname → tjeneste. |
+| **Minecraft Java server** | Server List Ping (direkte TCP) | Online/offline, spillere, versjon, MOTD, spillerhoder. Lenke til binhex web-konsoll. |
 | **Immich stats** | Immich | Bilder, videoer, lagring. |
 | **Portainer** | Portainer API | Containere og status. |
 | **Day progress** | Lokalt | Dag, måned eller år. |
