@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./shim.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>:root{--bg:#141416;--bg2:#18181a;--card:#1b1b1e;--line:#232326;--line2:#2a2a2e;--line3:#3a3a3e;--accent:#e8c46a;--text:#e6e4df;--text2:#c9c7c2;--soft:#a9a7a2;--muted:#8a877f;--dim:#6d6b66;--dim2:#55544f;--neg:#e0716a;--stripe1:#1f1f23;--stripe2:#232327;--hover:#212124}body{margin:0;background:var(--bg);color:var(--text2);font-family:'JetBrains Mono',monospace}a{color:var(--accent)}a:hover{color:#f3d68e}input,textarea,select,button{font:inherit}</style>
+</helmet>
+<div style="min-height:100vh;background:var(--bg);font-size:11px">
+<div style="zoom:{{zoom}};max-width:{{maxW}};margin:0 auto;padding:16px;box-sizing:border-box;display:flex;flex-direction:column;gap:18px">
+
+<header style="display:flex;align-items:center;gap:20px;padding:0 12px;height:40px;border:1px solid var(--line);border-radius:4px;background:var(--bg2)">
+  <div style="width:14px;height:14px;display:grid;grid-template-columns:1fr 1fr;gap:1px"><span style="background:var(--muted)"></span><span style="background:var(--accent)"></span><span style="background:var(--accent)"></span><span style="background:var(--muted)"></span></div>
+  <nav style="display:flex;gap:16px;height:100%;overflow-x:auto">
+    <sc-for list="{{tabs}}" as="t" hint-placeholder-count="4">
+      <button onClick="{{t.select}}" style="background:none;border:0;border-bottom:2px solid {{t.line}};color:{{t.color}};padding:0 2px;cursor:pointer;font-size:11px;white-space:nowrap">{{t.name}}</button>
+    </sc-for>
+  </nav>
+  <div style="flex:1"></div>
+  <sc-if value="{{editing}}" hint-placeholder-val="{{false}}"><button onClick="{{toggleEdit}}" style="background:var(--accent);border:0;color:var(--bg);border-radius:3px;padding:4px 10px;cursor:pointer;font-size:10px;font-weight:700">lagre</button></sc-if>
+  <div style="position:relative">
+    <button onClick="{{toggleTheme}}" title="Tema" style="background:none;border:1px solid {{themeBorder}};border-radius:3px;padding:5px 7px;cursor:pointer;display:flex;gap:3px">
+      <sc-for list="{{curDots}}" as="c"><span style="width:6px;height:6px;border-radius:1px;background:{{c}}"></span></sc-for>
+    </button>
+    <sc-if value="{{themeOpen}}" hint-placeholder-val="{{false}}">
+      <div style="position:absolute;right:0;top:calc(100% + 6px);z-index:20;background:var(--bg2);border:1px solid var(--line2);border-radius:4px;padding:6px;display:flex;gap:6px;box-shadow:0 8px 24px rgba(0,0,0,.4)">
+        <sc-for list="{{themes}}" as="t">
+          <button onClick="{{t.pick}}" title="{{t.name}}" style="background:{{t.bg}};border:1px solid {{t.border}};border-radius:3px;padding:6px 8px;cursor:pointer;display:flex;gap:3px">
+            <sc-for list="{{t.dots}}" as="c"><span style="width:6px;height:6px;border-radius:1px;background:{{c}}"></span></sc-for>
+          </button>
+        </sc-for>
+      </div>
+    </sc-if>
+  </div>
+  <div style="position:relative">
+    <button onClick="{{toggleMenu}}" title="Meny" style="background:{{menuBg}};border:1px solid var(--line2);color:var(--text2);border-radius:3px;width:28px;height:24px;cursor:pointer;font-size:13px;padding:0;line-height:1">☰</button>
+    <sc-if value="{{menuOpen}}" hint-placeholder-val="{{false}}">
+      <div style="position:absolute;right:0;top:calc(100% + 6px);z-index:20;min-width:170px;background:var(--bg2);border:1px solid var(--line2);border-radius:4px;padding:4px;display:flex;flex-direction:column;box-shadow:0 8px 24px rgba(0,0,0,.4)">
+        <sc-for list="{{menu}}" as="m">
+          <button onClick="{{m.fn}}" style="display:flex;justify-content:space-between;gap:12px;background:none;border:0;color:var(--text2);text-align:left;padding:8px 10px;border-radius:3px;cursor:pointer;font-size:11px" style-hover="background:var(--card)">
+            <span>{{m.label}}</span><span style="color:var(--dim)">{{m.hint}}</span>
+          </button>
+        </sc-for>
+      </div>
+    </sc-if>
+  </div>
+</header>
+
+<sc-if value="{{editing}}" hint-placeholder-val="{{false}}">
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 12px;border:1px dashed color-mix(in srgb,var(--accent) 40%,transparent);border-radius:4px;color:var(--muted)">
+    <span style="color:var(--accent)">EDIT MODE</span><span>Dra widgets og tjenester dit du vil. ⚙ for innstillinger, ikoner og status.</span>
+    <div style="flex:1"></div>
+    <button onClick="{{addSection}}" style="background:none;color:var(--accent);border:1px solid var(--accent);border-radius:3px;padding:4px 10px;cursor:pointer;font-size:10px;font-weight:700">+ ny seksjon</button>
+    <sc-for list="{{addBtns}}" as="a"><button onClick="{{a.open}}" style="background:var(--accent);color:var(--bg);border:0;border-radius:3px;padding:4px 10px;cursor:pointer;font-size:10px;font-weight:700">+ {{a.label}}</button></sc-for>
+    <button onClick="{{reset}}" style="background:none;color:var(--muted);border:1px solid var(--line2);border-radius:3px;padding:4px 10px;cursor:pointer;font-size:10px">reset</button>
+  </div>
+</sc-if>
+
+<sc-if value="{{onSecrets}}" hint-placeholder-val="{{false}}">
+  <div style="display:flex;flex-direction:column;gap:12px;max-width:760px;width:100%;margin:0 auto">
+    <span style="font-size:10.5px;letter-spacing:.06em;color:var(--muted);padding-left:4px">SECRETS</span>
+    <span style="color:var(--muted);line-height:1.6;padding-left:4px;text-wrap:pretty">Bruk verdiene i widget-innstillinger som ${NAVN}. I Docker lagres de i /app/data/secrets.env og sendes aldri til nettleseren.</span>
+    <div style="background:var(--card);border:1px solid var(--line);border-radius:4px;padding:6px 12px;display:flex;flex-direction:column">
+      <sc-for list="{{secrets}}" as="x">
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) auto auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)">
+          <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
+            <input value="{{x.name}}" onChange="{{x.setName}}" style="background:none;border:0;outline:none;color:var(--accent);font-size:11px;padding:0">
+            <span style="font-size:9px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{x.used}}</span>
+          </div>
+          <input type="{{x.type}}" value="{{x.value}}" onChange="{{x.setValue}}" placeholder="ikke satt" style="background:var(--bg);border:1px solid var(--line2);border-radius:3px;padding:7px;color:var(--text);outline:none;min-width:0">
+          <button onClick="{{x.toggle}}" style="background:none;border:1px solid var(--line2);color:var(--muted);border-radius:3px;padding:5px 8px;cursor:pointer;font-size:10px">{{x.eye}}</button>
+          <button onClick="{{x.remove}}" style="background:none;border:1px solid var(--line2);color:var(--neg);border-radius:3px;width:26px;height:26px;cursor:pointer;padding:0">✕</button>
+        </div>
+      </sc-for>
+      <button onClick="{{addSecret}}" style="background:none;border:0;color:var(--text2);padding:10px 0;text-align:left;cursor:pointer;font-size:11px">+ legg til secret</button>
+    </div>
+  </div>
+</sc-if>
+<div style="display:{{gridDisplay}};grid-template-columns:{{colTpl}};gap:16px;align-items:start">
+<sc-for list="{{columns}}" as="col" hint-placeholder-count="3">
+<div onDragOver="{{col.onOver}}" onDrop="{{col.onDrop}}" style="display:flex;flex-direction:column;gap:18px;min-width:0;min-height:{{col.minH}};border-radius:4px;background:{{col.bg}}">
+<sc-for list="{{col.items}}" as="w">
+<div draggable="{{w.draggable}}" onDragStart="{{w.onDragStart}}" onDragEnd="{{dragEnd}}" onDragOver="{{w.onOver}}" onDrop="{{w.onDrop}}" style="display:flex;flex-direction:column;gap:10px;outline:{{w.outline}};outline-offset:4px;border-radius:4px;box-shadow:{{w.dropShadow}};opacity:{{w.op}};cursor:{{w.cur}}">
+  <div style="display:flex;align-items:center;gap:6px;padding-left:4px">
+    <sc-if value="{{editing}}" hint-placeholder-val="{{false}}"><span style="color:var(--dim);cursor:grab;font-size:12px">⠿</span></sc-if><span style="font-size:10.5px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;flex:1">{{w.title}}</span>
+    <sc-if value="{{editing}}" hint-placeholder-val="{{false}}">
+      <div style="display:flex;gap:3px">
+        <sc-for list="{{w.ctrls}}" as="c"><button onClick="{{c.fn}}" style="background:var(--card);border:1px solid var(--line2);color:{{c.color}};border-radius:3px;width:20px;height:20px;padding:0;cursor:pointer;font-size:10px">{{c.icon}}</button></sc-for>
+      </div>
+    </sc-if>
+  </div>
+
+  <sc-if value="{{w.isSearch}}">
+    <div style="position:relative">
+      <div style="display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid {{srch.border}};border-radius:4px;padding:12px 14px">
+        <span style="color:var(--dim)">⌕</span>
+        <input ref="{{srch.ref}}" value="{{srch.q}}" onChange="{{srch.onChange}}" onKeyDown="{{srch.onKey}}" onFocus="{{srch.onFocus}}" onBlur="{{srch.onBlur}}" placeholder="Type here to search…" style="flex:1;background:none;border:0;outline:none;color:var(--text);font-size:10.5px;min-width:0">
+        <span style="border:1px solid var(--line2);border-radius:3px;padding:1px 5px;font-size:9px;color:var(--dim)">S</span>
+      </div>
+      <sc-if value="{{srch.open}}" hint-placeholder-val="{{false}}">
+        <div style="position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:15;background:var(--bg2);border:1px solid var(--line2);border-radius:4px;padding:4px;display:flex;flex-direction:column;box-shadow:0 10px 30px rgba(0,0,0,.45);max-height:340px;overflow-y:auto">
+          <sc-for list="{{srch.results}}" as="r">
+            <button onMouseDown="{{r.go}}" onMouseEnter="{{r.hover}}" style="display:flex;align-items:center;gap:10px;background:{{r.bg}};border:0;border-radius:3px;padding:7px 8px;cursor:pointer;text-align:left;color:var(--text2);font-size:10.5px">
+              <div style="width:20px;height:20px;border-radius:4px;background:{{r.tint}};flex:none;position:relative;display:flex;align-items:center;justify-content:center;font-size:8px;color:var(--bg);font-weight:700"><span>{{r.ini}}</span><sc-if value="{{r.hasIcon}}"><img src="{{r.icon}}" alt="" ref="{{r.imgRef}}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:var(--bg2)"></sc-if></div>
+              <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)">{{r.name}}</span>
+              <span style="font-size:9px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:45%">{{r.sub}}</span>
+            </button>
+          </sc-for>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{w.isApps}}">
+    <div style="display:grid;grid-template-columns:{{w.gridCols}};gap:4px 16px;background:var(--card);border:1px solid var(--line);border-radius:4px;padding:10px 12px">
+      <sc-for list="{{w.apps}}" as="a">
+        <a href="{{a.href}}" target="_blank" rel="noreferrer" draggable="{{a.draggable}}" onClick="{{a.onClick}}" onDragStart="{{a.onDragStart}}" onDragOver="{{a.onOver}}" onDrop="{{a.onDrop}}" style="display:flex;align-items:center;gap:10px;padding:5px 4px;margin:0 -4px;border-radius:4px;text-decoration:none;color:inherit;box-shadow:{{a.dropShadow}};cursor:{{a.cur}}" style-hover="background:var(--hover)">
+          <div style="width:22px;height:22px;border-radius:5px;background:{{a.bg}};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--bg);flex:none;position:relative"><span>{{a.ini}}</span><img src="{{a.icon}}" alt="" ref="{{a.imgRef}}" draggable="false" style="position:absolute;inset:-1px;width:24px;height:24px;object-fit:contain;background:var(--card)"></div>
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px">
+            <span style="color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{a.name}}</span>
+            <span style="font-size:9.5px;color:{{a.sc}}">{{a.status}}</span>
+          </div>
+          <sc-if value="{{a.showDot}}"><span title="{{a.dotTitle}}" style="width:12px;height:12px;border-radius:50%;background:{{a.dotBg}};color:{{a.markColor}};font-size:{{a.markSize}};font-weight:700;display:flex;align-items:center;justify-content:center;flex:none">{{a.mark}}</span></sc-if>
+        </a>
+      </sc-for>
+      <sc-if value="{{editing}}" hint-placeholder-val="{{false}}"><button onClick="{{w.addSvc}}" style="display:flex;align-items:center;gap:10px;padding:5px 4px;background:none;border:1px dashed var(--line2);border-radius:4px;color:var(--muted);cursor:pointer;font-size:10.5px">+ tjeneste</button></sc-if>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{w.isCalendar}}">
+    <div style="background:var(--card);border:1px solid var(--line);border-radius:4px;padding:12px;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:6px"><span style="color:var(--text);font-size:12px;flex:1">{{w.cal.label}}</span><button onClick="{{w.cal.prev}}" style="background:none;border:0;color:var(--muted);cursor:pointer;padding:0 4px">‹</button><span style="color:var(--text)">{{w.cal.mn}}</span><button onClick="{{w.cal.next}}" style="background:none;border:0;color:var(--muted);cursor:pointer;padding:0 4px">›</button></div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);row-gap:2px;text-align:center;font-size:10px">
+        <sc-for list="{{dows}}" as="d"><span style="color:var(--dim2);font-size:8.5px;padding-bottom:2px">{{d}}</span></sc-for>
+        <sc-for list="{{w.cal.days}}" as="d">
+          <button onClick="{{d.onClick}}" style="background:{{d.bg}};border:1px solid {{d.border}};color:{{d.color}};border-radius:3px;padding:3px 0 2px;cursor:{{d.cur}};display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px">
+            <span>{{d.n}}</span>
+            <span style="display:flex;gap:2px;height:3px"><sc-for list="{{d.dots}}" as="c"><span style="width:3px;height:3px;border-radius:50%;background:{{c}}"></span></sc-for></span>
+          </button>
+        </sc-for>
+      </div>
+      <sc-if value="{{w.cal.hasSel}}">
+        <div style="display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line2);padding-top:10px">
+          <span style="color:var(--muted);font-size:9.5px">{{w.cal.selLabel}}</span>
+          <sc-for list="{{w.cal.selItems}}" as="r">
+            <div style="display:flex;gap:8px;align-items:flex-start">
+              <div style="width:34px;height:50px;flex:none;border-radius:3px;border-left:2px solid {{r.c}};background:repeating-linear-gradient(135deg,var(--stripe1) 0 5px,var(--stripe2) 5px 10px);position:relative;overflow:hidden"><sc-if value="{{r.hasCover}}"><img src="{{r.cover}}" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></sc-if></div>
+              <div style="display:flex;flex-direction:column;gap:2px;min-width:0;font-size:9.5px">
+                <span style="color:var(--accent);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{r.t}}</span>
+                <sc-if value="{{r.n}}"><span style="color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{r.n}}</span></sc-if>
+                <span style="color:var(--dim)">{{r.meta}}</span>
+              </div>
+            </div>
+          </sc-for>
+          <sc-if value="{{w.cal.selEmpty}}"><span style="color:var(--dim);font-size:9.5px">Ingen utgivelser denne dagen.</span></sc-if>
+        </div>
+      </sc-if>
+      <div style="display:flex;gap:12px;font-size:8.5px;color:var(--dim)"><span style="display:flex;align-items:center;gap:4px"><span style="width:5px;height:5px;border-radius:50%;background:oklch(0.72 0.12 240)"></span>Sonarr</span><span style="display:flex;align-items:center;gap:4px"><span style="width:5px;height:5px;border-radius:50%;background:var(--accent)"></span>Radarr</span><sc-if value="{{w.cal.demo}}"><span style="margin-left:auto">demo-data</span></sc-if><sc-if value="{{w.cal.err}}"><span style="margin-left:auto;color:var(--neg)">{{w.cal.err}}</span></sc-if></div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{w.isSpeed}}">
+    <div style="display:flex;flex-direction:column;gap:8px">
+    <sc-if value="{{w.d.err}}"><div style="background:var(--card);border:1px solid var(--line);border-radius:4px;overflow:hidden"><div style="display:flex;justify-content:space-between;padding:8px 10px;background:color-mix(in srgb,var(--neg) 14%,var(--card));color:var(--neg)"><span>ERROR</span><span>⚠</span></div><div style="padding:10px;color:var(--soft);font-size:9.5px;line-height:1.6;word-break:break-all">{{w.d.err}}</div></div></sc-if>
+    <sc-if value="{{w.d.demo}}"><span style="font-size:9px;color:var(--dim);padding-left:4px">Demo-data · sett secrets for å koble til</span></sc-if>
+    <div style="background:var(--card);border:1px solid var(--line);border-radius:4px;padding:14px 12px;display:grid;grid-template-columns:repeat(3,1fr);text-align:center;gap:4px">
+      <sc-for list="{{w.d.items}}" as="s"><div style="display:flex;flex-direction:column;gap:4px"><sc-if value="{{s.showD}}"><span style="color:{{s.dc}};font-size:9px">{{s.d}}</span></sc-if><span style="color:var(--text);font-size:12px">{{s.v}}</span><span style="color:var(--dim);font-size:8px">{{s.k}}</span></div></sc-for>
+    </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{w.isText}}">
+    <div style="background:var(--card);border:1px solid var(--line);border-radius:4px;padding:12px;line-height:1.6;color:var(--text2);white-space:pre-wrap;text-wrap:pretty">{{w.text}}</div>
+  </sc-if>
+
+  <sc-if value="{{w.isFact}}">
+    <div style="background:var(--card);border:1px solid var(--line);border-radius:4px;padding:12px;line-height:1.6;color:var(--text2);text-wrap:pretty">{{fact}}</div>
+  </sc-if>
+  <sc-if value="{{w.isVerse}}">
+    <div style="background:var(--card);border:1px solid var(--line);border-radius:4px;padding:12px;line-height:1.6;display:flex;flex-direction:column;gap:2px">
+      <span style="color:var(--text);font-size:12px">{{verse.ref}}</span><span style="color:var(--text2);text-wrap:pretty">{{verse.text}}</span>
+    </div>
+  </sc-if>
+  <sc-if value="{{w.isNowplaying}}">
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <sc-if value="{{w.d.err}}"><div style="background:var(--card);border:1px solid var(--line);border-radius:4px;overflow:hidden"><div style="display:flex;justify-content:space-between;padding:8px 10px;background:color-mix(in srgb,var(--neg) 14%,var(--card));color:var(--neg)"><span>ERROR</span><span>⚠</span></div><div style="padding:10px;color:var(--soft);font-size:9.5px;line-height:1.6;word-break:break-all">{{w.d.err}}</div></div></sc-if>
+    <sc-if value="{{w.d.demo}}"><span style="font-size:9px;color:var(--dim);padding-left:4px">Demo-data · sett secrets for å koble til</span></sc-if>
+      <sc-if value="{{w.d.empty}}"><div style="background:var(--card);border:1px solid var(--line);border-radius:4px;padding:12px;color:var(--text2)">Nothing is playing right now.</div></sc-if>
+      <sc-for list="{{w.d.items}}" as="p">
+        <div style="background:var(--card);border:1px solid var(--line);border-radius:4px;padding:10px 12px;display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px">
+            <span style="color:var(--accent)">{{p.user}}</span>
+            <sc-if value="{{p.stateText}}"><span style="color:{{p.stc}}">[{{p.state}}]</span></sc-if>
+            <sc-if value="{{p.stateDot}}"><span style="width:8px;height:8px;border-radius:50%;background:{{p.dot}};box-shadow:{{p.glow}}"></span></sc-if>
+          </div>
+          <div style="height:1px;background:var(--line2)"></div>
+          <div style="display:flex;gap:10px;align-items:stretch">
+            <sc-if value="{{p.showThumb}}"><div style="width:{{p.tw}};aspect-ratio:{{p.ar}};flex:none;border:2px solid var(--accent);border-radius:4px;background:repeating-linear-gradient(135deg,var(--stripe1) 0 5px,var(--stripe2) 5px 10px);position:relative;overflow:hidden"><sc-if value="{{p.hasCover}}"><img src="{{p.cover}}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></sc-if></div></sc-if>
+            <div style="flex:1;min-width:0;display:flex;flex-direction:column;justify-content:space-evenly;gap:3px;font-size:10px;color:var(--soft)">
+              <sc-if value="{{p.l1}}"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{p.l1}}</span></sc-if>
+              <span style="color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{p.title}}</span>
+              <sc-if value="{{p.showBar}}"><div style="display:flex;gap:8px;align-items:center"><div style="flex:1;height:8px;border:1px solid var(--dim);border-radius:3px;overflow:hidden"><div style="height:100%;width:{{p.pct}};background:var(--accent)"></div></div><sc-if value="{{p.showInfo}}"><span style="font-size:9px">{{p.ends}}</span></sc-if></div></sc-if>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </sc-if>
+  <sc-if value="{{w.isQbit}}">
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <sc-if value="{{w.d.err}}"><div style="background:var(--card);border:1px solid var(--line);border-radius:4px;padding:12px;text-align:center;color:var(--neg);display:flex;flex-direction:column;gap:4px"><span>Error fetching qBittorrent data.</span><span style="font-size:9.5px">Check URL and authentication bypass settings.</span></div></sc-if>
+      <sc-if value="{{w.d.demo}}"><span style="font-size:9px;color:var(--dim);padding-left:4px">Demo-data · sett QBITTORRENT_IP i secrets</span></sc-if>
+      <div style="background:var(--card);border:1px solid var(--line);border-radius:4px;padding:12px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;justify-content:space-between;text-align:center;gap:8px">
+          <sc-for list="{{w.d.stats}}" as="s"><div style="display:flex;flex-direction:column;gap:3px;flex:1"><span style="color:var(--text);font-size:13px">{{s.v}}</span><span style="color:var(--dim);font-size:8px">{{s.k}}</span></div></sc-for>
+        </div>
+        <sc-for list="{{w.d.rows}}" as="t">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="width:16px;flex:none;text-align:center;color:{{t.ic}};font-size:11px">{{t.icon}}</span>
+            <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+              <span style="color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{t.name}}</span>
+              <sc-if value="{{t.isDl}}"><div title="{{t.pctLabel}}" style="height:5px;background:var(--line2);border-radius:3px;overflow:hidden"><div style="height:100%;width:{{t.pct}};background:#7fc98a;border-radius:3px"></div></div></sc-if>
+              <sc-if value="{{t.isUp}}"><span style="font-size:9px;color:var(--soft)">{{t.meta}}</span></sc-if>
+            </div>
+            <div style="flex:none;width:70px;text-align:right;display:flex;flex-direction:column;gap:2px;font-size:9px;color:var(--soft)"><span>{{t.speed}}</span><span>{{t.sub}}</span></div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{w.isProwlarr}}">
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <sc-if value="{{w.d.err}}"><div style="background:var(--card);border:1px solid var(--line);border-radius:4px;overflow:hidden"><div style="display:flex;justify-content:space-between;padding:8px 10px;background:color-mix(in srgb,var(--neg) 14%,var(--card));color:var(--neg)"><span>ERROR</span><span>⚠</span></div><div style="padding:10px;color:var(--soft);font-size:9.5px;line-height:1.6;word-break:break-all">{{w.d.err}}</div></div></sc-if>
+    <sc-if value="{{w.d.demo}}"><span style="font-size:9px;color:var(--dim);padding-left:4px">Demo-data · sett secrets for å koble til</span></sc-if>
+      <div style="background:var(--card);border:1px solid var(--line);border-radius:4px;padding:10px 12px;display:flex;flex-direction:column;gap:10px">
+        <sc-for list="{{w.d.items}}" as="i">
+          <div style="display:flex;align-items:center;gap:8px">
+            <a href="{{w.d.link}}" target="_blank" rel="noreferrer" style="flex:1;min-width:0;color:var(--text);text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{i.name}}</a>
+            <span style="border:1px solid var(--line2);background:var(--bg);border-radius:3px;padding:1px 8px;font-size:9px;color:var(--muted);text-transform:capitalize">{{i.privacy}}</span>
+            <span title="{{i.label}}" style="width:12px;height:12px;border-radius:50%;background:{{i.c}};color:var(--bg);font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none">{{i.mark}}</span>
+          </div>
+        </sc-for>
+        <sc-if value="{{w.d.more}}"><button onClick="{{w.d.toggle}}" style="background:none;border:0;padding:0;text-align:left;color:var(--muted);font-size:9.5px;cursor:pointer">{{w.d.moreLabel}}</button></sc-if>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{w.isPortainer}}">
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <sc-if value="{{w.d.err}}"><div style="background:var(--card);border:1px solid var(--line);border-radius:4px;overflow:hidden"><div style="display:flex;justify-content:space-between;padding:8px 10px;background:color-mix(in srgb,var(--neg) 14%,var(--card));color:var(--neg)"><span>ERROR</span><span>⚠</span></div><div style="padding:10px;color:var(--soft);font-size:9.5px;line-height:1.6;word-break:break-all">{{w.d.err}}</div></div></sc-if>
+    <sc-if value="{{w.d.demo}}"><span style="font-size:9px;color:var(--dim);padding-left:4px">Demo-data · sett secrets for å koble til</span></sc-if>
+      <div style="background:var(--card);border:1px solid var(--line);border-radius:4px;padding:12px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/portainer.svg" alt="" style="width:24px;height:24px;object-fit:contain">
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+            <span style="display:flex;align-items:center;gap:6px;color:var(--text);font-size:12px">{{w.d.p.name}}<span style="width:7px;height:7px;border-radius:50%;background:#7fc98a"></span></span>
+            <div style="display:flex;gap:14px;font-size:9.5px;color:var(--soft)"><span title="Containers">▣ {{w.d.p.containers}}</span><span title="Volumes">◫ {{w.d.p.volumes}}</span><span title="Networks">⌗ {{w.d.p.networks}}</span></div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <sc-for list="{{w.d.p.grid}}" as="g"><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:9px;color:var(--muted)">{{g.k}}</span><span style="font-size:14px;color:{{g.c}}">{{g.v}}</span></div></sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{w.isImmich}}">
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <sc-if value="{{w.d.err}}"><div style="background:var(--card);border:1px solid var(--line);border-radius:4px;overflow:hidden"><div style="display:flex;justify-content:space-between;padding:8px 10px;background:color-mix(in srgb,var(--neg) 14%,var(--card));color:var(--neg)"><span>ERROR</span><span>⚠</span></div><div style="padding:10px;color:var(--soft);font-size:9.5px;line-height:1.6;word-break:break-all">{{w.d.err}}</div></div></sc-if>
+    <sc-if value="{{w.d.demo}}"><span style="font-size:9px;color:var(--dim);padding-left:4px">Demo-data · sett secrets for å koble til</span></sc-if>
+      <div style="background:var(--card);border:1px solid var(--line);border-radius:4px;padding:14px 12px;display:grid;grid-template-columns:repeat(3,1fr);text-align:center;gap:4px">
+        <sc-for list="{{w.d.items}}" as="s"><div style="display:flex;flex-direction:column;gap:4px"><span style="color:var(--text);font-size:13px">{{s.v}}</span><span style="color:var(--dim);font-size:8px">{{s.k}}</span></div></sc-for>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{w.isProgress}}">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;gap:14px;font-size:9.5px;color:var(--dim2);padding-left:4px"><span style="color:var(--text2);border-bottom:1px solid var(--text2)">DAY</span><span>MONTH</span><span>YEAR</span></div>
+      <div style="background:var(--card);border:1px solid var(--line);border-radius:4px;padding:12px;display:flex;flex-direction:column;gap:8px;align-items:center">
+        <div style="width:100%;height:6px;border:1px solid var(--line3);border-radius:4px;overflow:hidden"><div style="height:100%;width:{{dayPct}};background:linear-gradient(90deg,var(--neg),var(--accent),#7fd3c9)"></div></div>
+        <span style="font-family:sans-serif;font-size:11.5px;color:var(--soft)">{{dayLabel}}</span>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{w.isError}}">
+    <div style="background:var(--card);border:1px solid var(--line);border-radius:4px;overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:color-mix(in srgb,var(--neg) 14%,var(--card));color:var(--neg)"><span>ERROR</span><span>⚠</span></div>
+      <div style="padding:10px;color:var(--soft);font-size:9.5px;line-height:1.6;word-break:break-all">{{w.text}}</div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{w.isCloudflare}}">
+    <div style="background:var(--card);border:1px solid var(--line);border-radius:4px;padding:12px;display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;gap:8px"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/cloudflare.svg" alt="" style="width:16px;height:16px"><span style="color:var(--text);flex:1">kristo.no</span><span style="font-size:9px;color:var(--muted)">24t</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <sc-for list="{{cf}}" as="c"><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:8.5px;color:var(--muted)">{{c.k}}</span><span style="color:var(--text);font-size:13px">{{c.v}}</span><span style="font-size:8.5px;color:{{c.dc}}">{{c.d}}</span></div></sc-for>
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:2px;height:34px"><sc-for list="{{cfBars}}" as="b"><div style="flex:1;height:{{b}};background:#f38020;opacity:.75;border-radius:1px"></div></sc-for></div>
+      <div style="display:flex;justify-content:space-between;font-size:8px;color:var(--dim2)"><span>00:00</span><span>12:00</span><span>nå</span></div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{w.isEmpty}}"><div style="height:22px;background:var(--card);border:1px solid var(--line);border-radius:4px"></div></sc-if>
+
+  <sc-if value="{{w.isHistory}}">
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <sc-if value="{{w.d.err}}"><div style="background:var(--card);border:1px solid var(--line);border-radius:4px;overflow:hidden"><div style="display:flex;justify-content:space-between;padding:8px 10px;background:color-mix(in srgb,var(--neg) 14%,var(--card));color:var(--neg)"><span>ERROR</span><span>⚠</span></div><div style="padding:10px;color:var(--soft);font-size:9.5px;line-height:1.6;word-break:break-all">{{w.d.err}}</div></div></sc-if>
+    <sc-if value="{{w.d.demo}}"><span style="font-size:9px;color:var(--dim);padding-left:4px">Demo-data · koble til i ⚙</span></sc-if>
+    <sc-if value="{{w.d.empty}}"><span style="color:var(--muted);padding-left:4px">Nothing has been played. Start streaming something!</span></sc-if>
+    <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:10px">
+      <sc-for list="{{w.d.items}}" as="h">
+        <div style="flex:0 0 130px;background:var(--card);border:1px solid var(--line);border-radius:4px;overflow:hidden">
+          <sc-if value="{{h.showThumb}}"><div style="height:190px;background:repeating-linear-gradient(135deg,var(--stripe1) 0 6px,var(--stripe2) 6px 12px);display:flex;align-items:center;justify-content:center;color:var(--dim2);font-size:9px;position:relative"><span>poster</span><sc-if value="{{h.hasCover}}"><img src="{{h.cover}}" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></sc-if></div></sc-if>
+          <div style="padding:8px 10px;display:flex;flex-direction:column;gap:3px;font-size:9.5px;color:var(--soft);min-width:0">
+            <sc-if value="{{h.showUser}}"><span style="color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{h.user}}</span></sc-if>
+            <span>{{h.when}}</span>
+            <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{h.l1}}</span>
+            <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{h.l2}}</span>
+            <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{h.title}}</span>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{w.isWeather}}">
+    <div style="background:var(--card);border:1px solid var(--line);border-radius:4px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:4px">
+      <span style="color:var(--text);font-size:12px">{{w.wx.desc}}</span><span style="color:var(--muted);font-size:10px">{{w.wx.feels}}</span>
+      <div style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));width:100%;margin-top:10px">
+        <sc-for list="{{w.wx.cols}}" as="c">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:5px">
+            <div style="height:70px;width:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px;background-color:{{c.day}};background-image:{{c.rain}};background-size:5px 5px;border-radius:{{c.rad}}">
+              <span style="font-size:8.5px;color:var(--text);visibility:{{c.lblVis}}">{{c.temp}}</span>
+              <div style="width:4px;height:{{c.h}};background:{{c.bar}};border-radius:3px 3px 0 0"></div>
+            </div>
+            <span style="font-size:8px;color:var(--dim);height:10px;white-space:nowrap">{{c.lbl}}</span>
+          </div>
+        </sc-for>
+      </div>
+      <span style="font-size:9.5px;color:var(--muted);margin-top:6px">⌖ {{w.wx.place}}</span>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{w.isServer}}">
+    <div style="background:var(--card);border:1px solid var(--line);border-radius:4px;padding:12px;display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center"><div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="color:var(--text)">Services</span><span style="color:var(--muted);font-size:9.5px">13d uptime</span></div><span style="color:var(--accent)">▭</span></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+        <sc-for list="{{stats}}" as="s"><div style="display:flex;flex-direction:column;gap:3px"><div style="display:flex;justify-content:space-between;font-size:8.5px;color:var(--muted)"><span>{{s.k}}</span><span style="color:var(--text)">{{s.v}} %</span></div><div style="height:14px;border:1px solid var(--line3);border-radius:2px;padding:2px;box-sizing:border-box"><div style="height:100%;width:{{s.p}};background:#55565c"></div></div></div></sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{w.isReleases}}">
+    <div style="background:var(--card);border:1px solid var(--line);border-radius:4px;padding:10px;display:flex;flex-direction:column;gap:8px">
+      <sc-if value="{{w.d.err}}"><div style="background:var(--card);border:1px solid var(--line);border-radius:4px;overflow:hidden"><div style="display:flex;justify-content:space-between;padding:8px 10px;background:color-mix(in srgb,var(--neg) 14%,var(--card));color:var(--neg)"><span>ERROR</span><span>⚠</span></div><div style="padding:10px;color:var(--soft);font-size:9.5px;line-height:1.6;word-break:break-all">{{w.d.err}}</div></div></sc-if>
+    <sc-if value="{{w.d.demo}}"><span style="font-size:9px;color:var(--dim);padding-left:4px">Demo-data · koble til i ⚙</span></sc-if>
+      <sc-if value="{{w.d.empty}}"><span style="color:var(--muted)">No items found.</span></sc-if>
+      <sc-for list="{{w.d.items}}" as="r">
+        <div style="display:flex;gap:8px;border:1px solid var(--line);border-radius:3px;overflow:hidden">
+          <div style="width:{{r.cw}};height:{{r.ch}};flex:none;background:repeating-linear-gradient(135deg,var(--stripe1) 0 5px,var(--stripe2) 5px 10px);position:relative"><sc-if value="{{r.hasCover}}"><img src="{{r.cover}}" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></sc-if></div>
+          <div style="display:flex;flex-direction:column;gap:3px;padding:6px 4px;font-size:9.5px;min-width:0"><span style="color:var(--accent);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{r.t}}</span><span style="color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{r.n}}</span><span style="color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{r.e}}</span></div>
+        </div>
+      </sc-for>
+      <sc-if value="{{w.d.more}}"><button onClick="{{w.d.toggle}}" style="background:none;border:0;padding:4px 0 0;text-align:left;color:var(--muted);font-size:9.5px;cursor:pointer">{{w.d.moreLabel}}</button></sc-if>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{w.isIndexers}}">
+    <div style="background:var(--card);border:1px solid var(--line);border-radius:4px;padding:10px 12px;display:flex;flex-direction:column;gap:8px">
+      <sc-for list="{{indexers}}" as="i"><div style="display:flex;align-items:center;gap:8px"><span style="flex:1;color:var(--text)">{{i}}</span><span style="border:1px solid var(--line2);border-radius:3px;padding:1px 6px;font-size:9px;color:var(--muted)">Public</span><span style="width:12px;height:12px;border-radius:50%;background:var(--accent);color:var(--bg);font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center">✓</span></div></sc-for>
+    </div>
+  </sc-if>
+</div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+<span style="text-align:center;font-size:9.5px;color:var(--dim2);padding:10px">labdeck v0.1</span>
+</div>
+
+<sc-if value="{{libOpen}}" hint-placeholder-val="{{false}}">
+  <div onClick="{{closeAll}}" style="position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;justify-content:flex-end;z-index:10">
+    <div onClick="{{stop}}" style="width:320px;max-width:100%;height:100%;background:var(--bg2);border-left:1px solid var(--line);padding:18px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;overflow:auto">
+      <span style="font-size:13px;color:var(--text)">Legg til i {{libCol}}</span>
+      <sc-for list="{{library}}" as="l"><button onClick="{{l.add}}" style="text-align:left;background:var(--card);border:1px solid var(--line);border-radius:4px;padding:10px;color:var(--text2);cursor:pointer;font-size:11px" style-hover="border-color:var(--accent)">{{l.name}}</button></sc-for>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{hasSel}}" hint-placeholder-val="{{false}}">
+  <div onClick="{{closeAll}}" style="position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;justify-content:flex-end;z-index:10">
+    <div onClick="{{stop}}" style="width:320px;max-width:100%;height:100%;background:var(--bg2);border-left:1px solid var(--line);padding:18px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px;overflow-y:auto">
+      <span style="font-size:13px;color:var(--text)">{{sel.heading}}</span>
+      <sc-if value="{{sel.notSingle}}"><label style="display:flex;flex-direction:column;gap:6px;color:var(--muted)">Tittel<input value="{{sel.title}}" onChange="{{setTitle}}" style="background:var(--bg);border:1px solid var(--line2);border-radius:3px;padding:8px;color:var(--text);outline:none"></label></sc-if>
+      
+      <sc-for list="{{sel.fields}}" as="f">
+        <label style="display:flex;flex-direction:column;gap:6px;color:var(--muted)">{{f.label}}
+          <sc-if value="{{f.isText}}"><input value="{{f.val}}" onChange="{{f.set}}" placeholder="{{f.ph}}" style="background:var(--bg);border:1px solid var(--line2);border-radius:3px;padding:8px;color:var(--text);outline:none"></sc-if>
+          <sc-if value="{{f.isSelect}}"><select value="{{f.val}}" onChange="{{f.set}}" style="background:var(--bg);border:1px solid var(--line2);border-radius:3px;padding:8px;color:var(--text);outline:none"><sc-for list="{{f.options}}" as="o"><option value="{{o}}">{{o}}</option></sc-for></select></sc-if>
+          <sc-if value="{{f.isBool}}"><input type="checkbox" checked="{{f.checked}}" onChange="{{f.setB}}" style="align-self:flex-start;accent-color:var(--accent)"></sc-if>
+        </label>
+      </sc-for>
+      <sc-if value="{{sel.hasApps}}">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <sc-if value="{{sel.notSingle}}"><span style="color:var(--muted)">Tjenester · dra i listen på dashbordet for å sortere</span></sc-if>
+          <sc-for list="{{sel.svcs}}" as="v">
+            <div style="display:flex;flex-direction:column;gap:6px;border:1px solid var(--line2);border-radius:4px;padding:8px">
+              <div style="display:flex;gap:6px;align-items:center">
+                <label style="width:30px;height:30px;flex:none;border:1px dashed var(--line3);border-radius:5px;display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;position:relative" title="Last opp PNG/SVG">
+                  <span style="font-size:9px;color:var(--dim)">{{v.ini}}</span>
+                  <img src="{{v.icon}}" alt="" ref="{{v.imgRef}}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:var(--bg)">
+                  <input type="file" accept=".png,.svg,image/png,image/svg+xml" onChange="{{v.upload}}" style="display:none">
+                </label>
+                <input value="{{v.name}}" onChange="{{v.setName}}" placeholder="Navn" style="flex:1;min-width:0;background:var(--bg);border:1px solid var(--line2);border-radius:3px;padding:6px;color:var(--text);outline:none">
+                <button onClick="{{v.remove}}" style="background:none;border:1px solid var(--line2);color:var(--neg);border-radius:3px;width:26px;height:26px;cursor:pointer;padding:0">✕</button>
+              </div>
+              <input value="{{v.url}}" onChange="{{v.setUrl}}" placeholder="http://10.69.1.126:8080" style="background:var(--bg);border:1px solid var(--line2);border-radius:3px;padding:6px;color:var(--text);outline:none">
+              <div style="display:flex;gap:6px;align-items:center">
+                <select value="{{v.status}}" onChange="{{v.setStatus}}" style="flex:1;background:var(--bg);border:1px solid var(--line2);border-radius:3px;padding:6px;color:var(--text);outline:none">
+                  <option value="auto">Sjekk automatisk (ping)</option>
+                  <option value="up">Overstyr: oppe</option>
+                  <option value="down">Overstyr: nede</option>
+                  <option value="off">Skjul prikk</option>
+                </select>
+                <sc-if value="{{v.hasCustom}}"><button onClick="{{v.clearIcon}}" style="background:none;border:1px solid var(--line2);color:var(--muted);border-radius:3px;padding:5px 8px;cursor:pointer;font-size:10px">fjern ikon</button></sc-if>
+              </div>
+            </div>
+          </sc-for>
+          <sc-if value="{{sel.notSingle}}"><button onClick="{{sel.addSvc}}" style="background:none;border:1px dashed var(--line3);color:var(--text2);border-radius:4px;padding:8px;cursor:pointer">+ Legg til tjeneste</button></sc-if>
+        </div>
+      </sc-if>
+      <sc-if value="{{sel.hasText}}"><label style="display:flex;flex-direction:column;gap:6px;color:var(--muted)">Tekst<textarea value="{{sel.text}}" onChange="{{setText}}" rows="6" style="background:var(--bg);border:1px solid var(--line2);border-radius:3px;padding:8px;color:var(--text);outline:none"></textarea></label></sc-if>
+      <div style="flex:1"></div>
+      <button onClick="{{closeAll}}" style="position:sticky;bottom:0;flex:none;background:var(--accent);color:var(--bg);border:0;border-radius:3px;padding:9px;cursor:pointer;font-weight:700;box-shadow:0 -12px 16px var(--bg2)">Ferdig</button>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{installOpen}}" hint-placeholder-val="{{false}}">
+  <div onClick="{{closeAll}}" style="position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:10;padding:16px">
+    <div onClick="{{stop}}" style="width:540px;max-width:100%;background:var(--bg2);border:1px solid var(--line);border-radius:6px;padding:20px;display:flex;flex-direction:column;gap:12px">
+      <span style="font-size:13px;color:var(--text)">Installer som Docker-container</span>
+      <div style="display:flex;gap:6px"><sc-for list="{{platforms}}" as="p"><button onClick="{{p.select}}" style="background:{{p.bg}};color:{{p.color}};border:1px solid var(--line2);border-radius:3px;padding:5px 12px;cursor:pointer;font-size:11px">{{p.name}}</button></sc-for></div>
+      <span style="color:var(--muted)">{{platformHint}}</span>
+      <pre style="margin:0;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:12px;font-size:10.5px;color:var(--text2);overflow:auto;line-height:1.6">{{compose}}</pre>
+    </div>
+  </div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const KEY='labdeck-v4',Y='var(--accent)',R='var(--neg)';
+const hues=[25,75,145,200,240,290,330];
+const ST={o:['OK · ',Y,'✓'],e:['ERROR',R,'!'],t:['Timed Out',R,'!']};
+const SLUG={'HomeAssistant':'home-assistant','ESP Home':'esphome','Qbittorrent':'qbittorrent','SUB/WAVE':'subwave','n8n':'n8n','Zigbee2mqtt':'zigbee2mqtt','UniFi':'unifi','UniFi Protect':'unifi-protect','Homey':'homey','Silo':'silo','Yuball':'youtube'};
+const toSvc=s=>{if(typeof s!=='string')return s;const[n,c='o',ms='3ms']=s.split('|');return{name:n,url:'',icon:'',status:'auto',demo:c,ms}};
+const mkApp0=(s,i)=>{const [n,c='o',ms='3ms']=s.split('|');const st=ST[c]||ST.o;const slug=/^ny tjeneste/i.test(n)?'':SLUG[n]||n.toLowerCase().replace(/[^a-z0-9]+/g,'-');return{icon:slug?`https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/${slug}.svg`:'',imgRef:el=>{if(el&&!el.onerror){el.onerror=()=>{const t=el;if(t.src.endsWith('.svg'))t.src=t.src.replace('/svg/','/png/').replace('.svg','.png');else t.style.display='none'};if(el.complete&&!el.naturalWidth)el.onerror()}},_x:e=>{const t=e.target;if(t.src.endsWith('.svg'))t.src=t.src.replace('/svg/','/png/').replace('.svg','.png');else t.style.display='none'},name:n,ini:n.slice(0,2),bg:`oklch(0.72 0.1 ${hues[(n.charCodeAt(0)+n.length)%7]})`,status:c==='o'?st[0]+ms:st[0],sc:c==='o'?'var(--muted)':R,ic:st[1],mark:st[2]}};
+const LIB={search:'Search',apps:'Tjenestegruppe',calendar:'Calendar',speed:'Internet speed',text:'Tekst / fact',progress:'Day progress',error:'Statuskort',empty:'Tom (Cloudflared)',cloudflare:'Cloudflare analytics',fact:'Random fact (API)',prowlarr:'Prowlarr indexers',portainer:'Portainer',qbit:'qBittorrent',nowplaying:'Media server (now playing)',immich:'Immich stats',verse:'Random bible verse (API)',history:'Media server history',weather:'Weather',server:'Server stats',releases:'Media releases',indexers:'Prowlarr indexers'};
+const W=(type,title,extra={})=>({type,title,...extra});
+const home=[[
+ W('calendar','Calendar'),W('speed','Internet speed'),W('fact','Random fact'),W('progress','Day progress'),
+ W('verse','Random bible verse'),
+ W('immich','Immich stats'),
+ W('fact','Random fact'),W('cloudflare','Cloudflare analytics'),W('empty','Cloudflared tunnels')],
+[W('search','Search'),
+ W('apps','Data',{apps:['Unraid|o|31ms','Proxmox|e','Immich|o|2ms','Frigate|e','UniFi|e','UniFi Protect|e','HomeAssistant|t','Homey|e','Homebridge|e']}),
+ W('apps','Arr',{apps:['Qbittorrent|e','Sonarr|o|4ms','Radarr|t','Prowlarr|t','Bazarr|o|5ms','Yuball|e']}),
+ W('apps','Media',{apps:['Plex|o|2ms','Jellyfin|o|469ms','Silo|e','Lyrion|t','Tunarr|t','SUB/WAVE|o|15ms']}),
+ W('apps','Nettverk',{apps:['Uptime Kuma|o|3ms','Speedtest Tracker|t','ESP Home|o|1ms','AdGuard Home|e','Portainer|t']}),
+ W('apps','Annet',{apps:['Dispatcharr|t','Zigbee2mqtt|e','n8n|o|1ms']}),
+ W('apps','Proxmox',{apps:['Qbittorrent|o|1ms','Sonarr|o|3ms','Radarr|o|3ms','Lidarr|o|3ms','Prowlarr|o|3ms','Plex|e','Jellyfin|e']}),
+ W('history','Media server history'),
+ W('qbit','qBittorrent')],
+[W('weather','Weather',{city:'Oslo'}),W('server','Server stats'),W('nowplaying','Media server'),
+ W('error','DNS stats',{text:'Get "https://adguard.domain.com/control/stats": dial tcp: lookup adguard.domain.com on 10.69.1.169:53: no such host'}),
+ W('releases','Media releases'),W('prowlarr','Prowlarr indexers'),W('portainer','Portainer')]];
+const uid=()=>Math.random().toString(36).slice(2,9);
+const tag=cols=>cols.map(c=>c.map(w=>({...w,id:uid()})));
+const seed=()=>({Hjem:tag(home),'Strømstad':tag([[W('calendar','Calendar')],[W('search','Search'),W('apps','Hytte',{apps:['HomeAssistant|o|8ms','Frigate|o|12ms']})],[W('weather','Weather')]]),Toten:tag([[],[W('search','Search')],[]]),Skole:tag([[],[W('search','Search')],[]])});
+const WMO={0:'Clear',1:'Mainly Clear',2:'Partly Cloudy',3:'Overcast',45:'Fog',48:'Fog',51:'Drizzle',53:'Drizzle',55:'Drizzle',61:'Rain',63:'Rain',65:'Heavy Rain',71:'Snow',73:'Snow',75:'Heavy Snow',80:'Showers',81:'Showers',82:'Showers',95:'Thunderstorm'};
+const THEMES=[
+ {name:'Amber',v:{bg:'#141416',bg2:'#18181a',card:'#1b1b1e',line:'#232326',line2:'#2a2a2e',line3:'#3a3a3e',accent:'#e8c46a',text:'#e6e4df',text2:'#c9c7c2',soft:'#a9a7a2',muted:'#8a877f',dim:'#6d6b66',dim2:'#55544f',neg:'#e0716a',stripe1:'#1f1f23',stripe2:'#232327',hover:'#212124'}},
+ {name:'Frost',v:{bg:'#11141a',bg2:'#151922',card:'#181d27',line:'#222935',line2:'#2a3240',line3:'#3a4456',accent:'#7fb2f0',text:'#e3e8f0',text2:'#c3cad6',soft:'#a2abba',muted:'#7f8a9c',dim:'#636d7e',dim2:'#4c5566',neg:'#e57a7a',stripe1:'#1b212c',stripe2:'#1f2531',hover:'#1d2330'}},
+ {name:'Moss',v:{bg:'#121513',bg2:'#161a17',card:'#191e1a',line:'#232a24',line2:'#2b332c',line3:'#3b453c',accent:'#9fd08a',text:'#e4ebe2',text2:'#c5cec3',soft:'#a5aea3',muted:'#848d82',dim:'#687066',dim2:'#525950',neg:'#e2786e',stripe1:'#1c221d',stripe2:'#202721',hover:'#1e241f'}},
+ {name:'Rose',v:{bg:'#161214',bg2:'#1b1619',card:'#1f191c',line:'#2a2226',line2:'#33292e',line3:'#45383e',accent:'#f0a0c0',text:'#efe4e8',text2:'#d3c5cb',soft:'#b3a5ab',muted:'#93858b',dim:'#75686e',dim2:'#5d5257',neg:'#ef7d6e',stripe1:'#231c20',stripe2:'#272024',hover:'#251e22'}},
+ {name:'Paper',v:{bg:'#f4f2ee',bg2:'#ece9e3',card:'#fbfaf8',line:'#e2ded6',line2:'#d6d1c7',line3:'#c2bcb0',accent:'#b07a12',text:'#1e1d1a',text2:'#34322e',soft:'#55524c',muted:'#6f6b63',dim:'#8a867d',dim2:'#a6a197',neg:'#c2453a',stripe1:'#efece6',stripe2:'#e8e4dc',hover:'#f0ede7'}}];
+const applyTheme=t=>{const r=document.documentElement.style;Object.entries(t.v).forEach(([k,v])=>r.setProperty('--'+k,v))};
+const SEC_KEY='labdeck-secrets';
+const SEC_DEF={PLEX_URL:'',PLEX_TOKEN:'',SONARR_URL:'',SONARR_KEY:'',RADARR_URL:'',RADARR_KEY:'',SPEEDTEST_URL:'',SPEEDTEST_TRACKER_API_TOKEN:'',CLOUDFLARE_API_TOKEN:'',IMMICH_URL:'',QBITTORRENT_IP:'',PROWLARR_URL:'',PROWLARR_API_URL:'',PROWLARR_KEY:'',PORTAINER_URL:'',PORTAINER_ENDPOINT_ID:'',PORTAINER_API_KEY:'',IMMICH_API_KEY:'',CLOUDFLARE_ZONE_ID:''};
+const OPTS0={speed:[['url','Speedtest URL','text','${SPEEDTEST_URL}'],['key','API-token','text','${SPEEDTEST_TRACKER_API_TOKEN}'],['showPct','Vis prosentendring','bool']],
+ weather:[['location','Location','text','London, United Kingdom'],['units','Units','select',['metric','imperial']],['hour','Hour format','select',['24h','12h']]]};
+const ENGINES={duckduckgo:'https://duckduckgo.com/?q=',google:'https://www.google.com/search?q=',bing:'https://www.bing.com/search?q=',startpage:'https://www.startpage.com/do/search?q='};
+const BANGS={'!yt':['YouTube','https://www.youtube.com/results?search_query='],'!gh':['GitHub','https://github.com/search?q='],'!r':['Reddit','https://www.reddit.com/search/?q='],'!w':['Wikipedia','https://en.wikipedia.org/w/index.php?search=']};
+const OPTS={...OPTS0,
+ search:[['engine','Søkemotor','select',Object.keys(ENGINES)],['newTab','Åpne i ny fane','bool']],
+ apps:[['cols','Kolonner','select',['auto','1','2','3','4']]],
+ prowlarr:[['url','Prowlarr URL (lenke)','text','${PROWLARR_URL}'],['apiUrl','API base URL','text','${PROWLARR_API_URL}'],['key','API-nøkkel','text','${PROWLARR_KEY}'],['collapse','Skjul etter','text','5']],
+ portainer:[['url','Portainer URL','text','${PORTAINER_URL}'],['endpoint','Endpoint ID','text','${PORTAINER_ENDPOINT_ID}'],['key','API-nøkkel','text','${PORTAINER_API_KEY}']],
+ qbit:[['url','qBittorrent IP:port','text','${QBITTORRENT_IP}'],['view','View','select',['detailed','basic']],['mode','Mode','select',['default','upload']]],
+ calendar:[['sonarrUrl','Sonarr URL','text','${SONARR_URL}'],['sonarrKey','Sonarr API-nøkkel','text','${SONARR_KEY}'],['radarrUrl','Radarr URL','text','${RADARR_URL}'],['radarrKey','Radarr API-nøkkel','text','${RADARR_KEY}']],
+ nowplaying:[['server','Medieserver','select',['plex','jellyfin','emby','tautulli']],['url','Base URL','text','${PLEX_URL}'],['key','API-nøkkel / token','text','${PLEX_TOKEN}'],['compact','Kompakt','bool'],['playState','Play state','select',['indicator','text','none']],['thumb','Vis thumbnail','bool'],['fullThumb','Full thumbnail','bool'],['showPaused','Vis pauset','bool'],['bar','Vis progress bar','bool'],['info','Vis sluttid','bool'],['hour','Tidsformat','select',['24h','12h']]],
+ immich:[['url','Immich URL','text','${IMMICH_URL}'],['key','API-nøkkel','text','${IMMICH_API_KEY}']],history:[['server','Medieserver','select',['plex','jellyfin','emby','tautulli']],['url','Base URL','text','http://10.69.1.126:32400'],['key','API-nøkkel / token','text',''],['user','Brukernavn (Jellyfin/Emby)','text',''],['length','Antall','text','10'],['compact','Kompakt','bool'],['thumb','Vis thumbnail','bool'],['showUser','Vis bruker','bool']],
+ releases:[['service','Tjeneste','select',['sonarr','radarr','lidarr']],['type','Type','select',['upcoming','recent','missing']],['size','Størrelse','select',['small','medium','large','huge']],['collapse','Skjul etter','text','3'],['interval','Intervall (dager)','text','20'],['url','API base URL','text','http://10.69.1.126:8989'],['key','API-nøkkel','text','']]};
+const DEFOPT={search:{engine:'duckduckgo',newTab:true},apps:{cols:'auto'},prowlarr:{url:'${PROWLARR_URL}',apiUrl:'${PROWLARR_API_URL}',key:'${PROWLARR_KEY}',collapse:'5'},portainer:{url:'${PORTAINER_URL}',endpoint:'${PORTAINER_ENDPOINT_ID}',key:'${PORTAINER_API_KEY}'},qbit:{url:'${QBITTORRENT_IP}',view:'detailed',mode:'default'},calendar:{sonarrUrl:'${SONARR_URL}',sonarrKey:'${SONARR_KEY}',radarrUrl:'${RADARR_URL}',radarrKey:'${RADARR_KEY}'},nowplaying:{server:'plex',url:'${PLEX_URL}',key:'${PLEX_TOKEN}',compact:true,playState:'indicator',thumb:false,fullThumb:false,showPaused:false,bar:true,info:true,hour:'24h'},immich:{url:'${IMMICH_URL}',key:'${IMMICH_API_KEY}'},speed:{url:'${SPEEDTEST_URL}',key:'${SPEEDTEST_TRACKER_API_TOKEN}',showPct:true},weather:{location:'Oslo, Norway',units:'metric',hour:'24h'},history:{url:'${PLEX_URL}',key:'${PLEX_TOKEN}',server:'plex',length:'10',compact:false,thumb:true,showUser:true},releases:{url:'${SONARR_URL}',key:'${SONARR_KEY}',service:'sonarr',type:'upcoming',size:'medium',collapse:'3',interval:'20'}};
+const SIZES={small:['40px','60px'],medium:['52px','80px'],large:['66px','100px'],huge:['80px','120px']};
+const DEMO_H=[['FBI',8,12,'Daybreak'],['FBI',8,11,'Confetti'],['FBI',8,10,'Wolf Pack (2)'],['FBI',8,10,'Wolf Pack (2)'],['FBI',8,9,'Lone Wolf']].map(([show,s,e,title])=>({user:'sebastiankristo',ts:Date.now()-172800000,show,s,e,title,cover:''}));
+const DEMO_R=[['Marshals','Off the Rails','S02E09','2026-11-30T02:00'],['Marshals','Bad Medicine','S02E08','2026-11-23T02:00'],['9-1-1: Nashville','TBA','S02E06','2026-11-20T03:00'],['Tracker','Echo','S03E07','2026-11-18T02:00'],['Dune: Part Three','','','2026-12-18T00:00']].map(([t,n,se,d])=>({t,n,se,date:new Date(d),cover:''}));
+const ago=ts=>{const m=Math.max(1,Math.round((Date.now()-ts)/60000));return m<60?m+'m ago':m<1440?Math.round(m/60)+'h ago':Math.round(m/1440)+'d ago'};
+const J=(u,hd={})=>fetch(u,{headers:{Accept:'application/json',...hd}}).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status+' fra '+u);return r.json()});
+async function loadHistory(o){const b=o.url.replace(/\/$/,''),n=o.length||'10';
+ if(o.server==='plex'){const hd={'X-Plex-Token':o.key};const[hj,aj]=await Promise.all([J(b+'/status/sessions/history/all?limit='+n+'&sort=viewedAt:desc',hd),J(b+'/accounts',hd).catch(()=>({}))]);const us=(aj.MediaContainer&&aj.MediaContainer.Account)||[];
+  return(hj.MediaContainer.Metadata||[]).map(i=>{const ep=i.type==='episode',mu=i.type==='track';return{user:(us.find(u=>u.id===i.accountID)||{}).name||'',ts:i.viewedAt*1000,show:ep?i.grandparentTitle:mu?i.grandparentTitle:'',s:ep?i.parentIndex:'',e:ep?i.index:'',album:mu?i.parentTitle:'',music:mu,title:i.title,cover:b+((ep||mu)?i.parentThumb:i.thumb)+'?X-Plex-Token='+o.key}})}
+ if(o.server==='tautulli'){const j=await J(b+'/api/v2?apikey='+o.key+'&cmd=get_history&length='+n+'&media_type=movie,episode,track');
+  return j.response.data.data.map(i=>{const ep=i.media_type==='episode',mu=i.media_type==='track';return{user:i.user,ts:i.date*1000,show:i.grandparent_title,s:ep?i.parent_media_index:'',e:ep?i.media_index:'',album:i.parent_title,music:mu,title:i.title,cover:b+'/api/v2?apikey='+o.key+'&cmd=pms_image_proxy&img='+i.thumb}})}
+ const users=await J(b+'/Users?api_key='+o.key);const u=users.find(x=>x.Name===o.user);if(!u)throw new Error("User '"+o.user+"' not found.");
+ const j=await J(b+'/Users/'+u.Id+'/Items?api_key='+o.key+'&Limit='+n+'&IncludeItemTypes=Movie,Episode,Audio&Recursive=true&isPlayed=true&sortBy=DatePlayed&sortOrder=Descending&Fields=UserDataLastPlayedDate');
+ return j.Items.map(i=>{const ep=i.Type==='Episode',mu=i.Type==='Audio';return{user:o.user,ts:Date.parse(i.UserData&&i.UserData.LastPlayedDate),show:ep?i.SeriesName:i.AlbumArtist,s:i.ParentIndexNumber,e:i.IndexNumber,album:i.Album,music:mu,title:i.Name,cover:b+'/Items/'+(ep?i.SeasonId:i.Id)+'/Images/Primary?api_key='+o.key}})}
+async function loadReleases(o){const b=o.url.replace(/\/$/,''),v=o.service==='lidarr'?'v1':'v3',days=+o.interval||0,now=new Date(),iso=d=>d.toISOString().slice(0,19);
+ const pos=iso(new Date(+now+days*864e5)),neg=iso(new Date(+now-days*864e5));
+ const inc=o.service==='sonarr'?'includeSeries=true&includeEpisode=true&':o.service==='radarr'?'includeMovie=true&':'includeArtist=true&includeAlbum=true&';
+ const u=o.type==='recent'?b+'/api/'+v+'/history/since?'+inc+'eventType=grabbed&date='+neg:o.type==='missing'?b+'/api/'+v+'/wanted/missing?page=1&pageSize=50'+(o.service==='radarr'?'':o.service==='sonarr'?'&includeSeries=true':'&includeArtist=true'):b+'/api/'+v+'/calendar?'+(o.service==='radarr'?'':'include'+(o.service==='sonarr'?'Series':'Artist')+'=true&')+'start='+iso(now)+'&end='+pos;
+ let arr=await J(u,{'X-Api-Key':o.key});if(arr.records)arr=arr.records;const cb=b+'/api/'+v+'/mediacover';
+ return arr.map(i=>{if(o.service==='sonarr'){const ep=o.type==='recent'?i.episode:i,se=ep?'S'+String(ep.seasonNumber).padStart(2,'0')+'E'+String(ep.episodeNumber).padStart(2,'0'):'';return{t:i.series&&i.series.title,n:ep&&ep.title,se,date:new Date(o.type==='recent'?i.date:i.airDateUtc),cover:cb+'/'+i.seriesId+'/poster-500.jpg?apikey='+o.key}}
+  if(o.service==='radarr'){const m=o.type==='recent'?i.movie:i;return{t:m.title,n:'',se:'',date:new Date(o.type==='recent'?i.date:(m.inCinemas||m.releaseDate||m.digitalRelease)),cover:cb+'/'+m.id+'/poster-500.jpg?apikey='+o.key}}
+  const al=o.type==='recent'?i.album:i;return{t:al.title,n:(i.artist||al.artist||{}).artistName,se:'',date:new Date(o.type==='recent'?i.date:i.releaseDate),cover:cb+'/album/'+(o.type==='recent'?i.albumId:((i.releases||[])[0]||{}).albumId)+'/cover-500.jpg?apikey='+o.key}}).sort((a,b)=>b.date-a.date)}
+async function loadSpeed(o){const b=o.url.replace(/\/$/,''),hd={Authorization:'Bearer '+o.key};const[l,s]=await Promise.all([J(b+'/api/v1/results/latest',hd),J(b+'/api/v1/stats',hd)]);
+ const pc=(v,a)=>a?(v-a)/a*100:0,d=l.data,st=s.data;return[{k:'DOWNLOAD',v:(d.download_bits/1e6).toFixed(1),p:pc(d.download_bits,st.download.avg_bits)},{k:'UPLOAD',v:(d.upload_bits/1e6).toFixed(1),p:pc(d.upload_bits,st.upload.avg_bits)},{k:'PING',v:Math.round(d.ping)+' ms',p:pc(d.ping,st.ping.avg),inv:true}]}
+async function loadNow(o){const b=o.url.replace(/\/$/,'');let S=[];
+ if(o.server==='plex'){const j=await J(b+'/status/sessions',{'X-Plex-Token':o.key});S=(j.MediaContainer.Metadata||[]).map(s=>{const ep=s.type==='episode',mu=s.type==='track';return{user:s.User&&s.User.title,playing:s.Player&&s.Player.state==='playing',ep,mu,show:s.grandparentTitle,s:s.parentIndex,e:s.index,album:s.parentTitle,title:s.title,cover:b+((ep||mu)?s.parentThumb:s.thumb)+'?X-Plex-Token='+o.key,dur:s.duration,off:s.viewOffset,client:true}})}
+ else if(o.server==='tautulli'){const j=await J(b+'/api/v2?apikey='+o.key+'&cmd=get_activity');S=j.response.data.sessions.map(s=>{const ep=s.media_type==='episode',mu=s.media_type==='track';return{user:s.user,playing:s.state==='playing',ep,mu,show:s.grandparent_title,s:s.parent_media_index,e:s.media_index,album:s.parent_title,title:s.title,cover:b+'/api/v2?apikey='+o.key+'&cmd=pms_image_proxy&img='+((ep||mu)?s.parent_thumb:s.thumb),dur:+s.duration,off:+s.view_offset,client:true}})}
+ else{const j=await J(b+'/Sessions?api_key='+o.key+'&activeWithinSeconds=30');S=j.filter(s=>s.NowPlayingItem).map(s=>{const n=s.NowPlayingItem,ep=n.Type==='Episode',mu=n.Type==='Audio',ps=s.PlayState||{};return{user:s.UserName,playing:!ps.IsPaused,ep,mu,show:ep?n.SeriesName:n.AlbumArtist,s:n.ParentIndexNumber,e:n.IndexNumber,album:n.Album,title:n.Name,cover:b+'/Items/'+(ep?n.ParentId:n.Id)+'/Images/Primary?api_key='+o.key,dur:n.RunTimeTicks/1e4,off:(ps.PositionTicks||0)/1e4,client:o.server==='emby'?!!ps.CanSeek:true}})}
+ return S}
+async function loadImmich(o){const j=await J(o.url.replace(/\/$/,'')+'/api/server/statistics',{'x-api-key':o.key});const f=n=>Number(n).toLocaleString('en-US');return[{k:'PHOTOS',v:f(j.photos)},{k:'VIDEOS',v:f(j.videos)},{k:'USAGE',v:f(Math.floor(j.usage/1073741824))+'GB'}]}
+const DEMO_N=[{user:'sebastiankristo',playing:true,ep:true,show:'FBI',s:8,e:12,title:'Daybreak',cover:'',dur:2580000,off:1290000,client:true}];
+const DEMO_I=[{k:'PHOTOS',v:'48,213'},{k:'VIDEOS',v:'2,904'},{k:'USAGE',v:'612GB'}];
+const BLUE='oklch(0.72 0.12 240)';
+const dkey=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+async function loadCal(o,start,end){const iso=d=>d.toISOString().slice(0,10),q='start='+iso(start)+'&end='+iso(end),out=[],errs=[];
+ if(o.sonarrUrl&&o.sonarrKey)try{(await J(o.sonarrUrl.replace(/\/$/,'')+'/api/v3/calendar?includeSeries=true&'+q,{'X-Api-Key':o.sonarrKey})).forEach(e=>out.push({src:'sonarr',cover:o.sonarrUrl.replace(/\/$/,'')+'/api/v3/mediacover/'+e.seriesId+'/poster-500.jpg?apikey='+o.sonarrKey,date:new Date(e.airDateUtc),t:e.series&&e.series.title,n:e.title,se:'S'+String(e.seasonNumber).padStart(2,'0')+'E'+String(e.episodeNumber).padStart(2,'0'),has:e.hasFile}))}catch(e){errs.push('Sonarr')}
+ if(o.radarrUrl&&o.radarrKey)try{(await J(o.radarrUrl.replace(/\/$/,'')+'/api/v3/calendar?'+q,{'X-Api-Key':o.radarrKey})).forEach(m=>[['inCinemas','På kino'],['digitalRelease','Digital'],['physicalRelease','Fysisk']].forEach(([k,l])=>{if(m[k]){const d=new Date(m[k]);if(d>=start&&d<=end)out.push({src:'radarr',cover:o.radarrUrl.replace(/\/$/,'')+'/api/v3/mediacover/'+m.id+'/poster-500.jpg?apikey='+o.radarrKey,date:d,t:m.title,n:'',se:l,has:m.hasFile})}}))}catch(e){errs.push('Radarr')}
+ if(errs.length&&!out.length)throw new Error(errs.join(' + ')+' feilet');return out}
+const demoCal=(y,m)=>[[2,'sonarr','Marshals','Off the Rails','S02E09'],[2,'sonarr','FBI','Daybreak','S08E12'],[5,'radarr','Dune: Part Three','','Digital'],[9,'sonarr','9-1-1: Nashville','TBA','S02E06'],[12,'sonarr','Tracker','Echo','S03E07'],[16,'radarr','The Batman Part II','','På kino'],[16,'sonarr','Marshals','Bad Medicine','S02E08'],[21,'sonarr','FBI','Confetti','S08E11'],[27,'radarr','Avatar: Fire and Ash','','Fysisk']].map(([d,src,t,n,se])=>({src,date:new Date(y,m,d,2,0),t,n,se}));
+async function loadQbit(o){let b=o.url.replace(/\/$/,'');if(!/^https?:/.test(b))b='http://'+b;const[tr,se,le]=await Promise.all([J(b+'/api/v2/transfer/info'),J(b+'/api/v2/torrents/info?filter=seeding'),J(b+'/api/v2/torrents/info?filter=downloading')]);return{dl:tr.dl_info_speed,ul:tr.up_info_speed,seed:se,leech:le}}
+const DEMO_Q={dl:41200000,ul:9300000,leech:[{name:'Ubuntu.24.04.1.Desktop.amd64.iso',progress:.82,dlspeed:34500000,eta:62,state:'downloading',completed:4,size:5},{name:'Big.Buck.Bunny.2008.1080p.BluRay',progress:.47,dlspeed:12400000,eta:210,state:'downloading',completed:2,size:5},{name:'Sintel.2010.4K.DTS-HD.MA.5.1',progress:.03,dlspeed:1200000,eta:14400,state:'downloading',completed:0,size:5},{name:'Tears.of.Steel.2012.1080p',progress:0,dlspeed:0,eta:8640000,state:'stalledDL',completed:0,size:5}],
+ seed:[{name:'Cosmos.Laundromat.2015.1080p',ratio:2.41,size:3221225472,upspeed:2100000,state:'uploading'},{name:'Elephants.Dream.2006.1080p',ratio:0.87,size:1610612736,upspeed:0,state:'stalledUP'}]};
+async function loadProwlarr(o){const j=await J((o.apiUrl||o.url).replace(/\/$/,'')+'/api/v1/indexer',{'X-Api-Key':o.key});return j.map(i=>({name:i.name,privacy:i.privacy,enable:!!i.enable}))}
+async function loadPortainer(o){const j=await J(o.url.replace(/\/$/,'')+'/api/endpoints/'+(o.endpoint||'1'),{'X-API-Key':o.key});const s=(j.Snapshots||[])[0]||{},raw=s.DockerSnapshotRaw||{};
+ return{name:j.Name,containers:s.ContainerCount||0,volumes:s.VolumeCount||0,networks:(raw.Networks||[]).length,running:s.RunningContainerCount||0,healthy:s.HealthyContainerCount||0,stopped:s.StoppedContainerCount||0,unhealthy:(raw.Containers||[]).filter(c=>c.Health==='unhealthy').length}}
+const DEMO_P=[['1337x','public',true],['The Pirate Bay','public',true],['TorrentDownload','public',true],['IPTorrents','private',true],['TorrentLeech','private',false],['Nyaa','public',true]].map(([name,privacy,enable])=>({name,privacy,enable}));
+const DEMO_PT={name:'unraid-01',containers:34,volumes:21,networks:6,running:31,healthy:18,stopped:3,unhealthy:1};
+const LOADERS={prowlarr:loadProwlarr,portainer:loadPortainer,qbit:loadQbit,history:loadHistory,releases:loadReleases,speed:loadSpeed,nowplaying:loadNow,immich:loadImmich};
+const DEMO_S=[{k:'DOWNLOAD',v:'912.4',p:3.2},{k:'UPLOAD',v:'488.1',p:-1.4},{k:'PING',v:'4 ms',p:-8.0,inv:true}];
+const NAMES=['venstre kolonne','midtkolonne','høyre kolonne'];
+const fileToData=f=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f)});
+class Component extends DCLogic{
+ ping={};
+ doPing(url){if(this.ping[url])return this.ping[url];this.ping[url]={state:'pending'};const t0=performance.now(),ac=new AbortController(),to=setTimeout(()=>ac.abort(),6000);
+  fetch(url,{mode:'no-cors',signal:ac.signal,cache:'no-store'}).then(()=>{this.ping[url]={state:'up',ms:Math.round(performance.now()-t0)}}).catch(e=>{this.ping[url]={state:ac.signal.aborted?'timeout':'down'}}).finally(()=>{clearTimeout(to);this.forceUpdate();setTimeout(()=>{delete this.ping[url];this.forceUpdate()},60000)});return this.ping[url]}
+ svcView(sv,i,w){const v=toSvc(sv),base=mkApp0(v.name+'|'+v.demo+'|'+v.ms,i),s=this.state;let st;
+  if(v.status==='up')st=['OK · overstyrt','var(--muted)',Y,'✓','Overstyrt: oppe'];else if(v.status==='down')st=['ERROR · overstyrt',R,R,'!','Overstyrt: nede'];
+  else if(v.url&&v.status!=='off'){const p=this.doPing(v.url);st=p.state==='up'?['OK · '+p.ms+'ms','var(--muted)',Y,'✓','Ping OK']:p.state==='pending'?['Sjekker…','var(--muted)','var(--line3)','·','Sjekker']:p.state==='timeout'?['Timed Out',R,R,'!','Tidsavbrudd']:['ERROR',R,R,'!','Utilgjengelig']}
+  else st=v.url?['','var(--muted)','','','']:[base.status,base.sc,base.ic,base.mark,'Demo'];
+  const ed=s.editing,sd=s.svcDrop;
+  const warn=st[3]==='!';return{...base,dotBg:warn?'transparent':st[2],markColor:warn?st[2]:'var(--bg)',markSize:warn?'13px':'8px',icon:v.icon||base.icon,status:v.status==='off'&&!v.url?'':st[0],sc:st[1],ic:st[2],mark:warn?'⚠':st[3],dotTitle:st[4],showDot:v.status!=='off',href:v.url||undefined,
+   draggable:ed,cur:ed?'grab':'pointer',dropShadow:sd&&sd.wid===w.id&&sd.i===i?'inset 0 2px 0 var(--accent)':'none',
+   onClick:e=>{e.preventDefault();if(ed)return this.setState({selId:w.id,selSvc:i});if(v.url)window.open(/^https?:\/\//.test(v.url)?v.url:'http://'+v.url,'_blank','noopener')},
+   onDragStart:e=>{e.stopPropagation();e.dataTransfer.effectAllowed='move';this.svcDrag={wid:w.id,i}},
+   onOver:e=>{if(!this.svcDrag)return;e.preventDefault();e.stopPropagation();if(!sd||sd.wid!==w.id||sd.i!==i)this.setState({svcDrop:{wid:w.id,i}})},
+   onDrop:e=>{if(!this.svcDrag)return;e.preventDefault();e.stopPropagation();const f=this.svcDrag;this.svcDrag=null;this.setState({svcDrop:null});
+    this.mut(cs=>{const fw=cs.flat().find(x=>x.id===f.wid),tw=cs.flat().find(x=>x.id===w.id);const[it]=fw.apps.splice(f.i,1);let ti=i;if(fw===tw&&f.i<i)ti--;tw.apps.splice(ti,0,it)})}}}
+ svcMut(wid,f){this.mut(cs=>{const w=cs.flat().find(x=>x.id===wid);w.apps=(w.apps||[]).map(toSvc);f(w.apps)})}
+ state={_:0,theme:+(localStorage.getItem('labdeck-theme')||0),menuOpen:false,themeOpen:false,secrets:(()=>{try{return{...SEC_DEF,...JSON.parse(localStorage.getItem(SEC_KEY))}}catch(e){return SEC_DEF}})(),page:'board',showSec:{},boards:(()=>{try{return JSON.parse(localStorage.getItem(KEY))||seed()}catch(e){return seed()}})(),tab:'Hjem',editing:false,libCol:null,selId:null,install:false,plat:'Unraid',mobile:false};
+ wx={};dc={};
+ getData(w){const o={...DEFOPT[w.type],...(w.opts||{})},ro=this.res(o);if(!ro.url||(w.type!=='qbit'&&!ro.key))return{o,items:{prowlarr:DEMO_P,portainer:DEMO_PT,qbit:DEMO_Q,history:DEMO_H,releases:DEMO_R,speed:DEMO_S,nowplaying:DEMO_N,immich:DEMO_I}[w.type],demo:true};const k=w.type+JSON.stringify(ro);
+  if(!this.dc[k]){this.dc[k]={o,items:[],loading:true};clearTimeout(this['t'+w.id]);this['t'+w.id]=setTimeout(()=>LOADERS[w.type](ro).then(items=>{this.dc[k]={o,items};this.forceUpdate()}).catch(e=>{this.dc[k]={o,items:[],err:'Could not fetch '+(o.server||o.service||'speedtest')+' API. '+(e.message||e)+' (CORS? kjør via Docker-backend)'};this.forceUpdate()}),700)}return this.dc[k]}
+ res(o){const s=this.state.secrets||{},r={};for(const k in o)r[k]=typeof o[k]==='string'?o[k].replace(/\$\{(\w+)\}/g,(_,n)=>s[n]??''):o[k];return r}
+ fmtData(w){const d=this.getData(w),o=d.o;if(w.type==='immich')return d;
+  if(w.type==='portainer'){const p=Array.isArray(d.items)?{name:'…',containers:0,volumes:0,networks:0,running:0,healthy:0,stopped:0,unhealthy:0}:d.items;
+   return{...d,p:{...p,grid:[['Running',p.running,'var(--text)'],['Healthy',p.healthy,'var(--text)'],['Stopped',p.stopped,'var(--text)'],['Unhealthy',p.unhealthy,p.unhealthy?R:'var(--text)']].map(([k,v,c])=>({k,v,c}))}}}
+  if(w.type==='prowlarr'){const ex=(this.state.exp||{})[w.id],n=+o.collapse||5,all=d.items||[];
+   return{...d,link:this.res(o).url||undefined,more:all.length>n,moreLabel:ex?'SHOW LESS ⌃':'SHOW MORE ⌄',toggle:()=>this.setState({exp:{...(this.state.exp||{}),[w.id]:!ex}}),
+    items:(ex?all:all.slice(0,n)).map(i=>({...i,c:i.enable?Y:R,mark:i.enable?'✓':'!',label:i.enable?'Enabled':'Disabled'}))}}
+  if(w.type==='qbit'){const q=Array.isArray(d.items)?{dl:0,ul:0,seed:[],leech:[]}:d.items,up=o.mode==='upload',det=o.view==='detailed';
+   const sp=v=>up?(v<1000?'--':(v/1e6).toFixed(1)+' MB/s'):(v<1024?'--':v<1048576?Math.round(v/1024)+' KiB/s':(v/1048576).toFixed(1)+' MiB/s');
+   const big=v=>up?(v/1e6).toFixed(1)+' MB/s':v<1048576?Math.round(v/1024)+' KiB/s':(v/1048576).toFixed(1)+' MiB/s';
+   const eta=e=>e===8640000?'∞':e>3600?Math.floor(e/3600)+'h '+Math.floor(e/60)%60+'m':e>0?Math.floor(e/60)+'m':'--';
+   const dIcon=t=>t.completed>=t.size?'✔':['downloading','forcedDL'].includes(t.state)?'↓':/^(paused|stopped|stalled|queued)/.test(t.state)?'❚❚':['error','missingFiles'].includes(t.state)?'!':/^checking|allocating/.test(t.state)?'…':'?';
+   const uIcon=t=>/^(paused|stopped|stalled|queued)UP/.test(t.state)?'❚❚':['error','missingFiles'].includes(t.state)?'!':t.state==='checkingUP'?'…':'↑';
+   const stats=[{k:'DOWNLOADING',v:big(q.dl)},...(up?[{k:'UPLOADING',v:big(q.ul)}]:[]),{k:'SEEDING',v:q.seed.length},...(up?[]:[{k:'LEECHING',v:q.leech.length}])];
+   const rows=det?[...q.leech.map(t=>{const i=dIcon(t);return{isDl:true,name:t.name,icon:i,ic:i==='!'?R:i==='↓'?'#7fc98a':'var(--soft)',pct:(t.progress*100)+'%',pctLabel:(t.progress*100).toFixed(1)+'%',speed:sp(t.dlspeed),sub:eta(t.eta)}}),
+    ...(up?q.seed.map(t=>{const i=uIcon(t);return{isUp:true,name:t.name,icon:i,ic:i==='!'?R:'var(--accent)',meta:'Ratio: '+t.ratio.toFixed(2)+' | Size: '+(t.size/1073741824).toFixed(1)+' GB',speed:t.upspeed<1000?'--':(t.upspeed/1e6).toFixed(1)+' MB/s',sub:'Upload'}}):[])]:[];
+   return{...d,stats,rows}}
+  if(w.type==='nowplaying'){const its=(d.items||[]).filter(p=>p.client&&(p.playing||o.showPaused));return{...d,empty:!its.length&&!d.err&&!d.loading,items:its.map(p=>{const end=new Date(Date.now()+Math.max(0,p.dur-p.off));
+   return{...p,state:p.playing?'playing':'paused',stc:p.playing?Y:'var(--muted)',stateText:o.playState==='text',stateDot:o.playState==='indicator',dot:p.playing?Y:'var(--dim2)',glow:p.playing?'0 0 0 3px color-mix(in srgb,var(--accent) 20%,transparent)':'none',
+    showThumb:!!o.thumb,hasCover:!!p.cover,tw:o.compact&&!o.fullThumb?'44px':'60px',ar:o.compact&&!o.fullThumb?'1':'2/3',
+    l1:p.ep?(o.compact?'S'+p.s+'E'+p.e+' · '+p.show:p.show+' · S'+p.s+'E'+p.e):p.mu?p.show+' · '+p.album:'',
+    showBar:!!o.bar&&p.playing,showInfo:!!o.info,pct:(p.dur?Math.round(p.off/p.dur*100):0)+'%',ends:(o.compact?'':'ends at ')+end.toLocaleTimeString(o.hour==='12h'?'en-US':'nb-NO',{hour:'2-digit',minute:'2-digit'})}})}}
+  if(w.type==='speed')return{...d,items:(d.items||[]).map(i=>{const good=i.inv?i.p<0:i.p>0,bad=i.inv?i.p>0:i.p<0;return{...i,showD:!!o.showPct,d:(i.p>=0?'+':'')+i.p.toFixed(1)+'%'+(i.p>0?' ↗':i.p<0?' ↘':''),dc:good?'#7fc98a':bad?R:Y}})};if(w.type==='history')return{...d,empty:!d.items.length&&!d.err&&!d.loading,items:d.items.map(i=>({...i,showThumb:!!o.thumb,hasCover:!!i.cover,showUser:!!o.showUser,when:ago(i.ts),l1:i.music?i.show:i.s?(o.compact?'S'+i.s+'E'+i.e:i.show):i.show||'',l2:i.music?i.album:i.s?(o.compact?i.show:'Season '+i.s+' Episode '+i.e):'',title:i.title}))};
+  const ex=(this.state.exp||{})[w.id],n=+o.collapse||5,[cw,ch]=SIZES[o.size]||SIZES.medium,lbl={upcoming:'Airs',recent:'Downloaded',missing:'Aired'}[o.type];
+  return{...d,empty:!d.items.length&&!d.err&&!d.loading,more:d.items.length>n,moreLabel:ex?'SHOW LESS ⌃':'SHOW MORE ⌄',toggle:()=>this.setState({exp:{...(this.state.exp||{}),[w.id]:!ex}}),
+   items:(ex?d.items:d.items.slice(0,n)).map(r=>({...r,cw,ch,hasCover:!!r.cover,e:(r.se?r.se+' - ':'')+lbl+' '+(isNaN(r.date)?'TBA':r.date.toLocaleString('en-US',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}))}))}}
+ srchRef=React.createRef();
+ openUrl(u,nt=true){u=/^https?:\/\//.test(u)?u:'http://'+u;if(nt)window.open(u,'_blank','noopener');else location.href=u}
+ zoom(){const w=window.innerWidth||0;return w?Math.max(1,Math.min(1.6,w/1180)):1}
+ componentDidMount(){this._key=e=>{const t=e.target.tagName;if((e.key==='/'||e.key==='s'||e.key==='S')&&!/INPUT|TEXTAREA|SELECT/.test(t)&&this.srchRef.current){e.preventDefault();this.srchRef.current.focus()}};window.addEventListener('keydown',this._key);this._rs=()=>this.forceUpdate();window.addEventListener('resize',this._rs);requestAnimationFrame(this._rs);try{this._ro=new ResizeObserver(this._rs);this._ro.observe(document.documentElement)}catch(e){}applyTheme(THEMES[this.state.theme]||THEMES[0]);this.migrate();this.forceUpdate();fetch('https://uselessfacts.jsph.pl/api/v2/facts/random').then(r=>r.json()).then(j=>this.setState({fact:j.text})).catch(()=>this.setState({fact:'Kunne ikke hente fakta.'}));
+  fetch('https://bible-api.com/data/web/random').then(r=>r.json()).then(j=>{const v=j.random_verse;this.setState({verse:{ref:`${v.book} ${v.chapter}:${v.verse}`,text:v.text.trim()}})}).catch(()=>this.setState({verse:{ref:'',text:'Kunne ikke hente vers.'}}))}
+ getWx(o){const k=JSON.stringify(o);if(this.wx[k])return this.wx[k];this.wx[k]={desc:'Laster…',feels:'',cols:[],place:o.location};
+  const parts=o.location.split(',').map(x=>x.trim()).filter(Boolean),name=parts[0]||'Oslo',rest=parts.slice(1).map(x=>x.toLowerCase()),imp=o.units==='imperial';
+  fetch('https://geocoding-api.open-meteo.com/v1/search?count=10&name='+encodeURIComponent(name)).then(r=>r.json()).then(g=>{const rs=g.results||[];const p=rs.find(x=>rest.every(q=>[x.country,x.admin1,x.country_code].some(v=>v&&v.toLowerCase()===q)))||rs[0];if(!p)throw 0;
+   return fetch('https://api.open-meteo.com/v1/forecast?latitude='+p.latitude+'&longitude='+p.longitude+'&current=temperature_2m,apparent_temperature,weather_code&hourly=temperature_2m,precipitation_probability&daily=sunrise,sunset&forecast_days=1&timezone=auto'+(imp?'&temperature_unit=fahrenheit':'')).then(r=>r.json()).then(f=>{
+    const T=f.hourly.temperature_2m,P=f.hourly.precipitation_probability||[],hrs=[...Array(12)].map((_,i)=>i*2),vals=hrs.map(x=>T[x]),mn=Math.min(...vals),mx=Math.max(...vals);
+    const nowH=new Date(f.current.time).getHours(),cur=Math.floor(nowH/2),sr=new Date(f.daily.sunrise[0]).getHours(),ss=new Date(f.daily.sunset[0]).getHours();
+    const isDay=x=>x>=sr&&x<=ss,fd=hrs.findIndex(isDay),ld=hrs.length-1-[...hrs].reverse().findIndex(isDay);
+    const fmt=x=>o.hour==='12h'?((x%12)||12)+(x<12?'am':'pm'):String(x).padStart(2,'0')+':00';
+    this.wx[k]={desc:WMO[f.current.weather_code]||'—',feels:'Feels like '+Math.round(f.current.apparent_temperature)+(imp?'°F':'°C'),place:p.name+', '+p.country,
+     cols:hrs.map((x,i)=>({h:(18+(vals[i]-mn)/((mx-mn)||1)*42)+'px',bar:i===cur?'linear-gradient(#d4d4de,#d4d4de55)':'linear-gradient(#6a6a72,#6a6a7222)',temp:Math.round(vals[i])+'°',lblVis:i===cur?'visible':'hidden',
+      lbl:[3,7,11].includes(i)?fmt(x):'',day:isDay(x)?'color-mix(in srgb,var(--accent) 5%,transparent)':'transparent',rad:i===fd&&i===ld?'10px 10px 0 0':i===fd?'10px 0 0 0':i===ld?'0 10px 0 0':'0',
+      rain:Math.max(P[x]||0,P[x+1]||0)>40?'radial-gradient(#5b7a9a 1px, transparent 1.3px)':'none'}))};this.forceUpdate()})})
+  .catch(()=>{this.wx[k]={desc:'Fant ikke stedet',feels:'',cols:[],place:o.location};this.forceUpdate()});return this.wx[k]}
+ getCal(w){const s=this.state,off=(s.calOff||{})[w.id]||0,now=new Date(),first=new Date(now.getFullYear(),now.getMonth()+off,1),y=first.getFullYear(),m=first.getMonth();
+  const o=this.res({...DEFOPT.calendar,...(w.opts||{})}),live=(o.sonarrUrl&&o.sonarrKey)||(o.radarrUrl&&o.radarrKey);
+  const lead=(first.getDay()+6)%7,start=new Date(y,m,1-lead),end=new Date(y,m,1-lead+42);let ev=[],err='';
+  if(!live)ev=demoCal(y,m);else{const k='cal'+JSON.stringify(o)+y+m;if(!this.dc[k]){this.dc[k]={ev:[]};loadCal(o,start,end).then(e=>{this.dc[k]={ev:e};this.forceUpdate()}).catch(e=>{this.dc[k]={ev:[],err:e.message};this.forceUpdate()})}ev=this.dc[k].ev;err=this.dc[k].err||''}
+  const by={};ev.forEach(e=>{const k=dkey(e.date);(by[k]=by[k]||[]).push(e)});const sel=(s.calSel||{})[w.id],today=dkey(now);
+  const setSel=v=>this.setState({calSel:{...(s.calSel||{}),[w.id]:v}}),setOff=d=>this.setState({calOff:{...(s.calOff||{}),[w.id]:off+d},calSel:{...(s.calSel||{}),[w.id]:null}});
+  const days=[...Array(42)].map((_,i)=>{const d=new Date(y,m,1-lead+i),k=dkey(d),out=d.getMonth()!==m,list=by[k]||[];
+   return{n:d.getDate(),color:out?'var(--dim2)':k===today?'var(--text)':'var(--text2)',bg:k===sel?'var(--line2)':k===today?'#26262a':'transparent',border:k===sel?'color-mix(in srgb,var(--accent) 40%,transparent)':'transparent',cur:list.length?'pointer':'default',
+    dots:[...new Set(list.map(e=>e.src))].map(x=>x==='sonarr'?BLUE:Y),onClick:()=>setSel(k===sel?null:k)}});
+  const sl=sel?(by[sel]||[]).sort((a,b)=>a.date-b.date):[];
+  return{label:first.toLocaleDateString('en-US',{month:'long',year:'numeric'}),mn:m+1,days,prev:()=>setOff(-1),next:()=>setOff(1),demo:!live,err,
+   hasSel:!!sel,selEmpty:!!sel&&!sl.length,selLabel:sel?new Date(sel+'T12:00').toLocaleDateString('nb-NO',{weekday:'long',day:'numeric',month:'long'}).toUpperCase():'',
+   selItems:sl.map(e=>({hasCover:!!e.cover,cover:e.cover,c:e.src==='sonarr'?BLUE:Y,t:e.t,n:e.n,meta:e.se+' · '+(e.src==='sonarr'?e.date.toLocaleTimeString('nb-NO',{hour:'2-digit',minute:'2-digit'}):'Radarr')+(e.has?' · ✓ lastet ned':'')}))}}
+ saveSec(secrets){this.setState({secrets});localStorage.setItem(SEC_KEY,JSON.stringify(secrets))}
+ save(boards){this.setState({boards});localStorage.setItem(KEY,JSON.stringify(boards))}
+ mut(f){const b=JSON.parse(JSON.stringify(this.state.boards));f(b[this.state.tab]);this.save(b)}
+ find(cols,id){for(let c=0;c<3;c++){const i=cols[c].findIndex(w=>w.id===id);if(i>=0)return[c,i]}}
+ move(id,dc,di){this.mut(cols=>{const[c,i]=this.find(cols,id);const nc=c+dc;if(nc<0||nc>2)return;const[w]=cols[c].splice(i,1);
+  if(dc)cols[nc].splice(Math.min(i,cols[nc].length),0,w);else cols[c].splice(Math.max(0,Math.min(cols[c].length,i+di)),0,w)})}
+ upd(f){this.mut(cols=>{const[c,i]=this.find(cols,this.state.selId);Object.assign(cols[c][i],f)})}
+ migrate(){const b=this.state.boards;let ch=false;Object.values(b).flat(2).forEach(w=>{if(w.type==='error'&&w.title==='Immich stats'){w.type='immich';delete w.text;ch=true}if(w.type==='indexers'){w.type='prowlarr';ch=true}if(w.type==='error'&&/^qbittorrent$/i.test(w.title)){w.type='qbit';w.title='qBittorrent';delete w.text;ch=true}if(w.type==='text'&&w.title==='Media server'){w.type='nowplaying';delete w.text;ch=true}});if(ch)localStorage.setItem(KEY,JSON.stringify(b))}
+ renderVals(){
+  const s=this.state,m=s.mobile,cols=s.boards[s.tab]||[[],[],[]];
+  const day=(()=>{const n=new Date();return((n.getHours()*60+n.getMinutes())/1440*100)})();
+  const mk=w=>({...w,['is'+w.type[0].toUpperCase()+w.type.slice(1)]:true,gridCols:(()=>{const c=((w.opts||{}).cols)||'auto';return c==='auto'||m?'repeat(auto-fill,minmax(180px,1fr))':'repeat('+c+',minmax(0,1fr))'})(),apps:(w.apps||[]).map((a,i)=>this.svcView(a,i,w)),addSvc:()=>{this.svcMut(w.id,a=>a.push({name:'Ny tjeneste',url:'',icon:'',status:'auto',demo:'o',ms:'1ms'}));this.setState({selId:w.id})},
+   draggable:s.editing,cur:s.editing?'grab':'default',op:s.dragW===w.id?.4:1,dropShadow:s.dropW&&s.dropW.id===w.id?(s.dropW.after?'0 3px 0 var(--accent)':'0 -3px 0 var(--accent)'):'none',
+   onDragStart:e=>{if(this.svcDrag)return;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',w.id);this.setState({dragW:w.id})},
+   onOver:e=>{if(!s.dragW||this.svcDrag)return;e.preventDefault();e.stopPropagation();const r=e.currentTarget.getBoundingClientRect(),after=e.clientY>r.top+r.height/2;const d=s.dropW;if(!d||d.id!==w.id||d.after!==after)this.setState({dropW:{id:w.id,after}})},
+   onDrop:e=>{if(!s.dragW||this.svcDrag)return;e.preventDefault();e.stopPropagation();const after=s.dropW&&s.dropW.after,src=s.dragW;this.setState({dragW:null,dropW:null});if(src===w.id)return;
+    this.mut(cs=>{const[c,i]=this.find(cs,src);const[it]=cs[c].splice(i,1);const[tc,ti]=this.find(cs,w.id);cs[tc].splice(ti+(after?1:0),0,it)})},wx:w.type==='weather'?this.getWx({...DEFOPT.weather,...(w.city?{location:w.city}:{}),...(w.opts||{})}):null,d:LOADERS[w.type]?this.fmtData(w):null,cal:w.type==='calendar'?this.getCal(w):null,outline:s.editing?'1px dashed var(--line3)':'none',
+   ctrls:[['⚙',()=>this.setState({selId:w.id,selSvc:null})],['✕',()=>this.mut(cs=>{const[c,i]=this.find(cs,w.id);cs[c].splice(i,1)}),R]].map(([icon,fn,color])=>({icon,fn,color:color||'var(--text2)'}))});
+  const columns=m?[{items:[...cols[1].slice(0,1),...cols[2],...cols[1].slice(1),...cols[0]].map(mk)}]:cols.map((c,ci)=>({items:c.map(mk),minH:s.editing?'120px':'0',bg:s.dragW&&!c.length?'color-mix(in srgb,var(--accent) 6%,transparent)':'transparent',
+   onOver:e=>{if(s.dragW&&!this.svcDrag)e.preventDefault()},onDrop:e=>{if(!s.dragW||this.svcDrag)return;e.preventDefault();const src=s.dragW;this.setState({dragW:null,dropW:null});this.mut(cs=>{const[c0,i]=this.find(cs,src);const[it]=cs[c0].splice(i,1);cs[ci].push(it)})}}));
+  let sel=null;if(s.selId){const f=this.find(cols,s.selId);if(f)sel=cols[f[0]][f[1]]}
+  const days=[];for(let i=0;i<42;i++){const d=i-2,out=d<1||d>31;days.push({n:d<1?30+d:d>31?d-31:d,color:out?'var(--dim2)':'var(--text2)',bg:d===16?'var(--line2)':'transparent'})}
+  return{
+   zoom:m?1:this.zoom(),maxW:m?'420px':(this.zoom()>1?(window.innerWidth/this.zoom())+'px':'100%'),colTpl:m?'minmax(0,1fr)':'minmax(200px,1fr) minmax(0,2.75fr) minmax(200px,1fr)',columns,editing:s.editing,stop:e=>e.stopPropagation(),
+   tabs:Object.keys(s.boards).map(n=>({name:n,select:()=>this.setState({tab:n}),line:n===s.tab?Y:'transparent',color:n===s.tab?'var(--text)':'var(--muted)'})),
+   toggleEdit:()=>this.setState({editing:!s.editing}),editLabel:s.editing?'lagre':'✎ rediger',editBg:s.editing?Y:'transparent',editColor:s.editing?'var(--bg)':'var(--muted)',
+   toggleMobile:()=>this.setState({mobile:!m}),mobileLabel:m?'desktop':'mobil',
+   addBtns:NAMES.map((l,i)=>({label:['venstre','midt','høyre'][i],open:()=>this.setState({libCol:i})})),libOpen:s.libCol!==null,libCol:NAMES[s.libCol],
+   library:Object.entries(LIB).map(([t,name])=>({name,add:()=>{const vars=(JSON.stringify(DEFOPT[t]||{}).match(/\$\{(\w+)\}/g)||[]).map(v=>v.slice(2,-1)),miss=vars.filter(v=>!(v in s.secrets));if(miss.length){const o={...s.secrets};miss.forEach(v=>o[v]='');this.saveSec(o)}const c=s.libCol;this.mut(cs=>cs[c].push({id:uid(),type:t,title:name,apps:t==='apps'?['Ny tjeneste|o|1ms']:undefined,text:t==='text'||t==='error'?'Rediger teksten i ⚙':undefined}));this.setState({libCol:null})}})),
+   srch:(()=>{const q=(s.q||'').trim(),ql=q.toLowerCase(),sw=Object.values(s.boards).flat(2).find(w=>w.type==='search')||{},o={...DEFOPT.search,...(sw.opts||{})},eng=ENGINES[o.engine]||ENGINES.duckduckgo;
+    const res=[];if(q){const bang=Object.keys(BANGS).find(b=>ql.startsWith(b+' '));
+     if(bang){const[n,u]=BANGS[bang],rest=q.slice(bang.length+1);res.push({name:n+': '+rest,sub:bang,url:u+encodeURIComponent(rest),ini:'!'})}
+     else{const seen=new Set();Object.entries(s.boards).forEach(([tab,cols])=>cols.flat().filter(w=>w.type==='apps').forEach(w=>(w.apps||[]).map(toSvc).forEach((v,i)=>{const k=v.name+v.url;if(seen.has(k))return;if(v.name.toLowerCase().includes(ql)||(v.url||'').toLowerCase().includes(ql)){seen.add(k);const b=mkApp0(v.name+'|o',i);res.push({name:v.name,sub:(v.url||'ingen URL')+' · '+tab+' / '+w.title,url:v.url,ini:b.ini,tint:b.bg,icon:v.icon||b.icon,imgRef:b.imgRef,hasIcon:!!(v.icon||b.icon)})}})));
+      if(/^(https?:\/\/)?[\w-]+(\.[\w-]+)+(:\d+)?(\/\S*)?$|^\d+\.\d+\.\d+\.\d+(:\d+)?/.test(q))res.push({name:'Åpne '+q,sub:'URL',url:q,ini:'↗'});
+      res.push({name:'Søk etter «'+q+'»',sub:o.engine,url:eng+encodeURIComponent(q),ini:'⌕'})}}
+    const sel=Math.min(s.qi||0,Math.max(0,res.length-1));
+    const go=r=>{if(!r||!r.url)return;this.openUrl(r.url,o.newTab!==false);this.setState({q:'',qi:0});this.srchRef.current&&this.srchRef.current.blur()};
+    return{ref:this.srchRef,q:s.q||'',open:!!(s.qFocus&&q),border:s.qFocus?'color-mix(in srgb,var(--accent) 50%,var(--line))':'var(--line)',
+     onChange:e=>this.setState({q:e.target.value,qi:0}),onFocus:()=>this.setState({qFocus:true}),onBlur:()=>this.setState({qFocus:false}),
+     onKey:e=>{if(e.key==='ArrowDown'){e.preventDefault();this.setState({qi:Math.min(sel+1,res.length-1)})}else if(e.key==='ArrowUp'){e.preventDefault();this.setState({qi:Math.max(sel-1,0)})}else if(e.key==='Enter'){e.preventDefault();go(res[sel])}else if(e.key==='Escape'){this.setState({q:''});e.target.blur()}},
+     results:res.map((r,i)=>({...r,tint:r.tint||'var(--line2)',hasIcon:!!r.hasIcon,bg:i===sel?'var(--card)':'transparent',hover:()=>this.setState({qi:i}),go:e=>{e.preventDefault();go(r)}}))}})(),
+   onSecrets:s.page==='secrets',
+   curDots:(()=>{const t=(THEMES[s.theme]||THEMES[0]).v;return[t.accent,t.text2,t.neg]})(),themeOpen:s.themeOpen,themeBorder:s.themeOpen?'var(--accent)':'var(--line2)',toggleTheme:()=>this.setState({themeOpen:!s.themeOpen,menuOpen:false}),
+   themes:THEMES.map((t,i)=>({name:t.name,dots:[t.v.accent,t.v.text2,t.v.neg],bg:t.v.bg,border:i===s.theme?'var(--accent)':'var(--line2)',pick:()=>{applyTheme(t);localStorage.setItem('labdeck-theme',i);this.setState({theme:i,themeOpen:false})}})),
+   menuOpen:s.menuOpen,menuBg:s.menuOpen?'var(--card)':'transparent',toggleMenu:()=>this.setState({menuOpen:!s.menuOpen,themeOpen:false}),
+   menu:[['✎ Rediger',s.editing?'på':'',()=>this.setState({editing:!s.editing})],['Secrets',s.page==='secrets'?'åpen':'',()=>this.setState({page:s.page==='secrets'?'board':'secrets'})],[m?'Desktopvisning':'Mobilvisning','',()=>this.setState({mobile:!m})],['Docker-oppsett','',()=>this.setState({install:true})]].map(([label,hint,fn])=>({label,hint,fn:()=>{fn();this.setState({menuOpen:false})}})),gridDisplay:s.page==='secrets'?'none':'grid',toggleSecrets:()=>this.setState({page:s.page==='secrets'?'board':'secrets'}),secBg:s.page==='secrets'?Y:'transparent',secColor:s.page==='secrets'?'var(--bg)':'var(--muted)',
+   secrets:(()=>{const all=JSON.stringify(s.boards)+JSON.stringify(DEFOPT);return Object.entries(s.secrets).map(([name,value],i)=>{const used=Object.values(s.boards).flat(2).filter(w=>JSON.stringify({...DEFOPT[w.type],...(w.opts||{})}).includes('${'+name+'}')).map(w=>w.title);
+    const ren=nn=>{const o={};Object.entries(s.secrets).forEach(([k,v])=>{o[k===name?nn:k]=v});this.saveSec(o)};
+    return{name,value,type:s.showSec[name]?'text':'password',eye:s.showSec[name]?'skjul':'vis',used:used.length?'brukes av: '+[...new Set(used)].join(', '):'ikke i bruk',
+     setName:e=>ren(e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g,'_')),setValue:e=>this.saveSec({...s.secrets,[name]:e.target.value}),toggle:()=>this.setState({showSec:{...s.showSec,[name]:!s.showSec[name]}}),
+     remove:()=>{const o={...s.secrets};delete o[name];this.saveSec(o)}}})})(),
+   addSecret:()=>{let n='NY_SECRET',i=1;while(n in s.secrets)n='NY_SECRET_'+(++i);this.saveSec({...s.secrets,[n]:''})},
+   dragEnd:()=>{this.svcDrag=null;this.setState({dragW:null,dropW:null,svcDrop:null})},
+   addSection:()=>{const id=uid();this.mut(cs=>cs[m?0:1].push({id,type:'apps',title:'Ny seksjon',apps:[]}));this.setState({selId:id})},
+   hasSel:!!sel,sel:sel?{...sel,notSingle:s.selSvc==null,heading:s.selSvc==null?'Widget-innstillinger':'Rediger tjeneste',addSvc:()=>this.svcMut(sel.id,a=>a.push({name:'Ny tjeneste',url:'',icon:'',status:'auto',demo:'o',ms:'1ms'})),
+    svcs:(sel.apps||[]).map(toSvc).map((v,i)=>{const b=mkApp0(v.name+'|o',i),set=p=>this.svcMut(sel.id,a=>Object.assign(a[i],p));return{...v,ini:b.ini,icon:v.icon||b.icon,imgRef:b.imgRef,hasCustom:!!v.icon,
+     setName:e=>set({name:e.target.value}),setUrl:e=>set({url:e.target.value}),setStatus:e=>set({status:e.target.value}),clearIcon:()=>set({icon:''}),
+     remove:()=>{this.svcMut(sel.id,a=>a.splice(i,1));if(s.selSvc!=null)this.setState({selId:null,selSvc:null})},upload:e=>{const f=e.target.files[0];if(f)fileToData(f).then(d=>set({icon:d}))}}}).filter((_,i)=>s.selSvc==null||i===s.selSvc),fields:(s.selSvc!=null?[]:OPTS[sel.type]||[]).map(([k,label,kind,x])=>{const o={...DEFOPT[sel.type],...(sel.opts||{})};const set=v=>this.upd({opts:{...o,[k]:v}});return{label,isText:kind==='text',isSelect:kind==='select',isBool:kind==='bool',options:kind==='select'?x:[],ph:kind==='text'?x:'',val:o[k]??'',checked:!!o[k],set:e=>set(e.target.value),setB:e=>set(e.target.checked)}}),isWeather:sel.type==='weather',hasApps:sel.type==='apps',hasText:!!sel.text||sel.type==='text',appText:(sel.apps||[]).join('\n')}:{},
+   setCity:e=>this.upd({city:e.target.value}),fact:s.fact||'Laster…',verse:s.verse||{ref:'',text:'Laster…'},
+   setTitle:e=>this.upd({title:e.target.value}),setText:e=>this.upd({text:e.target.value}),setApps:e=>this.upd({apps:e.target.value.split('\n').filter(Boolean)}),
+   closeAll:()=>this.setState({selSvc:null,libCol:null,selId:null,install:false}),reset:()=>this.save(seed()),openInstall:()=>this.setState({install:true}),installOpen:s.install,
+   dows:['Mo','Tu','We','Th','Fr','Sa','Su'],days,
+   speed:[['DOWNLOAD','0.0'],['UPLOAD','0.0'],['PING','0 ms']].map(([k,v])=>({k,v,d:'+0.0%'})),
+   dayPct:day.toFixed(0)+'%',dayLabel:day.toFixed(2)+'% of the day has passed',
+   history:[['Season 8 Episode 12','Daybreak'],['Season 8 Episode 11','Confetti'],['Season 8 Episode 10','Wolf Pack (2)'],['Season 8 Episode 10','Wolf Pack (2)'],['Season 8 Episode 9','Lone Wolf']].map(([ep,t])=>({ep,t})),
+   temps:[20,22,18,24,28,40,62,70,64,55,40,32].map(v=>v+'%'),
+   stats:[['CPU',55],['RAM',33],['DISK',55]].map(([k,v])=>({k,v,p:v+'%'})),
+   releases:[['Marshals','Off the Rails','S02E09 - Airs 11/30 02:00'],['Marshals','Bad Medicine','S02E08 - Airs 11/23 02:00'],['9-1-1: Nashville','TBA','S02E06 - Airs 11/20 03:00']].map(([t,n,e])=>({t,n,e})),
+   cf:[['REQUESTS','48.2k','+12%',Y],['BANDWIDTH','1.9 GB','+4%',Y],['VISITORS','3 104','-2%',R],['THREATS','212','+31%',R]].map(([k,v,d,dc])=>({k,v,d,dc})),
+   cfBars:[20,15,12,10,14,22,38,52,60,58,66,72,70,64,58,62,74,80,76,68,54,42,34,28].map(v=>v+'%'),
+   indexers:['1337x','The Pirate Bay','TorrentDownload'],
+   platforms:['Unraid','Proxmox'].map(n=>({name:n,select:()=>this.setState({plat:n}),bg:n===s.plat?'var(--line2)':'transparent',color:n===s.plat?'var(--text)':'var(--muted)'})),
+   platformHint:s.plat==='Unraid'?'Community Applications → søk «labdeck», eller:':'Kjør i en LXC med Docker (Debian 12), deretter:',
+   compose:`services:\n  labdeck:\n    image: ghcr.io/sebastiankristo/glass-dash:latest\n    ports:\n      - "7575:7575"\n    volumes:\n      - ${s.plat==='Unraid'?'/mnt/user/appdata/labdeck':'./data'}:/app/data\n      - /var/run/docker.sock:/var/run/docker.sock:ro\n    restart: unless-stopped`
+  }}}
+</script>
+</body>
+</html>

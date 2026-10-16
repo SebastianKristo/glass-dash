@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>labdeck</Name>
+  <Repository>ghcr.io/sebastiankristo/glass-dash:latest</Repository>
+  <Registry>https://github.com/sebastiankristo/glass-dash/pkgs/container/glass-dash</Registry>
+  <Network>bridge</Network>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/sebastiankristo/glass-dash</Support>
+  <Project>https://github.com/sebastiankristo/glass-dash</Project>
+  <Overview>Labdeck – selvhostet homelab-dashboard med GUI-editor.</Overview>
+  <Category>Tools: Productivity:</Category>
+  <WebUI>http://[IP]:[PORT:7575]/</WebUI>
+  <Config Name="WebUI" Target="7575" Default="7575" Mode="tcp" Type="Port" Display="always" Required="true">7575</Config>
+  <Config Name="Data" Target="/app/data" Default="/mnt/user/appdata/labdeck" Mode="rw" Type="Path" Display="always" Required="true">/mnt/user/appdata/labdeck</Config>
+</Container>
