@@ -11,7 +11,7 @@
   <Overview>Labdeck – selvhostet homelab-dashboard med GUI-editor.</Overview>
   <Category>Tools: Productivity:</Category>
   <WebUI>http://[IP]:[PORT:7575]/</WebUI>
-  <Icon>https://raw.githubusercontent.com/sebastiankristo/glass-dash/main/public/favicon.svg</Icon>
+  <Icon>https://raw.githubusercontent.com/sebastiankristo/glass-dash/main/public/icon.png</Icon>
   <Config Name="WebUI" Target="7575" Default="7575" Mode="tcp" Type="Port" Display="always" Required="true">7575</Config>
   <Config Name="Data" Target="/app/data" Default="/mnt/user/appdata/labdeck" Mode="rw" Type="Path" Display="always" Required="true">/mnt/user/appdata/labdeck</Config>
   <Config Name="PLEX_URL" Target="PLEX_URL" Default="" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
