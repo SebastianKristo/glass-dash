@@ -33,6 +33,7 @@
   - [Unraid (Docker-fanen)](#unraid-docker-fanen)
   - [Portainer](#portainer)
   - [TrueNAS SCALE](#truenas-scale)
+  - [Proxmox (LXC)](#proxmox-lxc)
   - [Docker Compose](#docker-compose)
 - [Kom i gang](#kom-i-gang)
 - [Secrets](#secrets)
@@ -173,6 +174,44 @@ Trykk **Install**.
 
 > Eldre TrueNAS SCALE (23.10 *Cobia* / 24.04 *Dragonfish*) bruker Kubernetes. Bruk da **Custom App**-skjemaet over – feltene er de samme. *TrueNAS CORE* har ikke Docker; kjør Labdeck i en VM eller på en annen maskin.
 
+### Proxmox (LXC)
+
+Et helper-script lager en liten Debian 12-container og installerer Labdeck direkte (Node.js, uten Docker).
+
+1. Åpne **Shell** på Proxmox-noden (ikke inne i en VM/LXC).
+2. Kjør:
+   ```bash
+   bash -c "$(curl -fsSL https://raw.githubusercontent.com/sebastiankristo/glass-dash/main/proxmox/labdeck-lxc.sh)"
+   ```
+3. Svar på spørsmålene (Enter = standard):
+
+   | Spørsmål | Standard | Forklaring |
+   |---|---|---|
+   | Container-ID | neste ledige | f.eks. `150` |
+   | Hostname | `labdeck` | |
+   | Disk-lagring | `local-lvm` | f.eks. `local-zfs` |
+   | Nettverksbro | `vmbr0` | |
+   | IP | `dhcp` | eller fast, f.eks. `10.69.1.50/24` (spør da om gateway) |
+
+4. Når scriptet er ferdig, skriver det ut adressen, f.eks. `http://10.69.1.50:7575`.
+
+Containeren får 1 kjerne, 512 MB RAM og 4 GB disk, og starter automatisk med Proxmox.
+
+**Uten spørsmål** (alt via variabler):
+```bash
+UNATTENDED=1 CTID=150 STORAGE=local-zfs NET=10.69.1.50/24 GATEWAY=10.69.1.1 \
+  bash -c "$(curl -fsSL https://raw.githubusercontent.com/sebastiankristo/glass-dash/main/proxmox/labdeck-lxc.sh)"
+```
+
+| Hva | Hvor |
+|---|---|
+| Oppdatere | `pct exec <ID> -- update-labdeck` (fra Proxmox-shell) |
+| Data | `/opt/labdeck-data` i containeren |
+| Secrets som variabler *(valgfritt)* | `/opt/labdeck-data/labdeck.env` (`NAVN=verdi` per linje), så `systemctl restart labdeck` |
+| Logg | `pct exec <ID> -- journalctl -u labdeck -f` |
+
+> Vil du heller kjøre Docker i Proxmox, bruk [Docker Compose](#docker-compose) i en VM eller LXC med Docker.
+
 ### Docker Compose
 
 ```yaml
@@ -292,6 +331,7 @@ Uten secrets viser API-widgetene **demo-data**, merket *«Demo-data · sett secr
 | Hvor | Slik gjør du |
 |---|---|
 | **Unraid** | Docker-fanen → klikk Labdeck-ikonet → **Force update** |
+| **Proxmox LXC** | `pct exec <ID> -- update-labdeck` |
 | **TrueNAS** | Apps → labdeck → **Update** (eller **⋮ → Pull Image** + Restart) |
 | **Portainer (Git)** | Stacks → labdeck → **Pull and redeploy** |
 | **Portainer (image)** | Stacks → labdeck → **Update the stack** med *Re-pull image* |
