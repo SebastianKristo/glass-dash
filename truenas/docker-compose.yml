@@ -1,0 +1,16 @@
+# Labdeck for TrueNAS SCALE 24.10+ (Apps → Discover Apps → ⋮ → Install via YAML)
+# Bytt ut "tank" med navnet på poolen din, og opprett datasettet først.
+services:
+  labdeck:
+    image: ghcr.io/sebastiankristo/glass-dash:latest
+    container_name: labdeck
+    ports:
+      - "7575:7575"
+    volumes:
+      - /mnt/tank/apps/labdeck:/app/data
+    environment:
+      TZ: Europe/Oslo
+      # Secrets kan også legges inn her, eller senere i dashbordet (☰ → Secrets):
+      # PLEX_URL: http://10.69.1.126:32400
+      # PLEX_TOKEN: ditt-token
+    restart: unless-stopped

@@ -6,7 +6,7 @@
 
 <p align="center">
   Et selvhostet homelab-dashboard med <b>GUI-editor</b> – dra og slipp widgets, ingen YAML.<br>
-  Én Docker-container for <b>Unraid</b>, <b>Portainer</b> og <b>Proxmox</b>.
+  Én Docker-container for <b>Unraid</b>, <b>TrueNAS</b>, <b>Portainer</b> og <b>Proxmox</b>.
 </p>
 
 <p align="center">
@@ -32,6 +32,7 @@
 - [Installasjon](#installasjon)
   - [Unraid (Docker-fanen)](#unraid-docker-fanen)
   - [Portainer](#portainer)
+  - [TrueNAS SCALE](#truenas-scale)
   - [Docker Compose](#docker-compose)
 - [Kom i gang](#kom-i-gang)
 - [Secrets](#secrets)
@@ -134,6 +135,43 @@ Tips: Skru på **GitOps updates → Polling** så henter Portainer nye versjoner
 #### Fra ferdig image
 
 **Stacks → Add stack → Web editor**, lim inn innholdet fra [`docker-compose.yml`](docker-compose.yml) og trykk **Deploy**.
+
+### TrueNAS SCALE
+
+Gjelder **TrueNAS SCALE 24.10 (Electric Eel) og nyere**, som bruker Docker for apper.
+
+#### 1. Lag en mappe til data
+1. **Datasets** → velg poolen (f.eks. `tank`) → **Add Dataset**.
+2. Navn: `apps/labdeck` (lag `apps` først hvis den ikke finnes). Preset: **Apps**.
+3. **Save**. Stien blir `/mnt/tank/apps/labdeck`.
+
+#### 2a. Installer via YAML (raskest)
+1. **Apps → Discover Apps** → klikk **⋮** øverst til høyre → **Install via YAML**.
+2. **Name:** `labdeck`
+3. Lim inn innholdet fra [`truenas/docker-compose.yml`](truenas/docker-compose.yml) og bytt `tank` med navnet på poolen din.
+4. **Save**. Åpne `http://<truenas-ip>:7575`.
+
+#### 2b. Eller via skjemaet (Custom App)
+**Apps → Discover Apps → Custom App** og fyll inn:
+
+| Felt | Verdi |
+|---|---|
+| **Application Name** | `labdeck` |
+| **Image → Repository** | `ghcr.io/sebastiankristo/glass-dash` |
+| **Image → Tag** | `latest` |
+| **Restart Policy** | `Unless Stopped` |
+| **Ports** | Container `7575` → Host `7575`, TCP |
+| **Storage → Host Path** | Host path `/mnt/tank/apps/labdeck` → Mount path `/app/data` |
+| **Environment Variables** *(valgfritt)* | f.eks. `PLEX_TOKEN` = tokenet ditt |
+| **Portal** *(valgfritt)* | Port `7575` – gir en *Web UI*-knapp i Apps |
+
+Trykk **Install**.
+
+> **Port opptatt?** TrueNAS bruker selv 80/443. 7575 er normalt ledig, men bytt host-porten (f.eks. `7576:7575`) om du får feil.
+
+**Oppdatere på TrueNAS:** **Apps** → velg `labdeck` → **Update** når den vises, eller **⋮ → Pull Image** og så **Restart**.
+
+> Eldre TrueNAS SCALE (23.10 *Cobia* / 24.04 *Dragonfish*) bruker Kubernetes. Bruk da **Custom App**-skjemaet over – feltene er de samme. *TrueNAS CORE* har ikke Docker; kjør Labdeck i en VM eller på en annen maskin.
 
 ### Docker Compose
 
@@ -254,6 +292,7 @@ Uten secrets viser API-widgetene **demo-data**, merket *«Demo-data · sett secr
 | Hvor | Slik gjør du |
 |---|---|
 | **Unraid** | Docker-fanen → klikk Labdeck-ikonet → **Force update** |
+| **TrueNAS** | Apps → labdeck → **Update** (eller **⋮ → Pull Image** + Restart) |
 | **Portainer (Git)** | Stacks → labdeck → **Pull and redeploy** |
 | **Portainer (image)** | Stacks → labdeck → **Update the stack** med *Re-pull image* |
 | **Compose** | `docker compose pull && docker compose up -d` |
