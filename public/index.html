@@ -2,6 +2,8 @@
 <html>
 <head>
 <meta charset="utf-8">
+<title>Labdeck</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="./shim.js"></script>
 <script src="./support.js"></script>
@@ -481,7 +483,7 @@ const home=[[
  W('prowlarr','Prowlarr Indexers',{opts:{collapse:'${PROWLARR_COLLAPSE_AFTER}'}})]];
 const uid=()=>Math.random().toString(36).slice(2,9);
 const tag=cols=>cols.map(c=>c.map(w=>({...w,id:uid()})));
-const seed=()=>({Hjem:tag(home),'Strømstad':tag([[W('calendar','Calendar')],[W('search','Search'),W('apps','Hytte',{apps:['HomeAssistant|o|8ms','Frigate|o|12ms']})],[W('weather','Weather')]]),Toten:tag([[],[W('search','Search')],[]]),Skole:tag([[],[W('search','Search')],[]])});
+const seed=()=>({Hjem:tag(home)});
 const WMO={0:'Clear',1:'Mainly Clear',2:'Partly Cloudy',3:'Overcast',45:'Fog',48:'Fog',51:'Drizzle',53:'Drizzle',55:'Drizzle',61:'Rain',63:'Rain',65:'Heavy Rain',71:'Snow',73:'Snow',75:'Heavy Snow',80:'Showers',81:'Showers',82:'Showers',95:'Thunderstorm'};
 const THEMES=[
  {name:'Amber',v:{bg:'#141416',bg2:'#18181a',card:'#1b1b1e',line:'#232326',line2:'#2a2a2e',line3:'#3a3a3e',accent:'#e8c46a',text:'#e6e4df',text2:'#c9c7c2',soft:'#a9a7a2',muted:'#8a877f',dim:'#6d6b66',dim2:'#55544f',neg:'#e0716a',stripe1:'#1f1f23',stripe2:'#232327',hover:'#212124'}},
@@ -642,7 +644,7 @@ class Component extends DCLogic{
  move(id,dc,di){this.mut(cols=>{const[c,i]=this.find(cols,id);const nc=c+dc;if(nc<0||nc>2)return;const[w]=cols[c].splice(i,1);
   if(dc)cols[nc].splice(Math.min(i,cols[nc].length),0,w);else cols[c].splice(Math.max(0,Math.min(cols[c].length,i+di)),0,w)})}
  upd(f){this.mut(cols=>{const[c,i]=this.find(cols,this.state.selId);Object.assign(cols[c][i],f)})}
- migrate(){if(localStorage.getItem('labdeck-hjem-v')!=='2'){const nb={...this.state.boards,Hjem:tag(home)};this.state.boards=nb;localStorage.setItem(KEY,JSON.stringify(nb));localStorage.setItem('labdeck-hjem-v','2')}const b=this.state.boards;let ch=false;Object.values(b).flat(2).forEach(w=>{if(w.type==='error'&&w.title==='Immich stats'){w.type='immich';delete w.text;ch=true}if(w.type==='indexers'){w.type='prowlarr';ch=true}if(w.type==='error'&&/^qbittorrent$/i.test(w.title)){w.type='qbit';w.title='qBittorrent';delete w.text;ch=true}if(w.type==='text'&&w.title==='Media server'){w.type='nowplaying';delete w.text;ch=true}});if(ch)localStorage.setItem(KEY,JSON.stringify(b))}
+ migrate(){if(localStorage.getItem('labdeck-tabs-v')!=='1'){const b0=this.state.boards;const nb={Hjem:b0.Hjem||tag(home)};this.state.boards=nb;localStorage.setItem(KEY,JSON.stringify(nb));localStorage.setItem('labdeck-tabs-v','1')}if(localStorage.getItem('labdeck-hjem-v')!=='2'){const nb={...this.state.boards,Hjem:tag(home)};this.state.boards=nb;localStorage.setItem(KEY,JSON.stringify(nb));localStorage.setItem('labdeck-hjem-v','2')}const b=this.state.boards;let ch=false;Object.values(b).flat(2).forEach(w=>{if(w.type==='error'&&w.title==='Immich stats'){w.type='immich';delete w.text;ch=true}if(w.type==='indexers'){w.type='prowlarr';ch=true}if(w.type==='error'&&/^qbittorrent$/i.test(w.title)){w.type='qbit';w.title='qBittorrent';delete w.text;ch=true}if(w.type==='text'&&w.title==='Media server'){w.type='nowplaying';delete w.text;ch=true}});if(ch)localStorage.setItem(KEY,JSON.stringify(b))}
  renderVals(){
   const s=this.state,m=s.mobile,cols=s.boards[s.tab]||[[],[],[]];
   const day=(()=>{const n=new Date();return((n.getHours()*60+n.getMinutes())/1440*100)})();
