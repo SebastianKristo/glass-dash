@@ -1,7 +1,6 @@
 // Kobler prototypen til backend: localStorage -> /api/kv, eksterne fetch -> /api/proxy (secrets byttes server-side).
 (function(){
-  var x=new XMLHttpRequest();x.open('GET','/api/kv',false);x.send();
-  var store={};try{store=JSON.parse(x.responseText)||{}}catch(e){}
+  var store=window.__LABDECK_KV__;if(!store){var x=new XMLHttpRequest();x.open('GET','/api/kv',false);x.send();try{store=JSON.parse(x.responseText)||{}}catch(e){store={}}}
   var put=function(k,v){fetch('/api/kv/'+encodeURIComponent(k),{method:'PUT',headers:{'Content-Type':'text/plain'},body:v==null?'':String(v)})};
   var ls={getItem:function(k){return k in store?store[k]:null},setItem:function(k,v){store[k]=String(v);put(k,v)},
     removeItem:function(k){delete store[k];fetch('/api/kv/'+encodeURIComponent(k),{method:'DELETE'})},clear:function(){},key:function(i){return Object.keys(store)[i]||null},get length(){return Object.keys(store).length}};
@@ -20,8 +19,11 @@
     return of(px(u),{method:init.method||'GET',body:init.body,signal:init.signal,headers:{'X-Proxy-Headers':JSON.stringify(h),'Content-Type':h['Content-Type']||h['content-type']||'text/plain'}});
   };
   // Bilder med ${SECRET} i URL (plakater osv.) går via proxy
+  // Ikoner/bilder fra CDN mellomlagres av serveren (disk + lang nettleser-cache)
+  var IMG=/^https:\/\/(cdn\.jsdelivr\.net|raw\.githubusercontent\.com|avatars\.githubusercontent\.com|mc-heads\.net|developers\.cloudflare\.com)\//;
+  var imgx=function(v){return typeof v==='string'&&IMG.test(v)?'/api/img?url='+v.replace(/[%?&#+]/g,encodeURIComponent):v};
   var sa=Element.prototype.setAttribute;
-  Element.prototype.setAttribute=function(n,v){if(n==='src'&&typeof v==='string'&&v.indexOf('${')>=0)v=px(v);return sa.call(this,n,v)};
+  Element.prototype.setAttribute=function(n,v){if(n==='src'&&typeof v==='string'){if(v.indexOf('${')>=0)v=px(v);else v=imgx(v)}return sa.call(this,n,v)};
   var d=Object.getOwnPropertyDescriptor(HTMLImageElement.prototype,'src');
-  Object.defineProperty(HTMLImageElement.prototype,'src',{get:d.get,set:function(v){if(typeof v==='string'&&v.indexOf('${')>=0)v=px(v);d.set.call(this,v)},configurable:true});
+  Object.defineProperty(HTMLImageElement.prototype,'src',{get:d.get,set:function(v){if(typeof v==='string'){if(v.indexOf('${')>=0)v=px(v);else v=imgx(v)}d.set.call(this,v)},configurable:true});
 })();

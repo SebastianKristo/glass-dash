@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preload" href="/fonts/jetbrains-mono-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/vendor/react.production.min.js" as="script">
+<link rel="preload" href="/vendor/react-dom.production.min.js" as="script">
 <script src="./shim.js"></script>
 <script src="./support.js"></script>
 </head>
@@ -11,7 +14,7 @@
 <helmet>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <title>Labdeck</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:400;font-display:swap;src:url(/fonts/jetbrains-mono-latin-400-normal.woff2) format('woff2')}@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:500;font-display:swap;src:url(/fonts/jetbrains-mono-latin-500-normal.woff2) format('woff2')}@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:700;font-display:swap;src:url(/fonts/jetbrains-mono-latin-700-normal.woff2) format('woff2')}</style>
 <style>:root{--bg:#141416;--bg2:#18181a;--card:#1b1b1e;--line:#232326;--line2:#2a2a2e;--line3:#3a3a3e;--accent:#e8c46a;--text:#e6e4df;--text2:#c9c7c2;--soft:#a9a7a2;--muted:#8a877f;--dim:#6d6b66;--dim2:#55544f;--neg:#e0716a;--stripe1:#1f1f23;--stripe2:#232327;--hover:#212124}body{margin:0;background:var(--bg);color:var(--text2);font-family:'JetBrains Mono',monospace}.noscroll{scrollbar-width:none;-ms-overflow-style:none}.noscroll::-webkit-scrollbar{display:none}a{color:var(--accent)}a:hover{color:#f3d68e}input,textarea,select,button{font:inherit}</style>
 </helmet>
 <div style="min-height:100vh;background:var(--bg);font-size:11px">
