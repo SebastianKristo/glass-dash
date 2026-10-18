@@ -15,31 +15,63 @@ const masked=()=>{const o={};new Set([...DEF,...Object.keys(secrets)]).forEach(n
 const MIME={'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.png':'image/png','.json':'application/json'};
 const body=req=>new Promise(r=>{const c=[];req.on('data',d=>c.push(d));req.on('end',()=>r(Buffer.concat(c)))});
 const json=(res,code,o)=>{res.writeHead(code,{'Content-Type':'application/json'});res.end(JSON.stringify(o))};
-const cache=new Map();
+// ── Forhåndslasting ──────────────────────────────────────────────────────────
+// Alle GET-kall via proxyen og alle status-pinger huskes (uten secrets, med ${NAVN})
+// og hentes på nytt i bakgrunnen. Nettleseren får alltid siste svar umiddelbart.
+const WARM_FILE=path.join(DATA,'warm.json');
+const TTL=+process.env.CACHE_TTL||30000;          // svar eldre enn dette fornyes i bakgrunnen
+const PING_TTL=+process.env.PING_TTL||60000;
+const IDLE=24*3600e3;                              // slutt å varme det som ikke er brukt på et døgn
+const cache=new Map(),pings=new Map(),inflight=new Map();
+function fillHeaders(hd){const o={};for(const k in hd){let v=String(hd[k]);
+  // Basic auth bygget i nettleseren inneholder base64 av ${NAVN} – dekod, bytt inn secrets og kod på nytt
+  const m=/^Basic\s+(.+)$/i.exec(v);if(m){const raw=Buffer.from(m[1],'base64').toString();if(raw.includes('${'))v='Basic '+Buffer.from(sub(raw)).toString('base64')}
+  o[k]=sub(v)}return o}
+async function upstream(u,hd){
+  const r=await fetch(new URL(sub(u)),{headers:fillHeaders(hd),signal:AbortSignal.timeout(15000),redirect:'follow'});
+  return{t:Date.now(),status:r.status,type:r.headers.get('content-type')||'application/octet-stream',buf:Buffer.from(await r.arrayBuffer())}}
+function refresh(key,e){if(inflight.has(key))return inflight.get(key);
+  const p=upstream(e.u,e.hd).then(v=>{if(v.status<400||!e.v)e.v=v;else e.v.t=Date.now();return e.v})
+    .catch(err=>{if(!e.v)throw err;e.v.t=Date.now();return e.v}).finally(()=>inflight.delete(key));
+  inflight.set(key,p);return p}
 async function proxy(req,res,u){
-  let target;try{target=new URL(sub(u))}catch(e){return json(res,400,{error:'Ugyldig URL'})}
+  try{new URL(sub(u))}catch(e){return json(res,400,{error:'Ugyldig URL'})}
   let hd={};try{hd=JSON.parse(req.headers['x-proxy-headers']||'{}')}catch(e){}
-  for(const k in hd){let v=String(hd[k]);
-    // Basic auth bygget i nettleseren inneholder base64 av ${NAVN} – dekod, bytt inn secrets og kod på nytt
-    const m=/^Basic\s+(.+)$/i.exec(v);if(m){const raw=Buffer.from(m[1],'base64').toString();if(raw.includes('${'))v='Basic '+Buffer.from(sub(raw)).toString('base64')}
-    hd[k]=sub(v)}
-  const method=req.method,b=method==='GET'||method==='HEAD'?undefined:sub((await body(req)).toString());
-  if(b!==undefined&&!Object.keys(hd).some(k=>k.toLowerCase()==='content-type')&&req.headers['content-type'])hd['Content-Type']=req.headers['content-type'];
-  const key=method==='GET'?target.href+JSON.stringify(hd):null;
-  const c=key&&cache.get(key);if(c&&Date.now()-c.t<10000){res.writeHead(c.status,{'Content-Type':c.type});return res.end(c.buf)}
+  if(req.method!=='GET'){ // POST o.l. (Pi-hole login) går rett gjennom
+    const h=fillHeaders(hd),b=sub((await body(req)).toString());
+    if(!Object.keys(h).some(k=>k.toLowerCase()==='content-type')&&req.headers['content-type'])h['Content-Type']=req.headers['content-type'];
+    try{const r=await fetch(new URL(sub(u)),{method:req.method,headers:h,body:b,signal:AbortSignal.timeout(15000)});
+      res.writeHead(r.status,{'Content-Type':r.headers.get('content-type')||'application/json'});return res.end(Buffer.from(await r.arrayBuffer()))}
+    catch(e){return json(res,502,{error:String(e.cause&&e.cause.message||e.message)})}}
+  const key=u+'\n'+JSON.stringify(hd);
+  let e=cache.get(key);if(!e){e={u,hd,v:null,used:0};cache.set(key,e);saveWarm()}
+  e.used=Date.now();
   try{
-    const r=await fetch(target,{method,headers:hd,body:b,signal:AbortSignal.timeout(15000),redirect:'follow'});
-    const buf=Buffer.from(await r.arrayBuffer()),type=r.headers.get('content-type')||'application/octet-stream';
-    if(key&&r.ok){cache.set(key,{t:Date.now(),status:r.status,type,buf});if(cache.size>500)cache.delete(cache.keys().next().value)}
-    res.writeHead(r.status,{'Content-Type':type,'Cache-Control':'no-store'});res.end(buf);
-  }catch(e){json(res,502,{error:String(e.cause&&e.cause.message||e.message)})}
+    if(!e.v)await refresh(key,e);else if(Date.now()-e.v.t>TTL)refresh(key,e).catch(()=>{});
+    const v=e.v;res.writeHead(v.status,{'Content-Type':v.type,'Cache-Control':'no-store'});res.end(v.buf);
+  }catch(err){cache.delete(key);json(res,502,{error:String(err.cause&&err.cause.message||err.message)})}
+  if(cache.size>600){const old=[...cache.entries()].sort((a,b)=>a[1].used-b[1].used)[0];cache.delete(old[0])}
 }
-async function ping(res,u){
-  const t0=Date.now();
+async function doPing(u){const t0=Date.now();
   try{const r=await fetch(new URL(sub(/^https?:\/\//.test(u)?u:'http://'+u)),{method:'GET',signal:AbortSignal.timeout(6000),redirect:'manual'});r.body&&r.body.cancel().catch(()=>{});
-    json(res,200,{ok:r.status<500,status:r.status,ms:Date.now()-t0})}
-  catch(e){json(res,200,{ok:false,error:e.name==='TimeoutError'?'timeout':'down'})}
-}
+    return{ok:r.status<500,status:r.status,ms:Date.now()-t0,t:Date.now()}}
+  catch(e){return{ok:false,error:e.name==='TimeoutError'?'timeout':'down',t:Date.now()}}}
+async function ping(res,u){
+  let e=pings.get(u);if(!e){e={v:null,used:0,p:null};pings.set(u,e);saveWarm()}
+  e.used=Date.now();
+  const run=()=>e.p||(e.p=doPing(u).then(v=>(e.v=v)).finally(()=>{e.p=null}));
+  if(!e.v)await run();else if(Date.now()-e.v.t>PING_TTL)run();
+  json(res,200,e.v)}
+// Husk hva som brukes, så cachen kan varmes opp igjen etter omstart
+let warmT=null;
+function saveWarm(){clearTimeout(warmT);warmT=setTimeout(()=>{try{wr(WARM_FILE,{proxy:[...cache.values()].filter(e=>/json|text/.test(e.v?.type||'json')).map(e=>({u:e.u,hd:e.hd})),ping:[...pings.keys()]})}catch(e){}},2000)}
+function warmTick(){const now=Date.now();
+  for(const[k,e]of cache){if(now-e.used>IDLE){cache.delete(k);continue}if(!e.v||(now-e.v.t>TTL&&/json|text/.test(e.v.type)))refresh(k,e).catch(()=>{})}
+  for(const[u,e]of pings){if(now-e.used>IDLE){pings.delete(u);continue}if(!e.v||now-e.v.t>PING_TTL)e.p||(e.p=doPing(u).then(v=>(e.v=v)).finally(()=>{e.p=null}))}}
+{const w=rd(WARM_FILE,{proxy:[],ping:[]}),now=Date.now();
+  (w.proxy||[]).forEach(x=>cache.set(x.u+'\n'+JSON.stringify(x.hd),{u:x.u,hd:x.hd,v:null,used:now}));
+  (w.ping||[]).forEach(u=>pings.set(u,{v:null,used:now,p:null}));
+  setTimeout(warmTick,500);setInterval(warmTick,10000)}
 
 // Minecraft Java Server List Ping (protokoll -1), med SRV-oppslag og 30 s cache
 const net=require('net'),dns=require('dns').promises;
@@ -59,7 +91,7 @@ const mcCache=new Map();
 async function minecraft(res,raw){
   raw=sub(raw||'${MINECRAFT_HOST}').replace(/^\w+:\/\//,'').replace(/\/.*$/,'');
   if(!raw)return json(res,400,{error:'MINECRAFT_HOST mangler'});
-  const hit=mcCache.get(raw);if(hit&&Date.now()-hit.t<30000)return json(res,200,hit.v);
+  const hit=mcCache.get(raw);if(hit){json(res,200,hit.v);if(Date.now()-hit.t<30000||hit.busy)return;hit.busy=true;res={writeHead(){},end(){}}}
   let[host,p]=raw.split(':'),port=+p||25565,v;
   if(!p){try{const r=await dns.resolveSrv('_minecraft._tcp.'+host);if(r[0]){host=r[0].name;port=r[0].port}}catch(e){}}
   try{const s=await slp(host,port);
