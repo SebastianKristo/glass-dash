@@ -357,6 +357,7 @@ Oppsettet ditt i `/app/data` beholdes.
 - **Frontend:** Prototypen fra Claude Design (React), servert som statiske filer. React og Babel ligger i imaget, så siden virker uten internett.
 - **Backend:** [`server.js`](server.js) – en liten Node-server uten avhengigheter. Den lagrer oppsett, holder secrets og videresender alle API-kall. Det løser CORS-problemer og holder nøklene unna nettleseren.
 - **Forhåndslasting:** Serveren husker alle kall widgetene gjør og oppdaterer dem i bakgrunnen (API-er hvert 30. sekund, status-ping hvert minutt). Når du åpner siden, får du siste svar umiddelbart i stedet for å vente på hver tjeneste. Lista lagres i `/app/data/warm.json`, så cachen varmes opp igjen etter omstart. Kan justeres med `CACHE_TTL` og `PING_TTL` (millisekunder).
+- **Rask oppstart:** Oppsettet bakes inn i siden, fonten (JetBrains Mono, OFL) ligger lokalt, filene komprimeres (gzip) og React/fonter caches i nettleseren. Ikoner fra CDN lastes ned én gang og lagres i `/app/data/img-cache`.
 - **Lagring:**
   - `/app/data/config.json` – faner, widgets, tema.
   - `/app/data/secrets.json` – secrets.

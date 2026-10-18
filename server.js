@@ -12,7 +12,7 @@ const known=n=>DEF.includes(n)||n in secrets;
 const sec=n=>!known(n)?'':secrets[n]!=null&&secrets[n]!==''?secrets[n]:(process.env[n]||'');
 const sub=s=>String(s).replace(/\$\{(\w+)\}/g,(_,n)=>sec(n));
 const masked=()=>{const o={};new Set([...DEF,...Object.keys(secrets)]).forEach(n=>o[n]=sec(n)?'${'+n+'}':'');return o};
-const MIME={'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.png':'image/png','.json':'application/json'};
+const MIME={'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.png':'image/png','.json':'application/json','.woff2':'font/woff2','.txt':'text/plain; charset=utf-8'};
 const body=req=>new Promise(r=>{const c=[];req.on('data',d=>c.push(d));req.on('end',()=>r(Buffer.concat(c)))});
 const json=(res,code,o)=>{res.writeHead(code,{'Content-Type':'application/json'});res.end(JSON.stringify(o))};
 // ── Forhåndslasting ──────────────────────────────────────────────────────────
@@ -99,6 +99,37 @@ async function minecraft(res,raw){
   catch(e){v={host:raw,online:false,now:0,max:0,version:'—',motd:'',icon:'',list:[]}}
   mcCache.set(raw,{t:Date.now(),v});json(res,200,v);
 }
+// Statiske filer: gzip + cache i minnet. index.html får oppsettet bakt inn, så siden slipper et ekstra kall.
+const zlib=require('zlib'),staticCache=new Map();
+function loadStatic(f){const st=fs.statSync(f),c=staticCache.get(f);if(c&&c.m===st.mtimeMs)return c;
+  const buf=fs.readFileSync(f),v={m:st.mtimeMs,buf,gz:/\.(html|js|css|svg|json|txt)$/.test(f)?zlib.gzipSync(buf):null};staticCache.set(f,v);return v}
+function serveStatic(req,res,f){
+  const ext=path.extname(f),type=MIME[ext]||'application/octet-stream',gz=/gzip/.test(req.headers['accept-encoding']||'');
+  if(f===path.join(PUB,'index.html')){
+    const kvj=JSON.stringify({...kv,[SEC_KEY]:JSON.stringify(masked())}).replace(/</g,'\\u003c');
+    const html=loadStatic(f).buf.toString().replace('<script src="./shim.js">','<script>window.__LABDECK_KV__='+kvj+'</script>\n<script src="./shim.js">');
+    const out=gz?zlib.gzipSync(html):Buffer.from(html);
+    res.writeHead(200,{'Content-Type':type,'Cache-Control':'no-store',...(gz?{'Content-Encoding':'gzip'}:{}),'Vary':'Accept-Encoding'});return res.end(out)}
+  const v=loadStatic(f),long=/\/(vendor|fonts)\//.test(f);
+  res.writeHead(200,{'Content-Type':type,'Cache-Control':long?'public, max-age=31536000, immutable':'no-cache',...(gz&&v.gz?{'Content-Encoding':'gzip'}:{}),'Vary':'Accept-Encoding'});
+  res.end(gz&&v.gz?v.gz:v.buf)}
+// Bildecache for ikoner (CDN) – lagres på disk i /app/data/img-cache
+const crypto=require('crypto'),IMG_DIR=path.join(DATA,'img-cache');fs.mkdirSync(IMG_DIR,{recursive:true});
+const IMG_OK=/^https:\/\/(cdn\.jsdelivr\.net|raw\.githubusercontent\.com|avatars\.githubusercontent\.com|mc-heads\.net|developers\.cloudflare\.com)\//;
+const imgBusy=new Map();
+async function image(res,u){
+  if(!IMG_OK.test(u))return res.writeHead(400).end();
+  const h=crypto.createHash('sha1').update(u).digest('hex'),f=path.join(IMG_DIR,h),meta=f+'.type';
+  const send=()=>{res.writeHead(200,{'Content-Type':fs.readFileSync(meta,'utf8'),'Cache-Control':'public, max-age=604800'});fs.createReadStream(f).pipe(res)};
+  if(fs.existsSync(f)&&fs.existsSync(meta)){send();
+    if(Date.now()-fs.statSync(f).mtimeMs>7*864e5&&!imgBusy.has(h))fetchImg(u,f,meta,h).catch(()=>{});return}
+  try{await fetchImg(u,f,meta,h);send()}
+  catch(e){res.writeHead(e.status||502,{'Cache-Control':'public, max-age=3600'});res.end()}
+}
+function fetchImg(u,f,meta,h){if(imgBusy.has(h))return imgBusy.get(h);
+  const p=(async()=>{const r=await fetch(u,{signal:AbortSignal.timeout(10000)});if(!r.ok){const e=new Error('HTTP '+r.status);e.status=r.status;throw e}
+    const b=Buffer.from(await r.arrayBuffer());fs.writeFileSync(f+'.tmp',b);fs.renameSync(f+'.tmp',f);fs.writeFileSync(meta,r.headers.get('content-type')||'image/png')})().finally(()=>imgBusy.delete(h));
+  imgBusy.set(h,p);return p}
 http.createServer(async(req,res)=>{
   const url=new URL(req.url,'http://x'),p=url.pathname;
   try{
@@ -116,9 +147,11 @@ http.createServer(async(req,res)=>{
     if(p==='/api/proxy')return proxy(req,res,url.searchParams.get('url')||'');
     if(p==='/api/ping')return ping(res,url.searchParams.get('url')||'');
     if(p==='/api/widgets/minecraft')return minecraft(res,url.searchParams.get('host'));
+    if(p==='/api/img')return image(res,url.searchParams.get('url')||'');
     if(p==='/api/health')return json(res,200,{ok:true});
-    let f=path.normalize(path.join(PUB,p==='/'?'index.html':p));
+    if(p.includes('{{'))return res.writeHead(404).end();   // mal-plassholdere fra før React har rendret
+    let f=path.normalize(path.join(PUB,p==='/'?'index.html':decodeURIComponent(p)));
     if(!f.startsWith(PUB)||!fs.existsSync(f)||fs.statSync(f).isDirectory())f=path.join(PUB,'index.html');
-    res.writeHead(200,{'Content-Type':MIME[path.extname(f)]||'application/octet-stream'});fs.createReadStream(f).pipe(res);
+    return serveStatic(req,res,f);
   }catch(e){json(res,500,{error:e.message})}
 }).listen(PORT,()=>console.log('Labdeck kjører på port '+PORT+', data i '+DATA));
