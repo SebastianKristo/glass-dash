@@ -13,7 +13,7 @@
     var u=typeof input==='string'?input:(input&&input.url)||String(input);init=init||{};
     if(!ext(u)&&u.indexOf('${')<0)return of(input,init);
     if(init.mode==='no-cors'){
-      return of('/api/ping?url='+encodeURIComponent(u),{signal:init.signal,cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(!j.ok)throw new Error(j.error||'down');return new Response('')});
+      return of('/api/ping?url='+encodeURIComponent(u),{signal:init.signal,cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(!j.ok)throw new Error(j.error||'down');return new Promise(function(ok){setTimeout(function(){ok(new Response(''))},Math.min(j.ms||0,2000))})});
     }
     var h={};var hd=init.headers||{};
     if(hd instanceof Headers)hd.forEach(function(v,k){h[k]=v});else for(var k in hd)h[k]=hd[k];
