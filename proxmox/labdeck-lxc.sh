@@ -121,6 +121,8 @@ set -e
 cd /opt/labdeck && git pull -q && systemctl restart labdeck && echo "Labdeck oppdatert ✓"
 UPD
 chmod +x /usr/local/bin/update-labdeck
+# pct exec søker bare i /usr/bin og /bin, ikke /usr/local/bin
+ln -sf /usr/local/bin/update-labdeck /usr/bin/update-labdeck
 systemctl daemon-reload
 systemctl enable -q --now labdeck
 INNER
