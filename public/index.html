@@ -70,6 +70,7 @@
     <button onClick="{{addSection}}" style="background:none;color:var(--accent);border:1px solid var(--accent);border-radius:3px;padding:4px 10px;cursor:pointer;font-size:10px;font-weight:700">+ ny seksjon</button>
     <sc-for list="{{addBtns}}" as="a"><button onClick="{{a.open}}" style="background:var(--accent);color:var(--bg);border:0;border-radius:3px;padding:4px 10px;cursor:pointer;font-size:10px;font-weight:700">+ {{a.label}}</button></sc-for>
     <button onClick="{{addTab}}" style="background:none;color:var(--accent);border:1px solid var(--accent);border-radius:3px;padding:4px 10px;cursor:pointer;font-size:10px;font-weight:700">+ ny fane</button>
+    <button onClick="{{openDisc}}" style="background:none;color:var(--accent);border:1px solid var(--accent);border-radius:3px;padding:4px 10px;cursor:pointer;font-size:10px;font-weight:700">⌕ finn nye tjenester</button>
     <button onClick="{{renameTab}}" style="background:none;color:var(--text2);border:1px solid var(--line2);border-radius:3px;padding:4px 10px;cursor:pointer;font-size:10px">gi fanen nytt navn</button>
     <button onClick="{{delTab}}" style="background:none;color:var(--neg);border:1px solid var(--line2);border-radius:3px;padding:4px 10px;cursor:pointer;font-size:10px">slett fane</button>
     <button onClick="{{reset}}" style="background:none;color:var(--muted);border:1px solid var(--line2);border-radius:3px;padding:4px 10px;cursor:pointer;font-size:10px">reset</button>
@@ -157,11 +158,11 @@
     <div style="background:var(--card);border:1px solid var(--line);border-radius:4px;padding:12px;display:flex;flex-direction:column;gap:10px">
       <div style="display:flex;align-items:center;gap:6px"><span style="color:var(--text);font-size:12px;flex:1">{{w.cal.label}}</span><button onClick="{{w.cal.prev}}" style="background:none;border:0;color:var(--muted);cursor:pointer;padding:0 4px">‹</button><span style="color:var(--text)">{{w.cal.mn}}</span><button onClick="{{w.cal.next}}" style="background:none;border:0;color:var(--muted);cursor:pointer;padding:0 4px">›</button></div>
       <div style="display:grid;grid-template-columns:repeat(7,1fr);row-gap:2px;text-align:center;font-size:10px">
-        <sc-for list="{{dows}}" as="d"><span style="color:var(--dim2);font-size:8.5px;padding-bottom:2px">{{d}}</span></sc-for>
-        <sc-for list="{{w.cal.days}}" as="d">
-          <button onClick="{{d.onClick}}" style="background:{{d.bg}};border:1px solid {{d.border}};color:{{d.color}};border-radius:3px;padding:3px 0 2px;cursor:{{d.cur}};display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px">
-            <span>{{d.n}}</span>
-            <span style="display:flex;gap:2px;height:3px"><sc-for list="{{d.dots}}" as="c"><span style="width:3px;height:3px;border-radius:50%;background:{{c}}"></span></sc-for></span>
+        <sc-for list="{{dows}}" as="dr"><span style="color:var(--dim2);font-size:8.5px;padding-bottom:2px">{{d}}</span></sc-for>
+        <sc-for list="{{w.cal.days}}" as="dr">
+          <button onClick="{{dr.onClick}}" style="background:{{dr.bg}};border:1px solid {{dr.border}};color:{{dr.color}};border-radius:3px;padding:3px 0 2px;cursor:{{dr.cur}};display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px">
+            <span>{{dr.n}}</span>
+            <span style="display:flex;gap:2px;height:3px"><sc-for list="{{dr.dots}}" as="c"><span style="width:3px;height:3px;border-radius:50%;background:{{c}}"></span></sc-for></span>
           </button>
         </sc-for>
       </div>
@@ -483,6 +484,38 @@
   </div>
 </sc-if>
 
+<sc-if value="{{discOpen}}" hint-placeholder-val="{{false}}">
+  <div onClick="{{closeAll}}" style="position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;justify-content:flex-end;z-index:10">
+    <div onClick="{{stop}}" style="width:400px;max-width:100%;height:100%;background:var(--bg2);border-left:1px solid var(--line);padding:18px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px;overflow:auto;font-size:11px">
+      <div style="display:flex;align-items:center;gap:8px"><span style="font-size:13px;color:var(--text);flex:1">Finn nye tjenester</span>
+        <button onClick="{{disc.refresh}}" style="background:none;border:1px solid var(--line2);color:var(--text2);border-radius:3px;padding:4px 8px;cursor:pointer;font-size:10px">↻ søk igjen</button></div>
+      <span style="color:var(--muted)">CT-er og VM-er fra Proxmox og containere fra Portainer.</span>
+      <sc-if value="{{disc.none}}"><span style="color:var(--neg);line-height:1.5">Ingen kilder satt opp. Fyll inn <b>PROXMOX_URL</b> + <b>PROXMOX_TOKEN</b> og/eller <b>PORTAINER_URL</b> + <b>PORTAINER_API_KEY</b> under Secrets.</span></sc-if>
+      <sc-if value="{{disc.hasErr}}"><span style="color:var(--neg);line-height:1.5">{{disc.errors}}</span></sc-if>
+      <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--accent);flex:1">{{disc.summary}}</span>
+        <button onClick="{{disc.toggleAll}}" style="background:none;border:0;color:var(--muted);cursor:pointer;font-size:10px;text-decoration:underline">{{disc.allLabel}}</button></div>
+      <sc-for list="{{disc.rows}}" as="dr">
+        <label style="display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:4px;padding:8px;cursor:pointer;opacity:{{dr.op}}">
+          <input type="checkbox" checked="{{dr.checked}}" disabled="{{dr.off}}" onChange="{{dr.toggle}}" style="accent-color:var(--accent)">
+          <span style="width:22px;height:22px;flex:none;display:flex;align-items:center;justify-content:center"><img src="{{dr.icon}}" alt="" ref="{{dr.imgRef}}" style="width:22px;height:22px;object-fit:contain;display:{{dr.imgDisp}}"></span>
+          <span style="display:flex;flex-direction:column;gap:2px;min-width:0">
+            <span style="color:var(--text)">{{dr.name}}</span>
+            <span style="color:var(--dim);font-size:9.5px">{{dr.where}}</span>
+            <span style="color:{{dr.lineColor}};font-size:9.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{dr.line}}</span>
+          </span>
+        </label>
+      </sc-for>
+      <label style="display:flex;flex-direction:column;gap:6px;color:var(--muted);margin-top:4px">Legg i gruppe (denne fanen)
+        <select value="{{disc.target}}" onChange="{{disc.setTarget}}" style="background:var(--bg);border:1px solid var(--line2);border-radius:3px;padding:8px;color:var(--text);outline:none"><sc-for list="{{disc.targets}}" as="o"><option value="{{o.v}}">{{o.n}}</option></sc-for></select></label>
+      <button onClick="{{disc.add}}" disabled="{{disc.cantAdd}}" style="background:var(--accent);color:var(--bg);border:0;border-radius:3px;padding:9px;cursor:pointer;font-weight:700;opacity:{{disc.addOp}}">{{disc.addLabel}}</button>
+      <label style="display:flex;gap:10px;align-items:flex-start;border-top:1px solid var(--line);padding-top:12px;margin-top:4px;color:var(--text2);line-height:1.5;cursor:pointer">
+        <input type="checkbox" checked="{{disc.auto}}" onChange="{{disc.setAuto}}" style="accent-color:var(--accent);margin-top:2px">
+        <span>Legg til nye automatisk<br><span style="color:var(--dim)">Tjenester som dukker opp etter at dette slås på, havner i «Nye tjenester» på første fane. Fliser lagt til automatisk fjernes når CT-en/containeren slettes. Det som finnes nå, legger du til fra listen over.</span></span>
+      </label>
+    </div>
+  </div>
+</sc-if>
+
 <sc-if value="{{hasSel}}" hint-placeholder-val="{{false}}">
   <div onClick="{{closeAll}}" style="position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;justify-content:flex-end;z-index:10">
     <div onClick="{{stop}}" style="width:320px;max-width:100%;height:100%;background:var(--bg2);border-left:1px solid var(--line);padding:18px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px;overflow-y:auto">
@@ -549,6 +582,7 @@ const KEY='labdeck-v4',Y='var(--accent)',R='var(--neg)';
 const hues=[25,75,145,200,240,290,330];
 const ST={o:['OK · ',Y,'✓'],e:['ERROR',R,'!'],t:['Timed Out',R,'!']};
 const SLUG={'HomeAssistant':'home-assistant','ESP Home':'esphome','Qbittorrent':'qbittorrent','SUB/WAVE':'subwave','n8n':'n8n','Zigbee2mqtt':'zigbee2mqtt','UniFi':'unifi','UniFi Protect':'unifi-protect','Homey':'homey','Silo':'silo','Yuball':'youtube'};
+const urlKey=u=>{if(!u)return'';try{const x=new URL(/^https?:\/\//.test(u)?u:'http://'+u);return x.hostname.toLowerCase()+':'+(x.port||(x.protocol==='https:'?'443':'80'))}catch(e){return''}};
 const toSvc=s=>{if(typeof s!=='string')return s;const[n,c='o',ms='3ms']=s.split('|');return{name:n,url:'',icon:'',status:'auto',demo:c,ms}};
 const mkApp0=(s,i)=>{const [n,c='o',ms='3ms']=s.split('|');const st=ST[c]||ST.o;const slug=/^ny tjeneste/i.test(n)?'':SLUG[n]||n.toLowerCase().replace(/[^a-z0-9]+/g,'-');return{icon:slug?`https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/${slug}.svg`:'',imgRef:el=>{if(el&&!el.onload){el.onload=()=>{const p=el.parentElement;if(p){p.style.background='transparent';if(p.firstElementChild&&p.firstElementChild!==el)p.firstElementChild.style.visibility='hidden'}};if(el.complete&&el.naturalWidth)el.onload()}if(el&&!el.onerror){el.onerror=()=>{const t=el;if(t.src.endsWith('.svg'))t.src=t.src.replace('/svg/','/png/').replace('.svg','.png');else t.style.display='none'};if(el.complete&&!el.naturalWidth)el.onerror()}},_x:e=>{const t=e.target;if(t.src.endsWith('.svg'))t.src=t.src.replace('/svg/','/png/').replace('.svg','.png');else t.style.display='none'},name:n,ini:n.slice(0,2),bg:`oklch(0.72 0.1 ${hues[(n.charCodeAt(0)+n.length)%7]})`,status:c==='o'?st[0]+ms:st[0],sc:c==='o'?'var(--muted)':R,ic:st[1],mark:st[2]}};
 const LIB={search:'Search',apps:'Tjenestegruppe',calendar:'Calendar',speed:'Internet speed',text:'Tekst / fact',progress:'Day progress',error:'Statuskort',empty:'Tom',tunnels:'Cloudflared tunnels',cloudflare:'Cloudflare analytics',fact:'Random fact (API)',dns:'DNS stats',prowlarr:'Prowlarr indexers',portainer:'Portainer',qbit:'qBittorrent',nowplaying:'Media server (now playing)',immich:'Immich stats',verse:'Random bible verse (API)',history:'Media server history',weather:'Weather',server:'Server stats',releases:'Media releases',indexers:'Prowlarr indexers',minecraft:'Minecraft Java server'};
@@ -732,7 +766,7 @@ class Component extends DCLogic{
  srchRef=React.createRef();
  openUrl(u,nt=true){u=/^https?:\/\//.test(u)?u:'http://'+u;if(nt)window.open(u,'_blank','noopener');else location.href=u}
  zoom(){const w=window.innerWidth||0;return w?Math.max(1,Math.min(1.6,w/1180)):1}
- componentDidMount(){this._srv=setInterval(()=>{for(const k in this.dc)if(k.startsWith('server')||(k.startsWith('minecraft')&&Date.now()-(this._mcT||0)>55000))delete this.dc[k];if(Date.now()-(this._mcT||0)>55000)this._mcT=Date.now();this.forceUpdate()},15000);this._key=e=>{const t=e.target.tagName;if((e.key==='/'||e.key==='s'||e.key==='S')&&!/INPUT|TEXTAREA|SELECT/.test(t)&&this.srchRef.current){e.preventDefault();this.srchRef.current.focus()}};window.addEventListener('keydown',this._key);this._rs=()=>this.forceUpdate();window.addEventListener('resize',this._rs);requestAnimationFrame(this._rs);try{this._ro=new ResizeObserver(this._rs);this._ro.observe(document.documentElement)}catch(e){}applyTheme(THEMES[this.state.theme]||THEMES[0]);this.migrate();this.forceUpdate();fetch('https://uselessfacts.jsph.pl/api/v2/facts/random').then(r=>r.json()).then(j=>this.setState({fact:j.text})).catch(()=>this.setState({fact:'Kunne ikke hente fakta.'}));
+ componentDidMount(){this._dt=setTimeout(()=>this.discTick(),4000);this._di=setInterval(()=>this.discTick(),300000);this._srv=setInterval(()=>{for(const k in this.dc)if(k.startsWith('server')||(k.startsWith('minecraft')&&Date.now()-(this._mcT||0)>55000))delete this.dc[k];if(Date.now()-(this._mcT||0)>55000)this._mcT=Date.now();this.forceUpdate()},15000);this._key=e=>{const t=e.target.tagName;if((e.key==='/'||e.key==='s'||e.key==='S')&&!/INPUT|TEXTAREA|SELECT/.test(t)&&this.srchRef.current){e.preventDefault();this.srchRef.current.focus()}};window.addEventListener('keydown',this._key);this._rs=()=>this.forceUpdate();window.addEventListener('resize',this._rs);requestAnimationFrame(this._rs);try{this._ro=new ResizeObserver(this._rs);this._ro.observe(document.documentElement)}catch(e){}applyTheme(THEMES[this.state.theme]||THEMES[0]);this.migrate();this.forceUpdate();fetch('https://uselessfacts.jsph.pl/api/v2/facts/random').then(r=>r.json()).then(j=>this.setState({fact:j.text})).catch(()=>this.setState({fact:'Kunne ikke hente fakta.'}));
   fetch('https://bible-api.com/data/web/random').then(r=>r.json()).then(j=>{const v=j.random_verse;this.setState({verse:{ref:`${v.book} ${v.chapter}:${v.verse}`,text:v.text.trim()}})}).catch(()=>this.setState({verse:{ref:'',text:'Kunne ikke hente vers.'}}))}
  wxView(id,x){const hv=(this.state.wxH||{})[id],set=v=>this.setState({wxH:{...(this.state.wxH||{}),[id]:v}});const hc=hv!=null&&x.cols[hv];
   return{...x,foot:hc?hc.time+' · '+hc.temp+(hc.rainP?' · '+hc.rainP+'% nedbør':''):'⌖ '+x.place,
@@ -766,6 +800,31 @@ class Component extends DCLogic{
    selItems:sl.map(e=>({hasCover:!!e.cover,cover:e.cover,c:e.src==='sonarr'?BLUE:Y,t:e.t,n:e.n,meta:e.se+' · '+(e.src==='sonarr'?e.date.toLocaleTimeString('nb-NO',{hour:'2-digit',minute:'2-digit'}):'Radarr')+(e.has?' · ✓ lastet ned':'')}))}}
  setDraft(o){this.setState({secDraft:o,secSaved:false})}
  saveSec(secrets){this.setState({secrets});localStorage.setItem(SEC_KEY,JSON.stringify(secrets))}
+ // ── Oppdagelse (Proxmox + Portainer via /api/discover) ──
+ discCfg(){try{return JSON.parse(localStorage.getItem('labdeck-discover'))||{}}catch(e){return{}}}
+ discSave(c){localStorage.setItem('labdeck-discover',JSON.stringify(c));this.forceUpdate()}
+ discFetch(fresh){return fetch('/api/discover'+(fresh?'?fresh':''),{cache:'no-store'}).then(r=>r.json())}
+ discOpen(){this.setState({discOpen:true,discBusy:true,discSel:{}});this.discFetch(true).then(v=>this.setState({disc:v,discBusy:false})).catch(e=>this.setState({disc:{items:[],errors:['Labdeck: '+e.message],sources:{}},discBusy:false}))}
+ discEx(boards){const keys=new Set(),urls=new Set();for(const t in boards)for(const col of boards[t])for(const w of col)if(w.type==='apps')for(const a of w.apps||[]){if(!a||typeof a!=='object')continue;if(a.disc)keys.add(a.disc);const k=urlKey(a.url);if(k)urls.add(k)}return{keys,urls}}
+ discIsNew(it,ex){return!ex.keys.has(it.key)&&!(it.url&&ex.urls.has(urlKey(it.url)))}
+ discTile(it,auto){return{name:it.name,url:it.url,icon:it.icon||'',status:'auto',disc:it.key,...(auto?{auto:true}:{})}}
+ // Tar en tjeneste i bruk i en gruppe. target: widget-id i gjeldende fane, eller '' = ny gruppe «Nye tjenester»
+ discAdd(items,target){if(!items.length)return;const m=this.state.mobile;
+  this.mut(cols=>{let w=target&&cols.flat().find(x=>x.id===target);if(!w){w={id:uid(),type:'apps',title:'Nye tjenester',apps:[]};cols[m?0:1].unshift(w)}w.apps=[...(w.apps||[]),...items.map(it=>this.discTile(it))]});
+  const c=this.discCfg();this.discSave({...c,seen:[...new Set([...(c.seen||[]),...items.map(i=>i.key)])]})}
+ // Automodus: nye tjenester havner i «Nye tjenester» på første fane; forsvunne auto-fliser fjernes.
+ discTick(){const c=this.discCfg();if(!c.auto)return;
+  this.discFetch(false).then(v=>{const c=this.discCfg();if(!c.auto)return;const b=JSON.parse(JSON.stringify(this.state.boards)),ex=this.discEx(b),seen=new Set(c.seen||[]);
+   const add=v.items.filter(it=>it.url&&!seen.has(it.key)&&this.discIsNew(it,ex));
+   const ok=new Set(Object.entries(v.sources||{}).filter(([k,on])=>on&&!(v.errors||[]).some(e=>e.toLowerCase().startsWith(k))).map(([k])=>k==='portainer'?'docker:':'pve'));
+   const alive=new Set(v.items.map(i=>i.key));let changed=false;
+   for(const t in b)for(const col of b[t])for(const w of col)if(w.type==='apps'&&w.apps){const n=w.apps.filter(a=>!(a&&a.auto&&a.disc&&[...ok].some(p=>a.disc.startsWith(p))&&!alive.has(a.disc)));if(n.length!==w.apps.length){w.apps=n;changed=true}}
+   for(const t in b)b[t]=b[t].map(col=>col.filter(w=>!(w.discAuto&&!(w.apps||[]).length&&(changed=true))));
+   if(add.length){const tab=Object.keys(b)[0],cols=b[tab];let w=cols.flat().find(x=>x.type==='apps'&&x.discAuto);
+    if(!w){w={id:uid(),type:'apps',title:'Nye tjenester',apps:[],discAuto:true};cols[1]?cols[1].unshift(w):cols[0].unshift(w)}
+    w.apps=[...(w.apps||[]),...add.map(it=>this.discTile(it,true))];changed=true}
+   if(changed)this.save(b);
+   this.discSave({...c,seen:[...new Set([...seen,...v.items.filter(i=>i.url).map(i=>i.key)])]})}).catch(()=>{})}
  save(boards){this.setState({boards});localStorage.setItem(KEY,JSON.stringify(boards))}
  mut(f){const b=JSON.parse(JSON.stringify(this.state.boards));f(b[this.state.tab]);this.save(b)}
  find(cols,id){for(let c=0;c<3;c++){const i=cols[c].findIndex(w=>w.id===id);if(i>=0)return[c,i]}}
@@ -832,7 +891,23 @@ class Component extends DCLogic{
      remove:()=>{this.svcMut(sel.id,a=>a.splice(i,1));if(s.selSvc!=null)this.setState({selId:null,selSvc:null})},upload:e=>{const f=e.target.files[0];if(f)fileToData(f).then(d=>set({icon:d}))}}}).filter((_,i)=>s.selSvc==null||i===s.selSvc),fields:(s.selSvc!=null?[]:OPTS[sel.type]||[]).map(([k,label,kind,x])=>{const o={...DEFOPT[sel.type],...(sel.opts||{})};const set=v=>this.upd({opts:{...o,[k]:v}});return{label,isText:kind==='text',isSelect:kind==='select',isBool:kind==='bool',options:kind==='select'?x:[],ph:kind==='text'?x:'',val:o[k]??'',checked:!!o[k],set:e=>set(e.target.value),setB:e=>set(e.target.checked)}}),isWeather:sel.type==='weather',hasApps:sel.type==='apps',hasText:!!sel.text||sel.type==='text',appText:(sel.apps||[]).join('\n')}:{},
    setCity:e=>this.upd({city:e.target.value}),fact:s.fact||'Laster…',verse:s.verse||{ref:'',text:'Laster…'},
    setTitle:e=>this.upd({title:e.target.value}),setText:e=>this.upd({text:e.target.value}),setApps:e=>this.upd({apps:e.target.value.split('\n').filter(Boolean)}),
-   closeAll:()=>this.setState({selSvc:null,libCol:null,selId:null,install:false}),reset:()=>{if(confirm('Tilbakestill fanen «'+s.tab+'»?'))this.save({...s.boards,[s.tab]:s.tab==='Hjem'?tag(home):tag([[],[W('search','Search')],[]])})},openInstall:()=>this.setState({install:true}),installOpen:s.install,
+openDisc:()=>this.discOpen(),discOpen:!!s.discOpen,
+   disc:(()=>{if(!s.discOpen)return{};const v=s.disc||{items:[],errors:[],sources:{}},ex=this.discEx(s.boards),sel=s.discSel||{},cfg=this.discCfg();
+    const cols=s.boards[s.tab]||[],groups=cols.flat().filter(w=>w.type==='apps'),target=s.discTarget!=null&&(s.discTarget===''||groups.some(g=>g.id===s.discTarget))?s.discTarget:(groups[0]?groups[0].id:'');
+    const fresh=v.items.filter(it=>this.discIsNew(it,ex)),picked=fresh.filter(it=>it.url&&sel[it.key]);
+    const none=!s.discBusy&&v.sources&&!v.sources.proxmox&&!v.sources.portainer;
+    return{busy:!!s.discBusy,none,errors:(v.errors||[]).join(' · '),hasErr:!!(v.errors||[]).length,
+     summary:s.discBusy?'Søker i Proxmox og Portainer…':fresh.length?fresh.length+' nye · '+(v.items.length-fresh.length)+' er allerede på dashbordet':v.items.length?'Alt er allerede på dashbordet ✓':'',
+     rows:fresh.map(it=>({name:it.name,where:it.where,line:it.url||it.note||'',lineColor:it.url?'var(--muted)':'var(--neg)',icon:it.icon||'data:,',imgDisp:it.icon?'block':'none',off:!it.url,op:it.url?1:.55,checked:!!sel[it.key],
+      imgRef:el=>{if(el&&!el.onerror)el.onerror=()=>{el.style.visibility='hidden'}},toggle:e=>this.setState({discSel:{...sel,[it.key]:e.target.checked}})})),
+     allLabel:picked.length&&picked.length===fresh.filter(i=>i.url).length?'fjern alle':'velg alle',
+     toggleAll:()=>{const all=fresh.filter(i=>i.url),on=!(picked.length===all.length&&all.length);const n={};if(on)all.forEach(i=>n[i.key]=true);this.setState({discSel:n})},
+     targets:[...groups.map(g=>({v:g.id,n:g.title||'Tjenester'})),{v:'',n:'＋ ny gruppe «Nye tjenester»'}],target,setTarget:e=>this.setState({discTarget:e.target.value}),
+     addLabel:'Legg til valgte ('+picked.length+')',canAdd:picked.length>0,cantAdd:!picked.length,addOp:picked.length?1:.5,
+     add:()=>{this.discAdd(picked,target);this.setState({discSel:{}})},
+     refresh:()=>this.discOpen(),
+     auto:!!cfg.auto,setAuto:e=>{const on=e.target.checked;this.discSave({...cfg,auto:on,seen:on?[...new Set([...(cfg.seen||[]),...v.items.filter(i=>i.url).map(i=>i.key)])]:cfg.seen||[]})}}})(),
+   closeAll:()=>this.setState({selSvc:null,libCol:null,selId:null,install:false,discOpen:false}),reset:()=>{if(confirm('Tilbakestill fanen «'+s.tab+'»?'))this.save({...s.boards,[s.tab]:s.tab==='Hjem'?tag(home):tag([[],[W('search','Search')],[]])})},openInstall:()=>this.setState({install:true}),installOpen:s.install,
    dows:['Mo','Tu','We','Th','Fr','Sa','Su'],days,
    speed:[['DOWNLOAD','0.0'],['UPLOAD','0.0'],['PING','0 ms']].map(([k,v])=>({k,v,d:'+0.0%'})),
    ...(()=>{const mode=s.progMode||'day',n=new Date(),y=n.getFullYear(),mo=n.getMonth();const[a,b]=mode==='month'?[new Date(y,mo,1),new Date(y,mo+1,1)]:mode==='year'?[new Date(y,0,1),new Date(y+1,0,1)]:[new Date(y,mo,n.getDate()),new Date(y,mo,n.getDate()+1)];const pct=(n-a)/(b-a)*100;

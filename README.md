@@ -38,6 +38,7 @@
 - [Kom i gang](#kom-i-gang)
 - [Secrets](#secrets)
 - [Widgets](#widgets)
+- [Finn tjenester automatisk](#finn-tjenester-automatisk)
 - [Oppdatere](#oppdatere)
 - [Hvordan det fungerer](#hvordan-det-fungerer)
 - [Feilsøking](#feilsøking)
@@ -55,6 +56,7 @@
 | 🔐 **Secrets på serveren** | API-nøkler skrives som `${NAVN}` og fylles inn av backend – nettleseren ser dem aldri. |
 | 🎨 **5 temaer** | Amber, Frost, Moss, Rose og Paper (lyst). |
 | 📱 **Mobilvisning** | Én kolonne på små skjermer. |
+| 🧭 **Finn tjenester** | Henter CT-er og VM-er fra Proxmox og containere fra Portainer, og lager fliser med riktig adresse og ikon. Kan legge til nye automatisk. |
 | 🔎 **Søk** | Trykk `S` eller `/`. Søker i tjenestene dine, åpner URL/IP direkte, støtter `!yt !gh !r !w`. |
 
 <table>
@@ -326,6 +328,49 @@ Verdier i dashbordet går foran miljøvariabler.
 | **Search** | DuckDuckGo, Google, Bing, Startpage | Søkemotor velges i ☰-menyen. |
 
 Uten secrets viser API-widgetene **demo-data**, merket *«Demo-data · sett secrets for å koble til»*.
+
+---
+
+## Finn tjenester automatisk
+
+I edit mode finner du **⌕ finn nye tjenester**. Labdeck spør da Proxmox og Portainer og viser alt som ennå ikke er på dashbordet, med adresse og ikon. Huk av det du vil ha, velg gruppe og trykk **Legg til valgte**.
+
+Nederst i panelet kan du slå på **Legg til nye automatisk**. Da sjekker Labdeck hvert 5. minutt (mens dashbordet er åpent), og nye CT-er, VM-er og containere havner i gruppen *Nye tjenester* på første fane. Fliser som ble lagt til automatisk, forsvinner når CT-en eller containeren slettes. Fliser du har lagt til selv, røres aldri. Er Proxmox eller Portainer nede, fjernes ingenting.
+
+**Oppsett** (under Secrets):
+
+| Secret | Eksempel |
+|---|---|
+| `PROXMOX_URL` | `https://10.68.2.245:8006` |
+| `PROXMOX_TOKEN` | `labdeck@pve!dash=xxxxxxxx-xxxx-…` |
+| `PORTAINER_URL` | `https://10.68.2.50:9443` |
+| `PORTAINER_API_KEY` | `ptr_…` (Portainer → *My account* → *Access tokens*) |
+
+Du trenger bare den ene av dem. Selvsignerte sertifikater godtas.
+
+Lag et Proxmox-token som **bare kan lese** (i Proxmox-shell):
+```bash
+pveum user add labdeck@pve
+pveum aclmod / -user labdeck@pve -role PVEAuditor
+pveum user token add labdeck@pve dash --privsep 0
+```
+`PROXMOX_TOKEN` blir `labdeck@pve!dash=` etterfulgt av `value` fra siste kommando.
+
+**Slik finner den adressen:**
+- **CT-er:** IP fra Proxmox. Porten hentes fra en liste over kjente tjenester (Home Assistant → 8123, Jellyfin → 8096 osv.). Ellers prøver den vanlige web-porter (80, 443, 8080, 3000 …).
+- **VM-er:** krever `qemu-guest-agent` i VM-en for å få IP-en.
+- **Docker:** publiserte porter fra Portainer. Containere bak Gluetun får porten fra Gluetun-containeren. Databaser, Redis, Gluetun, Watchtower o.l. skjules.
+
+**Overstyre:**
+
+| Hvor | Tag / label | Virkning |
+|---|---|---|
+| Proxmox (Tags på CT/VM) | `port-8080` / `https-8443` | Bruk denne porten |
+| Proxmox | `nodash` | Ikke vis |
+| Docker-label | `labdeck.url=https://app.lan` | Bruk denne adressen (`homepage.href` virker også) |
+| Docker-label | `labdeck.name=Min app` / `labdeck.icon=https://…` | Navn og ikon |
+| Docker-label | `labdeck.hide=true` | Ikke vis |
+| Portainer-miljø | *Public IP* | Adressen til Docker-verten (trengs for Edge-agenter) |
 
 ---
 
