@@ -490,7 +490,7 @@
       <div style="display:flex;align-items:center;gap:8px"><span style="font-size:13px;color:var(--text);flex:1">Finn nye tjenester</span>
         <button onClick="{{disc.refresh}}" style="background:none;border:1px solid var(--line2);color:var(--text2);border-radius:3px;padding:4px 8px;cursor:pointer;font-size:10px">↻ søk igjen</button></div>
       <span style="color:var(--muted)">CT-er og VM-er fra Proxmox, containere og VM-er fra Unraid, og containere fra Portainer.</span>
-      <sc-if value="{{disc.none}}"><span style="color:var(--neg);line-height:1.5">Ingen kilder satt opp. Fyll inn <b>PROXMOX_URL</b> + <b>PROXMOX_TOKEN</b>, <b>UNRAID_URL</b> + <b>UNRAID_API_KEY</b> og/eller <b>PORTAINER_URL</b> + <b>PORTAINER_API_KEY</b> under Secrets.</span></sc-if>
+      <sc-if value="{{disc.none}}"><span style="color:var(--neg);line-height:1.5">Ingen kilder satt opp. Fyll inn <b>PROXMOX_URL</b> + <b>PROXMOX_TOKEN</b>, <b>UNRAID_URL</b> + <b>UNRAID_API_KEY</b> <b>DOCKER_HOSTS</b> og/eller <b>PORTAINER_URL</b> + <b>PORTAINER_API_KEY</b> under Secrets.</span></sc-if>
       <sc-if value="{{disc.hasErr}}"><span style="color:var(--neg);line-height:1.5">{{disc.errors}}</span></sc-if>
       <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--accent);flex:1">{{disc.summary}}</span>
         <button onClick="{{disc.toggleAll}}" style="background:none;border:0;color:var(--muted);cursor:pointer;font-size:10px;text-decoration:underline">{{disc.allLabel}}</button></div>
@@ -616,7 +616,7 @@ const THEMES=[
  {name:'Paper',v:{bg:'#f4f2ee',bg2:'#ece9e3',card:'#fbfaf8',line:'#e2ded6',line2:'#d6d1c7',line3:'#c2bcb0',accent:'#b07a12',text:'#1e1d1a',text2:'#34322e',soft:'#55524c',muted:'#6f6b63',dim:'#8a867d',dim2:'#a6a197',neg:'#c2453a',stripe1:'#efece6',stripe2:'#e8e4dc',hover:'#f0ede7'}}];
 const applyTheme=t=>{const r=document.documentElement.style;Object.entries(t.v).forEach(([k,v])=>r.setProperty('--'+k,v))};
 const SEC_KEY='labdeck-secrets';
-const SEC_DEF={UNRAID_URL:'',UNRAID_API_KEY:'',DOCKER_HOST_IP:'',MINECRAFT_HOST:'',MINECRAFT_CONSOLE_URL:'',SONARR_API_URL:'',RADARR_API_URL:'',PROWLARR_COLLAPSE_AFTER:'',CLOUDFLARE_API_KEY:'',CLOUDFLARE_ACCOUNT_ID:'',CLOUDFLARE_TUNNEL_ID:'',ADGUARD_PASSWORD:'',PLEX_URL:'',PLEX_TOKEN:'',SONARR_URL:'',SONARR_KEY:'',RADARR_URL:'',RADARR_KEY:'',SPEEDTEST_URL:'',SPEEDTEST_TRACKER_API_TOKEN:'',CLOUDFLARE_API_TOKEN:'',IMMICH_URL:'',QBITTORRENT_IP:'',DNS_URL:'',DNS_USER:'',DNS_PASSWORD:'',GLANCES_URL:'',PROXMOX_URL:'',PROXMOX_TOKEN:'',PROWLARR_URL:'',PROWLARR_API_URL:'',PROWLARR_KEY:'',PORTAINER_URL:'',PORTAINER_ENDPOINT_ID:'',PORTAINER_API_KEY:'',IMMICH_API_KEY:'',CLOUDFLARE_ZONE_ID:''};
+const SEC_DEF={DOCKER_HOSTS:'',UNRAID_URL:'',UNRAID_API_KEY:'',DOCKER_HOST_IP:'',MINECRAFT_HOST:'',MINECRAFT_CONSOLE_URL:'',SONARR_API_URL:'',RADARR_API_URL:'',PROWLARR_COLLAPSE_AFTER:'',CLOUDFLARE_API_KEY:'',CLOUDFLARE_ACCOUNT_ID:'',CLOUDFLARE_TUNNEL_ID:'',ADGUARD_PASSWORD:'',PLEX_URL:'',PLEX_TOKEN:'',SONARR_URL:'',SONARR_KEY:'',RADARR_URL:'',RADARR_KEY:'',SPEEDTEST_URL:'',SPEEDTEST_TRACKER_API_TOKEN:'',CLOUDFLARE_API_TOKEN:'',IMMICH_URL:'',QBITTORRENT_IP:'',DNS_URL:'',DNS_USER:'',DNS_PASSWORD:'',GLANCES_URL:'',PROXMOX_URL:'',PROXMOX_TOKEN:'',PROWLARR_URL:'',PROWLARR_API_URL:'',PROWLARR_KEY:'',PORTAINER_URL:'',PORTAINER_ENDPOINT_ID:'',PORTAINER_API_KEY:'',IMMICH_API_KEY:'',CLOUDFLARE_ZONE_ID:''};
 const OPTS0={minecraft:[['url','Server-adresse (host:port)','text','${MINECRAFT_HOST}'],['name','Visningsnavn','text',''],['console','Web-konsoll URL (binhex, port 8222)','text','${MINECRAFT_CONSOLE_URL}'],['players','Vis spillerliste','bool']],tunnels:[['url','Account ID','text','${CLOUDFLARE_ACCOUNT_ID}'],['tunnel','Tunnel ID','text','${CLOUDFLARE_TUNNEL_ID}'],['key','API-token','text','${CLOUDFLARE_API_KEY}'],['domain','Domene å skjule (f.eks. .example.com)','text',''],['lan','Erstatt localhost med','text','']],speed:[['url','Speedtest URL','text','${SPEEDTEST_URL}'],['key','API-token','text','${SPEEDTEST_TRACKER_API_TOKEN}'],['showPct','Vis prosentendring','bool']],
  weather:[['location','Location','text','London, United Kingdom'],['units','Units','select',['metric','imperial']],['hour','Hour format','select',['24h','12h']]]};
 const ENGINES={duckduckgo:'https://duckduckgo.com/?q=',google:'https://www.google.com/search?q=',bing:'https://www.bing.com/search?q=',startpage:'https://www.startpage.com/do/search?q='};
@@ -834,7 +834,7 @@ class Component extends DCLogic{
  discTick(){const c=this.discCfg();if(!c.auto)return;
   this.discFetch(false).then(v=>{const c=this.discCfg();if(!c.auto)return;const b=JSON.parse(JSON.stringify(this.state.boards)),ex=this.discEx(b),seen=new Set(c.seen||[]);
    const add=v.items.filter(it=>it.url&&!seen.has(it.key)&&this.discIsNew(it,ex));
-   const ok=new Set(Object.entries(v.sources||{}).filter(([k,on])=>on&&!(v.errors||[]).some(e=>e.toLowerCase().startsWith(k))).map(([k])=>k==='portainer'?'docker:':k==='unraid'?'unraid':'pve'));
+   const ok=new Set(Object.entries(v.sources||{}).filter(([k,on])=>on&&!(v.errors||[]).some(e=>e.toLowerCase().startsWith(k))).map(([k])=>k==='portainer'?'docker:':k==='unraid'?'unraid':k==='docker'?'dockerhost:':'pve'));
    const alive=new Set(v.items.map(i=>i.key));let changed=false;
    for(const t in b)for(const col of b[t])for(const w of col)if(w.type==='apps'&&w.apps){const n=w.apps.filter(a=>!(a&&a.auto&&a.disc&&[...ok].some(p=>a.disc.startsWith(p))&&!alive.has(a.disc)));if(n.length!==w.apps.length){w.apps=n;changed=true}}
    for(const t in b)b[t]=b[t].map(col=>col.filter(w=>!(w.discAuto&&!(w.apps||[]).length&&(changed=true))));
@@ -913,7 +913,7 @@ openDisc:()=>this.discOpen(),discOpen:!!s.discOpen,
    disc:(()=>{if(!s.discOpen)return{};const v=s.disc||{items:[],errors:[],sources:{}},ex=this.discEx(s.boards),sel=s.discSel||{},cfg=this.discCfg();
     const cols=s.boards[s.tab]||[],groups=cols.flat().filter(w=>w.type==='apps'),target=s.discTarget!=null&&(s.discTarget===''||groups.some(g=>g.id===s.discTarget))?s.discTarget:(groups[0]?groups[0].id:'');
     const fresh=v.items.filter(it=>this.discIsNew(it,ex)),picked=fresh.filter(it=>it.url&&sel[it.key]);
-    const none=!s.discBusy&&v.sources&&!v.sources.proxmox&&!v.sources.portainer&&!v.sources.unraid;
+    const none=!s.discBusy&&v.sources&&!v.sources.proxmox&&!v.sources.portainer&&!v.sources.unraid&&!v.sources.docker;
     return{busy:!!s.discBusy,none,errors:(v.errors||[]).join(' · '),hasErr:!!(v.errors||[]).length,
      summary:s.discBusy?'Søker i Proxmox og Portainer…':fresh.length?fresh.length+' nye · '+(v.items.length-fresh.length)+' er allerede på dashbordet':v.items.length?'Alt er allerede på dashbordet ✓':'',
      rows:fresh.map(it=>({name:it.name,where:it.where,line:it.url||it.note||'',lineColor:it.url?'var(--muted)':'var(--neg)',icon:IMG(it.icon)||'data:,',imgDisp:it.icon?'block':'none',off:!it.url,op:it.url?1:.55,checked:!!sel[it.key],

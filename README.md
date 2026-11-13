@@ -375,6 +375,14 @@ Du trenger bare de kildene du har. Selvsignerte sertifikater godtas.
 - **Labdeck et annet sted (f.eks. Proxmox):** Fyll inn `UNRAID_URL` + `UNRAID_API_KEY`. Krever Unraid 7.2 eller nyere (innebygd API).
 - VM-er på Unraid har ingen IP i API-et. De vises i listen, men adressen må legges inn selv.
 
+**Docker inne i en Proxmox-CT/VM:** Proxmox ser bare selve CT-en, ikke containerne i den. Kjør en skrivebeskyttet socket-proxy i CT-en:
+```bash
+docker run -d --name dockerproxy --restart unless-stopped -p 2375:2375 \
+  -v /var/run/docker.sock:/var/run/docker.sock:ro -e CONTAINERS=1 \
+  ghcr.io/tecnativa/docker-socket-proxy:latest
+```
+og legg CT-ens IP i `DOCKER_HOSTS` (flere med komma, valgfritt navn foran): `media=10.69.1.60, 10.69.1.61`.
+
 **Proxmox-LXC-scriptet** lager Proxmox-tokenet selv og spør om Unraid-adresse og API-nøkkel underveis.
 
 Lag et Proxmox-token som **bare kan lese** (i Proxmox-shell):
