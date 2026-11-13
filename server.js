@@ -7,7 +7,7 @@ const rd=(f,d)=>{try{return JSON.parse(fs.readFileSync(f,'utf8'))}catch(e){retur
 const wr=(f,o)=>{fs.writeFileSync(f+'.tmp',JSON.stringify(o,null,2));fs.renameSync(f+'.tmp',f)};
 let kv=rd(KV_FILE,{}),secrets=rd(SEC_FILE,{});
 // Miljøvariabler (f.eks. fra Unraid-template) brukes som fallback, men kun for kjente secret-navn
-const DEF=['PLEX_URL','PLEX_TOKEN','SONARR_URL','SONARR_KEY','RADARR_URL','RADARR_KEY','SPEEDTEST_URL','SPEEDTEST_TRACKER_API_TOKEN','CLOUDFLARE_API_TOKEN','CLOUDFLARE_ZONE_ID','IMMICH_URL','IMMICH_API_KEY','QBITTORRENT_IP','PROWLARR_URL','PROWLARR_API_URL','PROWLARR_KEY','PORTAINER_URL','PORTAINER_ENDPOINT_ID','PORTAINER_API_KEY','SONARR_API_URL','RADARR_API_URL','PROWLARR_COLLAPSE_AFTER','CLOUDFLARE_API_KEY','CLOUDFLARE_ACCOUNT_ID','CLOUDFLARE_TUNNEL_ID','ADGUARD_PASSWORD','DNS_URL','DNS_USER','DNS_PASSWORD','PIHOLE_URL','PIHOLE_PASSWORD','GLANCES_URL','PROXMOX_URL','PROXMOX_TOKEN','UNRAID_URL','UNRAID_API_KEY','DOCKER_HOST_IP','MINECRAFT_HOST','MINECRAFT_CONSOLE_URL'];
+const DEF=['PLEX_URL','PLEX_TOKEN','SONARR_URL','SONARR_KEY','RADARR_URL','RADARR_KEY','SPEEDTEST_URL','SPEEDTEST_TRACKER_API_TOKEN','CLOUDFLARE_API_TOKEN','CLOUDFLARE_ZONE_ID','IMMICH_URL','IMMICH_API_KEY','QBITTORRENT_IP','PROWLARR_URL','PROWLARR_API_URL','PROWLARR_KEY','PORTAINER_URL','PORTAINER_ENDPOINT_ID','PORTAINER_API_KEY','SONARR_API_URL','RADARR_API_URL','PROWLARR_COLLAPSE_AFTER','CLOUDFLARE_API_KEY','CLOUDFLARE_ACCOUNT_ID','CLOUDFLARE_TUNNEL_ID','ADGUARD_PASSWORD','DNS_URL','DNS_USER','DNS_PASSWORD','PIHOLE_URL','PIHOLE_PASSWORD','GLANCES_URL','PROXMOX_URL','PROXMOX_TOKEN','UNRAID_URL','UNRAID_API_KEY','DOCKER_HOST_IP','DOCKER_HOSTS','MINECRAFT_HOST','MINECRAFT_CONSOLE_URL'];
 const known=n=>DEF.includes(n)||n in secrets;
 const sec=n=>!known(n)?'':secrets[n]!=null&&secrets[n]!==''?secrets[n]:(process.env[n]||'');
 const sub=s=>String(s).replace(/\$\{(\w+)\}/g,(_,n)=>sec(n));
@@ -200,7 +200,7 @@ const KNOWN={
   syncthing:S('Syncthing',[8384]),homarr:S('Homarr',[7575]),homepage:S('Homepage',[3000]),dashy:S('Dashy',[4000]),labdeck:S('Labdeck',[80,7575],{icon:'',self:true}),
   glances:S('Glances',[61208]),speedtesttracker:S('Speedtest Tracker',[80,8080],{icon:'speedtest-tracker'}),musicassistant:S('Music Assistant',[8095],{icon:'music-assistant'}),
   lyrion:S('Lyrion',[9000],{icon:'lyrion-music-server'}),lms:S('Lyrion',[9000],{icon:'lyrion-music-server'}),scrypted:S('Scrypted',[10443]),go2rtc:S('go2rtc',[1984]),
-  silo:S('Silo',[80,3000,8080]),dispatcharr:S('Dispatcharr',[9191]),minio:S('MinIO',[9001]),n8n:S('n8n',[5678]),
+  silo:S('Silo',[80,3000,8080]),navidrome:S('Navidrome',[4533]),subwave:S('SUB/WAVE',[3000,8080],{icon:'subwave'}),dispatcharr:S('Dispatcharr',[9191]),minio:S('MinIO',[9001]),n8n:S('n8n',[5678]),
   // Uten web-side: skjules
   postgres:S('',[],{hide:true}),postgresql:S('',[],{hide:true}),mariadb:S('',[],{hide:true}),mysql:S('',[],{hide:true}),redis:S('',[],{hide:true}),valkey:S('',[],{hide:true}),
   mongo:S('',[],{hide:true}),mongodb:S('',[],{hide:true}),watchtower:S('',[],{hide:true}),gluetun:S('',[],{hide:true}),portaineragent:S('',[],{hide:true}),agent:S('',[],{hide:true}),
@@ -327,17 +327,29 @@ async function discoverSocket(idx,reqHost){
   const host=sec('DOCKER_HOST_IP')||(sec('UNRAID_URL')?new URL(sec('UNRAID_URL')).hostname:'')||reqHost||'';
   for(const c of cs){const n=(c.NetworkSettings||{}).Networks||{};for(const k in n){if(/^(bridge|host|none)$/.test(k))continue;if(n[k].IPAddress){c._ip=n[k].IPAddress;break}}}
   return{items:await dockerItems(cs,host,idx,'unraid',c=>'unraid:'+c,c=>'Docker · denne verten · '+c,'sett DOCKER_HOST_IP under Secrets'),error:null}}
+// Docker-verter over nettverket (f.eks. Docker i en Proxmox-CT) via en skrivebeskyttet socket-proxy på port 2375.
+// DOCKER_HOSTS = «10.69.1.50:2375, media=10.69.1.60:2375» (navn= er valgfritt).
+async function discoverDockerHosts(idx){
+  const list=sec('DOCKER_HOSTS').split(/[,\s]+/).filter(Boolean);if(!list.length)return{items:[],error:null,skipped:true};
+  const out=[],errs=[];
+  await Promise.all(list.map(async entry=>{let[label,addr]=entry.includes('=')?entry.split('='):['',entry];
+    addr=addr.replace(/^\w+:\/\//,'').replace(/\/$/,'');if(!/:\d+$/.test(addr))addr+=':2375';const host=addr.split(':')[0];label=label||host;
+    try{const cs=await getJSON('http://'+addr+'/containers/json',{},6000);
+      for(const c of cs){const n=(c.NetworkSettings||{}).Networks||{};for(const k in n){if(/^(bridge|host|none)$/.test(k)||/_default$/.test(k))continue;if(n[k].IPAddress&&!n[k].IPAddress.startsWith('172.')){c._ip=n[k].IPAddress;break}}}
+      out.push(...await dockerItems(cs,host,idx,'docker',c=>'dockerhost:'+host+':'+c,c=>'Docker · '+label+' · '+c,''))}
+    catch(e){errs.push(label+' ('+e.message+')')}}));
+  return{items:out,error:errs.length?'Docker-verter: '+errs.join(', '):null}}
 let discCache=null;
 async function discover(res,force,reqHost){
   if(!force&&discCache&&Date.now()-discCache.t<60000)return json(res,200,discCache.v);
   const idx=await iconIndex();
   const run=async(f,label)=>{try{return await f(idx,reqHost)}catch(e){return{items:[],error:label+': '+(e.cause&&e.cause.message||e.message)}}};
-  const[p,d,u]=await Promise.all([run(discoverProxmox,'Proxmox'),run(discoverPortainer,'Portainer'),run(discoverUnraid,'Unraid')]);
+  const[p,d,u,h]=await Promise.all([run(discoverProxmox,'Proxmox'),run(discoverPortainer,'Portainer'),run(discoverUnraid,'Unraid'),run(discoverDockerHosts,'Docker-verter')]);
   // Socket bare hvis Unraid-API-et ikke ga containere (samme nøkler, unngår dobbelt)
   const sk=(!u.skipped&&!u.error)?{items:[],skipped:true}:await run(discoverSocket,'Docker-socket');
-  const seen=new Set(),items=[...p.items,...d.items,...u.items,...sk.items].filter(i=>!seen.has(i.key)&&seen.add(i.key));
-  const v={t:Date.now(),items,errors:[p.error,d.error,u.error,sk.error].filter(Boolean),
-    sources:{proxmox:!p.skipped,portainer:!d.skipped,unraid:!u.skipped||!sk.skipped}};
+  const seen=new Set(),items=[...p.items,...d.items,...u.items,...h.items,...sk.items].filter(i=>!seen.has(i.key)&&seen.add(i.key));
+  const v={t:Date.now(),items,errors:[p.error,d.error,u.error,h.error,sk.error].filter(Boolean),
+    sources:{proxmox:!p.skipped,portainer:!d.skipped,unraid:!u.skipped||!sk.skipped,docker:!h.skipped}};
   discCache={t:Date.now(),v};json(res,200,v)}
 http.createServer(async(req,res)=>{
   const url=new URL(req.url,'http://x'),p=url.pathname;
