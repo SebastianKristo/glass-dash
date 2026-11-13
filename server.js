@@ -130,6 +130,133 @@ function fetchImg(u,f,meta,h){if(imgBusy.has(h))return imgBusy.get(h);
   const p=(async()=>{const r=await fetch(u,{signal:AbortSignal.timeout(10000)});if(!r.ok){const e=new Error('HTTP '+r.status);e.status=r.status;throw e}
     const b=Buffer.from(await r.arrayBuffer());fs.writeFileSync(f+'.tmp',b);fs.renameSync(f+'.tmp',f);fs.writeFileSync(meta,r.headers.get('content-type')||'image/png')})().finally(()=>imgBusy.delete(h));
   imgBusy.set(h,p);return p}
+// ── Oppdagelse: CT-er og VM-er fra Proxmox, containere fra Portainer ─────────
+// GET /api/discover gir en liste med {key,name,url,icon,source,where,note}. Bare lesing.
+// Proxmox-token trenger kun rollen PVEAuditor. Selvsignerte sertifikater godtas (LAN).
+const https=require('https');
+function getJSON(u,headers={},ms=8000){return new Promise((resolve,reject)=>{let url;try{url=new URL(u)}catch(e){return reject(e)}
+  const mod=url.protocol==='https:'?https:http;
+  const rq=mod.request(url,{headers,rejectUnauthorized:false,timeout:ms},r=>{const c=[];r.on('data',d=>c.push(d));r.on('end',()=>{
+    if(r.statusCode>=400)return reject(new Error('HTTP '+r.statusCode));try{resolve(JSON.parse(Buffer.concat(c).toString()))}catch(e){reject(e)}})});
+  rq.on('timeout',()=>rq.destroy(new Error('timeout')));rq.on('error',reject);rq.end()})}
+const portOpen=(host,port,ms=700)=>new Promise(r=>{const s=net.createConnection({host,port});const d=v=>{s.destroy();r(v)};s.setTimeout(ms,()=>d(false));s.on('connect',()=>d(true));s.on('error',()=>d(false))});
+const norm=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+// Kjente tjenester: navn, porter (første som svarer brukes), sti, ikon. hide = ingen web-side.
+const S=(name,ports,o={})=>({name,ports,...o});
+const KNOWN={
+  homeassistant:S('Home Assistant',[8123],{icon:'home-assistant'}),haos:S('Home Assistant',[8123],{icon:'home-assistant'}),hass:S('Home Assistant',[8123],{icon:'home-assistant'}),
+  adguard:S('AdGuard Home',[80,3000],{icon:'adguard-home'}),adguardhome:S('AdGuard Home',[80,3000],{icon:'adguard-home'}),
+  pihole:S('Pi-hole',[80],{path:'/admin',icon:'pi-hole'}),homebridge:S('Homebridge',[8581]),
+  jellyfin:S('Jellyfin',[8096]),emby:S('Emby',[8096]),plex:S('Plex',[32400],{path:'/web'}),plexmediaserver:S('Plex',[32400],{path:'/web',icon:'plex'}),
+  portainer:S('Portainer',[9443,9000]),portainerce:S('Portainer',[9443,9000],{icon:'portainer'}),
+  ollama:S('Ollama',[11434]),openwebui:S('Open WebUI',[8080,3000],{icon:'open-webui'}),
+  frigate:S('Frigate',[8971,5000]),proxmoxbackupserver:S('Proxmox Backup',[8007],{icon:'proxmox'}),pbs:S('Proxmox Backup',[8007],{icon:'proxmox'}),
+  sonarr:S('Sonarr',[8989]),radarr:S('Radarr',[7878]),prowlarr:S('Prowlarr',[9696]),lidarr:S('Lidarr',[8686]),readarr:S('Readarr',[8787]),bazarr:S('Bazarr',[6767]),
+  qbittorrent:S('qBittorrent',[8080]),qbittorrentnox:S('qBittorrent',[8080],{icon:'qbittorrent'}),sabnzbd:S('SABnzbd',[8080]),nzbget:S('NZBGet',[6789]),
+  transmission:S('Transmission',[9091]),deluge:S('Deluge',[8112]),overseerr:S('Overseerr',[5055]),jellyseerr:S('Jellyseerr',[5055]),tautulli:S('Tautulli',[8181]),
+  flaresolverr:S('FlareSolverr',[8191],{hide:true}),
+  uptimekuma:S('Uptime Kuma',[3001],{icon:'uptime-kuma'}),nginxproxymanager:S('Nginx Proxy Manager',[81],{icon:'nginx-proxy-manager'}),npm:S('Nginx Proxy Manager',[81],{icon:'nginx-proxy-manager'}),
+  grafana:S('Grafana',[3000]),prometheus:S('Prometheus',[9090]),influxdb:S('InfluxDB',[8086]),nodered:S('Node-RED',[1880],{icon:'node-red'}),
+  zigbee2mqtt:S('Zigbee2MQTT',[8080]),esphome:S('ESPHome',[6052]),unifi:S('UniFi',[8443]),immich:S('Immich',[2283]),immichserver:S('Immich',[2283],{icon:'immich'}),
+  nextcloud:S('Nextcloud',[443,80]),vaultwarden:S('Vaultwarden',[80]),paperless:S('Paperless',[8000],{icon:'paperless-ngx'}),paperlessngx:S('Paperless',[8000],{icon:'paperless-ngx'}),
+  syncthing:S('Syncthing',[8384]),homarr:S('Homarr',[7575]),homepage:S('Homepage',[3000]),dashy:S('Dashy',[4000]),labdeck:S('Labdeck',[80,7575],{icon:'',self:true}),
+  glances:S('Glances',[61208]),speedtesttracker:S('Speedtest Tracker',[80,8080],{icon:'speedtest-tracker'}),musicassistant:S('Music Assistant',[8095],{icon:'music-assistant'}),
+  lyrion:S('Lyrion',[9000],{icon:'lyrion-music-server'}),lms:S('Lyrion',[9000],{icon:'lyrion-music-server'}),scrypted:S('Scrypted',[10443]),go2rtc:S('go2rtc',[1984]),
+  silo:S('Silo',[80,3000,8080]),dispatcharr:S('Dispatcharr',[9191]),minio:S('MinIO',[9001]),n8n:S('n8n',[5678]),
+  // Uten web-side: skjules
+  postgres:S('',[],{hide:true}),postgresql:S('',[],{hide:true}),mariadb:S('',[],{hide:true}),mysql:S('',[],{hide:true}),redis:S('',[],{hide:true}),valkey:S('',[],{hide:true}),
+  mongo:S('',[],{hide:true}),mongodb:S('',[],{hide:true}),watchtower:S('',[],{hide:true}),gluetun:S('',[],{hide:true}),portaineragent:S('',[],{hide:true}),agent:S('',[],{hide:true}),
+  mosquitto:S('',[],{hide:true}),mqtt:S('',[],{hide:true}),tailscale:S('',[],{hide:true}),cloudflared:S('',[],{hide:true}),wireguard:S('',[],{hide:true}),
+  whisper:S('',[],{hide:true}),piper:S('',[],{hide:true}),openwakeword:S('',[],{hide:true}),wyomingwhisper:S('',[],{hide:true}),wyomingpiper:S('',[],{hide:true}),
+};
+const HTTPS_PORTS=new Set([443,8443,9443,8006,8007,8971,10443]);
+const PROBE=[80,443,8080,3000,8000,5000,9000,9443,8443,8096,8123,8081,5055,8888];
+const lookup=(...names)=>{for(const n of names){const k=norm(n);if(KNOWN[k])return[k,KNOWN[k]]}
+  for(const n of names){const k=norm(n);for(const key in KNOWN)if(key.length>3&&k.startsWith(key))return[key,KNOWN[key]]}return[null,null]};
+const pretty=s=>String(s).replace(/[-_.]+/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+const mkUrl=(host,port,path='')=>(HTTPS_PORTS.has(port)?'https://':'http://')+host+((port===80&&!HTTPS_PORTS.has(port))||port===443?'':':'+port)+path;
+// Ikoner: slå opp i homarr-labs/dashboard-icons sin indeks (caches et døgn), ellers gjett svg.
+let iconIdx={t:0,svg:new Set(),png:new Set()};
+async function iconIndex(){if(Date.now()-iconIdx.t<864e5)return iconIdx;
+  try{const j=await getJSON('https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/tree.json',{},8000);
+    iconIdx={t:Date.now(),svg:new Set((j.svg||[]).map(f=>f.replace(/\.svg$/,''))),png:new Set((j.png||[]).map(f=>f.replace(/\.png$/,'')))}}
+  catch(e){iconIdx.t=Date.now()-864e5+3600e3}return iconIdx}
+function iconFor(idx,...cands){const base='https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/';
+  const list=cands.filter(Boolean).flatMap(c=>{const k=String(c).toLowerCase();return[k,k.replace(/[^a-z0-9]+/g,'-'),norm(k)]});
+  if(idx.svg.size){for(const c of list){if(idx.svg.has(c))return base+'svg/'+c+'.svg';if(idx.png.has(c))return base+'png/'+c+'.png'}return ''}
+  return list[0]?base+'svg/'+list[1]+'.svg':''}
+async function pickPort(host,known,extra=[]){if(!host)return null;const cand=[...new Set([...(known?known.ports:[]),...extra,...(known&&known.ports.length?[]:PROBE)])];
+  const res=await Promise.all(cand.map(p=>portOpen(host,p)));const i=res.indexOf(true);return i<0?null:cand[i]}
+function tagPort(tags){const m=/(?:^|;)(?:port|web|https)-(\d+)(?:;|$)/.exec(tags||'');return m?{port:+m[1],https:/(?:^|;)https-/.test(tags)}:null}
+async function discoverProxmox(idx){
+  const base=sec('PROXMOX_URL').replace(/\/$/,''),tok=sec('PROXMOX_TOKEN');if(!base||!tok)return{items:[],error:null,skipped:true};
+  const H={Authorization:'PVEAPIToken='+tok},pveHost=new URL(base).hostname;
+  const list=(await getJSON(base+'/api2/json/cluster/resources?type=vm',H)).data||[];
+  const items=await Promise.all(list.filter(v=>!v.template).map(async v=>{
+    const kind=v.type==='lxc'?'CT':'VM',key='pve:'+v.vmid,where=kind+' '+v.vmid+(v.node?' · '+v.node:'');
+    if((v.tags||'').split(/[;,]/).includes('nodash'))return null;
+    const[,known]=lookup(v.name,...(v.tags||'').split(/[;,]/));if(known&&known.hide)return null;
+    const name=known&&known.name||pretty(v.name||kind+' '+v.vmid);
+    if(v.status!=='running')return{key,name,url:'',icon:iconFor(idx,known&&known.icon,v.name),source:'proxmox',where,note:'stoppet'};
+    let ip='';
+    try{if(v.type==='lxc'){const j=await getJSON(`${base}/api2/json/nodes/${v.node}/lxc/${v.vmid}/interfaces`,H);
+        const a=(j.data||[]).filter(i=>i.name!=='lo').map(i=>(i.inet||'').split('/')[0]).find(x=>x&&x!=='127.0.0.1');ip=a||''}
+      else{const j=await getJSON(`${base}/api2/json/nodes/${v.node}/qemu/${v.vmid}/agent/network-get-interfaces`,H);
+        for(const i of (j.data&&j.data.result)||[]){if(i.name==='lo')continue;const a=(i['ip-addresses']||[]).find(x=>x['ip-address-type']==='ipv4'&&!x['ip-address'].startsWith('127.')&&!x['ip-address'].startsWith('172.17.'));if(a){ip=a['ip-address'];break}}}}
+    catch(e){}
+    if(!ip)return{key,name,url:'',icon:iconFor(idx,known&&known.icon,v.name),source:'proxmox',where,note:kind==='VM'?'fant ikke IP (installer qemu-guest-agent)':'fant ikke IP'};
+    const tp=tagPort(v.tags);let port=tp?tp.port:await pickPort(ip,known);
+    if(!port)return{key,name,url:'',icon:iconFor(idx,known&&known.icon,v.name),source:'proxmox',where:where+' · '+ip,note:'ingen web-port funnet (legg til tag port-XXXX)'};
+    const url=tp&&tp.https?'https://'+ip+':'+port:mkUrl(ip,port,known&&known.path||'');
+    return{key,name,url,icon:iconFor(idx,known&&known.icon,v.name),source:'proxmox',where:where+' · '+ip}}));
+  // Selve Proxmox-noden(e)
+  const nodes=[...new Set(list.map(v=>v.node))];
+  if(!nodes.length)nodes.push('pve');
+  const self=nodes.map(n=>({key:'pve-node:'+n,name:'Proxmox'+(nodes.length>1?' '+n:''),url:base.replace(/\/api2.*$/,''),icon:iconFor(idx,'proxmox'),source:'proxmox',where:'node '+n}));
+  return{items:[...self,...items.filter(Boolean)],error:null}}
+async function discoverPortainer(idx){
+  const base=sec('PORTAINER_URL').replace(/\/$/,''),key=sec('PORTAINER_API_KEY');if(!base||!key)return{items:[],error:null,skipped:true};
+  const H={'X-API-Key':key},pHost=new URL(base).hostname;
+  const eps=await getJSON(base+'/api/endpoints',H),out=[];
+  for(const ep of eps){const edge=ep.Type===4||ep.Type===7;if(!edge&&ep.Status!==1)continue;
+    // Vertens adresse: «Public IP» i Portainer, ellers agent-adressen, ellers Portainer selv (lokal socket)
+    const pub=(ep.PublicURL||'').replace(/^\w+:\/\//,'').split(/[:/]/)[0],agent=(/^(?:tcp|https?):\/\/([^:/]+)/.exec(ep.URL||'')||[])[1];
+    const host=pub||agent||(edge?'':pHost);
+    let cs;try{cs=await getJSON(`${base}/api/endpoints/${ep.Id}/docker/containers/json`,H)}catch(e){continue}
+    const byId=new Map(cs.map(c=>[c.Id,c])),byName=new Map(cs.map(c=>[(c.Names[0]||'').replace(/^\//,''),c]));
+    for(const c of cs){const cname=(c.Names[0]||'').replace(/^\//,''),L=c.Labels||{},img=(c.Image||'').split('@')[0].split(':')[0],ib=img.split('/').pop();
+      if(/^(true|1)$/i.test(L['labdeck.hide']||''))continue;
+      const k='docker:'+ep.Id+':'+cname,where='Docker · '+ep.Name+' · '+cname;
+      const[,known]=lookup(L['labdeck.name'],cname,ib,L['com.docker.compose.service']);
+      const name=L['labdeck.name']||L['homepage.name']||known&&known.name||pretty(cname);
+      const icon=L['labdeck.icon']||iconFor(idx,known&&known.icon,ib,cname);
+      const href=L['labdeck.url']||L['homepage.href'];
+      if(href){out.push({key:k,name,url:href,icon,source:'docker',where});continue}
+      if(known&&known.hide||known&&known.self)continue;
+      let ports=c.Ports||[],netMode=(c.HostConfig&&c.HostConfig.NetworkMode)||'';
+      // Containere som deler nettverk med en annen (f.eks. Gluetun): portene ligger på den andre containeren
+      if(netMode.startsWith('container:')){const ref=netMode.slice(10),p=byId.get(ref)||[...byId.values()].find(x=>x.Id.startsWith(ref))||byName.get(ref);ports=p?p.Ports||[]:[]}
+      const pub=ports.filter(p=>p.PublicPort&&p.Type==='tcp');
+      let port=null;
+      if(netMode==='host'){port=known&&known.ports.length?(await pickPort(host,known))||known.ports[0]:null}
+      else if(known&&known.ports.length){const hit=pub.find(p=>known.ports.includes(p.PrivatePort));port=hit?hit.PublicPort:null;
+        if(!port&&!netMode.startsWith('container:')&&pub.length===1)port=pub[0].PublicPort}
+      else{const web=pub.find(p=>[80,443,8080,3000,8000,5000,9000].includes(p.PrivatePort))||pub.find(p=>![22,53,25565,1883,8883,5432,3306,6379].includes(p.PrivatePort));port=web?web.PublicPort:null}
+      if(!port)continue;   // ingen web-port: sannsynligvis ikke en side man vil åpne
+      if(!host){out.push({key:k,name,url:'',icon,source:'docker',where,note:'sett «Public IP» på miljøet i Portainer'});continue}
+      const priv=(pub.find(p=>p.PublicPort===port)||{}).PrivatePort;
+      const url=(HTTPS_PORTS.has(port)||HTTPS_PORTS.has(priv)?'https://':'http://')+host+(port===80?'':':'+port)+(known&&known.path||'');
+      out.push({key:k,name,url,icon,source:'docker',where})}}
+  return{items:out,error:null}}
+let discCache=null;
+async function discover(res,force){
+  if(!force&&discCache&&Date.now()-discCache.t<60000)return json(res,200,discCache.v);
+  const idx=await iconIndex();
+  const run=async(f,label)=>{try{return await f(idx)}catch(e){return{items:[],error:label+': '+(e.cause&&e.cause.message||e.message)}}};
+  const[p,d]=await Promise.all([run(discoverProxmox,'Proxmox'),run(discoverPortainer,'Portainer')]);
+  const v={t:Date.now(),items:[...p.items,...d.items],errors:[p.error,d.error].filter(Boolean),
+    sources:{proxmox:!p.skipped,portainer:!d.skipped}};
+  discCache={t:Date.now(),v};json(res,200,v)}
 http.createServer(async(req,res)=>{
   const url=new URL(req.url,'http://x'),p=url.pathname;
   try{
@@ -148,6 +275,7 @@ http.createServer(async(req,res)=>{
     if(p==='/api/ping')return ping(res,url.searchParams.get('url')||'');
     if(p==='/api/widgets/minecraft')return minecraft(res,url.searchParams.get('host'));
     if(p==='/api/img')return image(res,url.searchParams.get('url')||'');
+    if(p==='/api/discover')return discover(res,url.searchParams.has('fresh'));
     if(p==='/api/health')return json(res,200,{ok:true});
     if(p.includes('{{'))return res.writeHead(404).end();   // mal-plassholdere fra før React har rendret
     let f=path.normalize(path.join(PUB,p==='/'?'index.html':decodeURIComponent(p)));
