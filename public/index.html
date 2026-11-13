@@ -277,7 +277,7 @@
     <sc-if value="{{w.d.demo}}"><span style="font-size:9px;color:var(--dim);padding-left:4px">Demo-data · sett secrets for å koble til</span></sc-if>
       <div style="background:var(--card);border:1px solid var(--line);border-radius:4px;padding:12px;display:flex;flex-direction:column;gap:14px">
         <div style="display:flex;align-items:center;gap:12px">
-          <img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/portainer.svg" alt="" style="width:24px;height:24px;object-fit:contain">
+          <img src="/api/img?url=https%3A%2F%2Fcdn.jsdelivr.net%2Fgh%2Fhomarr-labs%2Fdashboard-icons%2Fsvg%2Fportainer.svg" alt="" style="width:24px;height:24px;object-fit:contain">
           <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
             <span style="display:flex;align-items:center;gap:6px;color:var(--text);font-size:12px">{{w.d.p.name}}<span style="width:7px;height:7px;border-radius:50%;background:#7fc98a"></span></span>
             <div style="display:flex;gap:14px;font-size:9.5px;color:var(--soft)"><span title="Containers">▣ {{w.d.p.containers}}</span><span title="Volumes">◫ {{w.d.p.volumes}}</span><span title="Networks">⌗ {{w.d.p.networks}}</span></div>
@@ -383,7 +383,7 @@
 
   <sc-if value="{{w.isCloudflare}}">
     <div style="background:var(--card);border:1px solid var(--line);border-radius:4px;padding:12px;display:flex;flex-direction:column;gap:12px">
-      <div style="display:flex;align-items:center;gap:8px"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/cloudflare.svg" alt="" style="width:16px;height:16px"><span style="color:var(--text);flex:1">kristo.no</span><span style="font-size:9px;color:var(--muted)">24t</span></div>
+      <div style="display:flex;align-items:center;gap:8px"><img src="/api/img?url=https%3A%2F%2Fcdn.jsdelivr.net%2Fgh%2Fhomarr-labs%2Fdashboard-icons%2Fsvg%2Fcloudflare.svg" alt="" style="width:16px;height:16px"><span style="color:var(--text);flex:1">kristo.no</span><span style="font-size:9px;color:var(--muted)">24t</span></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <sc-for list="{{cf}}" as="c"><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:8.5px;color:var(--muted)">{{c.k}}</span><span style="color:var(--text);font-size:13px">{{c.v}}</span><span style="font-size:8.5px;color:{{c.dc}}">{{c.d}}</span></div></sc-for>
       </div>
@@ -583,8 +583,9 @@ const hues=[25,75,145,200,240,290,330];
 const ST={o:['OK · ',Y,'✓'],e:['ERROR',R,'!'],t:['Timed Out',R,'!']};
 const SLUG={'HomeAssistant':'home-assistant','ESP Home':'esphome','Qbittorrent':'qbittorrent','SUB/WAVE':'subwave','n8n':'n8n','Zigbee2mqtt':'zigbee2mqtt','UniFi':'unifi','UniFi Protect':'unifi-protect','Homey':'homey','Silo':'silo','Yuball':'youtube'};
 const urlKey=u=>{if(!u)return'';try{const x=new URL(/^https?:\/\//.test(u)?u:'http://'+u);return x.hostname.toLowerCase()+':'+(x.port||(x.protocol==='https:'?'443':'80'))}catch(e){return''}};
+const IMG=u=>u&&/^https:\/\/(cdn\.jsdelivr\.net|raw\.githubusercontent\.com|avatars\.githubusercontent\.com|mc-heads\.net|developers\.cloudflare\.com)\//.test(u)?'/api/img?url='+encodeURIComponent(u):u;
 const toSvc=s=>{if(typeof s!=='string')return s;const[n,c='o',ms='3ms']=s.split('|');return{name:n,url:'',icon:'',status:'auto',demo:c,ms}};
-const mkApp0=(s,i)=>{const [n,c='o',ms='3ms']=s.split('|');const st=ST[c]||ST.o;const slug=/^ny tjeneste/i.test(n)?'':SLUG[n]||n.toLowerCase().replace(/[^a-z0-9]+/g,'-');return{icon:slug?`https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/${slug}.svg`:'',imgRef:el=>{if(el&&!el.onload){el.onload=()=>{const p=el.parentElement;if(p){p.style.background='transparent';if(p.firstElementChild&&p.firstElementChild!==el)p.firstElementChild.style.visibility='hidden'}};if(el.complete&&el.naturalWidth)el.onload()}if(el&&!el.onerror){el.onerror=()=>{const t=el;if(t.src.endsWith('.svg'))t.src=t.src.replace('/svg/','/png/').replace('.svg','.png');else t.style.display='none'};if(el.complete&&!el.naturalWidth)el.onerror()}},_x:e=>{const t=e.target;if(t.src.endsWith('.svg'))t.src=t.src.replace('/svg/','/png/').replace('.svg','.png');else t.style.display='none'},name:n,ini:n.slice(0,2),bg:`oklch(0.72 0.1 ${hues[(n.charCodeAt(0)+n.length)%7]})`,status:c==='o'?st[0]+ms:st[0],sc:c==='o'?'var(--muted)':R,ic:st[1],mark:st[2]}};
+const mkApp0=(s,i)=>{const [n,c='o',ms='3ms']=s.split('|');const st=ST[c]||ST.o;const slug=/^ny tjeneste/i.test(n)?'':SLUG[n]||n.toLowerCase().replace(/[^a-z0-9]+/g,'-');return{icon:slug?`https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/${slug}.svg`:'',imgRef:el=>{if(el&&!el.onload){el.onload=()=>{const p=el.parentElement;if(p){p.style.background='transparent';if(p.firstElementChild&&p.firstElementChild!==el)p.firstElementChild.style.visibility='hidden'}};if(el.complete&&el.naturalWidth)el.onload()}if(el&&!el.onerror){el.onerror=()=>{const t=el;if(!t.src.includes('/api/img')&&t.src.endsWith('.svg'))t.src=t.src.replace('/svg/','/png/').replace('.svg','.png');else t.style.display='none'};if(el.complete&&!el.naturalWidth)el.onerror()}},_x:e=>{const t=e.target;if(t.src.endsWith('.svg'))t.src=t.src.replace('/svg/','/png/').replace('.svg','.png');else t.style.display='none'},name:n,ini:n.slice(0,2),bg:`oklch(0.72 0.1 ${hues[(n.charCodeAt(0)+n.length)%7]})`,status:c==='o'?st[0]+ms:st[0],sc:c==='o'?'var(--muted)':R,ic:st[1],mark:st[2]}};
 const LIB={search:'Search',apps:'Tjenestegruppe',calendar:'Calendar',speed:'Internet speed',text:'Tekst / fact',progress:'Day progress',error:'Statuskort',empty:'Tom',tunnels:'Cloudflared tunnels',cloudflare:'Cloudflare analytics',fact:'Random fact (API)',dns:'DNS stats',prowlarr:'Prowlarr indexers',portainer:'Portainer',qbit:'qBittorrent',nowplaying:'Media server (now playing)',immich:'Immich stats',verse:'Random bible verse (API)',history:'Media server history',weather:'Weather',server:'Server stats',releases:'Media releases',indexers:'Prowlarr indexers',minecraft:'Minecraft Java server'};
 const W=(type,title,extra={})=>({type,title,...extra});
 const home=[[
@@ -714,7 +715,7 @@ class Component extends DCLogic{
   else if(v.url&&v.status!=='off'){const p=this.doPing(v.url);st=p.state==='up'?['OK · '+p.ms+'ms','var(--muted)',Y,'✓','Ping OK']:p.state==='pending'?['Sjekker…','var(--muted)','var(--line3)','·','Sjekker']:p.state==='timeout'?['Timed Out',R,R,'!','Tidsavbrudd']:['ERROR',R,R,'!','Utilgjengelig']}
   else st=v.url?['','var(--muted)','','','']:[base.status,base.sc,base.ic,base.mark,'Demo'];
   const ed=s.editing,sd=s.svcDrop;
-  const warn=st[3]==='!';return{...base,dotBg:warn?'transparent':st[2],markColor:warn?st[2]:'var(--bg)',markSize:warn?'13px':'8px',icon:v.icon||base.icon,status:v.status==='off'&&!v.url?'':st[0],sc:st[1],ic:st[2],mark:warn?'⚠':st[3],dotTitle:st[4],showDot:v.status!=='off',href:v.url||undefined,
+  const warn=st[3]==='!';return{...base,dotBg:warn?'transparent':st[2],markColor:warn?st[2]:'var(--bg)',markSize:warn?'13px':'8px',icon:IMG(v.icon||base.icon),status:v.status==='off'&&!v.url?'':st[0],sc:st[1],ic:st[2],mark:warn?'⚠':st[3],dotTitle:st[4],showDot:v.status!=='off',href:v.url||undefined,
    draggable:ed,cur:ed?'grab':'pointer',dropShadow:sd&&sd.wid===w.id&&sd.i===i?'inset 0 2px 0 var(--accent)':'none',
    onClick:e=>{e.preventDefault();if(ed)return this.setState({selId:w.id,selSvc:i});if(v.url)window.open(/^https?:\/\//.test(v.url)?v.url:'http://'+v.url,'_blank','noopener')},
    onDragStart:e=>{e.stopPropagation();e.dataTransfer.effectAllowed='move';this.svcDrag={wid:w.id,i}},
@@ -863,7 +864,7 @@ class Component extends DCLogic{
    srch:(()=>{const q=(s.q||'').trim(),ql=q.toLowerCase(),sw=Object.values(s.boards).flat(2).find(w=>w.type==='search')||{},o={...DEFOPT.search,...(sw.opts||{}),...(s.engine?{engine:s.engine}:{})},eng=ENGINES[o.engine]||ENGINES.duckduckgo;
     const res=[];if(q){const bang=Object.keys(BANGS).find(b=>ql.startsWith(b+' '));
      if(bang){const[n,u]=BANGS[bang],rest=q.slice(bang.length+1);res.push({name:n+': '+rest,sub:bang,url:u+encodeURIComponent(rest),ini:'!'})}
-     else{const seen=new Set();Object.entries(s.boards).forEach(([tab,cols])=>cols.flat().filter(w=>w.type==='apps').forEach(w=>(w.apps||[]).map(toSvc).forEach((v,i)=>{const k=v.name+v.url;if(seen.has(k))return;if(v.name.toLowerCase().includes(ql)||(v.url||'').toLowerCase().includes(ql)){seen.add(k);const b=mkApp0(v.name+'|o',i);res.push({name:v.name,sub:(v.url||'ingen URL')+' · '+tab+' / '+w.title,url:v.url,ini:b.ini,tint:b.bg,icon:v.icon||b.icon,imgRef:b.imgRef,hasIcon:!!(v.icon||b.icon)})}})));
+     else{const seen=new Set();Object.entries(s.boards).forEach(([tab,cols])=>cols.flat().filter(w=>w.type==='apps').forEach(w=>(w.apps||[]).map(toSvc).forEach((v,i)=>{const k=v.name+v.url;if(seen.has(k))return;if(v.name.toLowerCase().includes(ql)||(v.url||'').toLowerCase().includes(ql)){seen.add(k);const b=mkApp0(v.name+'|o',i);res.push({name:v.name,sub:(v.url||'ingen URL')+' · '+tab+' / '+w.title,url:v.url,ini:b.ini,tint:b.bg,icon:IMG(v.icon||b.icon),imgRef:b.imgRef,hasIcon:!!(v.icon||b.icon)})}})));
       if(/^(https?:\/\/)?[\w-]+(\.[\w-]+)+(:\d+)?(\/\S*)?$|^\d+\.\d+\.\d+\.\d+(:\d+)?/.test(q))res.push({name:'Åpne '+q,sub:'URL',url:q,ini:'↗'});
       res.push({name:'Søk etter «'+q+'»',sub:o.engine,url:eng+encodeURIComponent(q),ini:'⌕'})}}
     const sel=Math.min(s.qi||0,Math.max(0,res.length-1));
@@ -886,7 +887,7 @@ class Component extends DCLogic{
    dragEnd:()=>{this.svcDrag=null;this.setState({dragW:null,dropW:null,svcDrop:null})},
    addSection:()=>{const id=uid();this.mut(cs=>cs[m?0:1].push({id,type:'apps',title:'Ny seksjon',apps:[]}));this.setState({selId:id})},
    hasSel:!!sel,sel:sel?{...sel,notSingle:s.selSvc==null,heading:s.selSvc==null?'Widget-innstillinger':'Rediger tjeneste',addSvc:()=>this.svcMut(sel.id,a=>a.push({name:'Ny tjeneste',url:'',icon:'',status:'auto',demo:'o',ms:'1ms'})),
-    svcs:(sel.apps||[]).map(toSvc).map((v,i)=>{const b=mkApp0(v.name+'|o',i),set=p=>this.svcMut(sel.id,a=>Object.assign(a[i],p));return{...v,ini:b.ini,icon:v.icon||b.icon,imgRef:b.imgRef,hasCustom:!!v.icon,
+    svcs:(sel.apps||[]).map(toSvc).map((v,i)=>{const b=mkApp0(v.name+'|o',i),set=p=>this.svcMut(sel.id,a=>Object.assign(a[i],p));return{...v,ini:b.ini,icon:IMG(v.icon||b.icon),imgRef:b.imgRef,hasCustom:!!v.icon,
      setName:e=>set({name:e.target.value}),setUrl:e=>set({url:e.target.value}),setStatus:e=>set({status:e.target.value}),clearIcon:()=>set({icon:''}),
      remove:()=>{this.svcMut(sel.id,a=>a.splice(i,1));if(s.selSvc!=null)this.setState({selId:null,selSvc:null})},upload:e=>{const f=e.target.files[0];if(f)fileToData(f).then(d=>set({icon:d}))}}}).filter((_,i)=>s.selSvc==null||i===s.selSvc),fields:(s.selSvc!=null?[]:OPTS[sel.type]||[]).map(([k,label,kind,x])=>{const o={...DEFOPT[sel.type],...(sel.opts||{})};const set=v=>this.upd({opts:{...o,[k]:v}});return{label,isText:kind==='text',isSelect:kind==='select',isBool:kind==='bool',options:kind==='select'?x:[],ph:kind==='text'?x:'',val:o[k]??'',checked:!!o[k],set:e=>set(e.target.value),setB:e=>set(e.target.checked)}}),isWeather:sel.type==='weather',hasApps:sel.type==='apps',hasText:!!sel.text||sel.type==='text',appText:(sel.apps||[]).join('\n')}:{},
    setCity:e=>this.upd({city:e.target.value}),fact:s.fact||'Laster…',verse:s.verse||{ref:'',text:'Laster…'},
@@ -898,7 +899,7 @@ openDisc:()=>this.discOpen(),discOpen:!!s.discOpen,
     const none=!s.discBusy&&v.sources&&!v.sources.proxmox&&!v.sources.portainer;
     return{busy:!!s.discBusy,none,errors:(v.errors||[]).join(' · '),hasErr:!!(v.errors||[]).length,
      summary:s.discBusy?'Søker i Proxmox og Portainer…':fresh.length?fresh.length+' nye · '+(v.items.length-fresh.length)+' er allerede på dashbordet':v.items.length?'Alt er allerede på dashbordet ✓':'',
-     rows:fresh.map(it=>({name:it.name,where:it.where,line:it.url||it.note||'',lineColor:it.url?'var(--muted)':'var(--neg)',icon:it.icon||'data:,',imgDisp:it.icon?'block':'none',off:!it.url,op:it.url?1:.55,checked:!!sel[it.key],
+     rows:fresh.map(it=>({name:it.name,where:it.where,line:it.url||it.note||'',lineColor:it.url?'var(--muted)':'var(--neg)',icon:IMG(it.icon)||'data:,',imgDisp:it.icon?'block':'none',off:!it.url,op:it.url?1:.55,checked:!!sel[it.key],
       imgRef:el=>{if(el&&!el.onerror)el.onerror=()=>{el.style.visibility='hidden'}},toggle:e=>this.setState({discSel:{...sel,[it.key]:e.target.checked}})})),
      allLabel:picked.length&&picked.length===fresh.filter(i=>i.url).length?'fjern alle':'velg alle',
      toggleAll:()=>{const all=fresh.filter(i=>i.url),on=!(picked.length===all.length&&all.length);const n={};if(on)all.forEach(i=>n[i.key]=true);this.setState({discSel:n})},

@@ -107,29 +107,56 @@ function serveStatic(req,res,f){
   const ext=path.extname(f),type=MIME[ext]||'application/octet-stream',gz=/gzip/.test(req.headers['accept-encoding']||'');
   if(f===path.join(PUB,'index.html')){
     const kvj=JSON.stringify({...kv,[SEC_KEY]:JSON.stringify(masked())}).replace(/</g,'\\u003c');
-    const html=loadStatic(f).buf.toString().replace('<script src="./shim.js">','<script>window.__LABDECK_KV__='+kvj+'</script>\n<script src="./shim.js">');
+    const pre=iconUrls().filter(u=>{const v=imgGet(u);return v&&!v.miss}).slice(0,120).map(u=>'<link rel="preload" as="image" href="/api/img?url='+encodeURIComponent(u).replace(/'/g,'%27')+'">').join('');
+    const html=loadStatic(f).buf.toString().replace('<script src="./shim.js">',pre+'<script>window.__LABDECK_KV__='+kvj+'</script>\n<script src="./shim.js">');
     const out=gz?zlib.gzipSync(html):Buffer.from(html);
     res.writeHead(200,{'Content-Type':type,'Cache-Control':'no-store',...(gz?{'Content-Encoding':'gzip'}:{}),'Vary':'Accept-Encoding'});return res.end(out)}
   const v=loadStatic(f),long=/\/(vendor|fonts)\//.test(f);
   res.writeHead(200,{'Content-Type':type,'Cache-Control':long?'public, max-age=31536000, immutable':'no-cache',...(gz&&v.gz?{'Content-Encoding':'gzip'}:{}),'Vary':'Accept-Encoding'});
   res.end(gz&&v.gz?v.gz:v.buf)}
-// Bildecache for ikoner (CDN) – lagres på disk i /app/data/img-cache
+// Bildecache for ikoner (CDN) – lagres på disk i <data>/img-cache og holdes i minnet.
+// Ikoner lastes ned så snart de legges inn i oppsettet, så dashbordet aldri venter på nettet.
 const crypto=require('crypto'),IMG_DIR=path.join(DATA,'img-cache');fs.mkdirSync(IMG_DIR,{recursive:true});
 const IMG_OK=/^https:\/\/(cdn\.jsdelivr\.net|raw\.githubusercontent\.com|avatars\.githubusercontent\.com|mc-heads\.net|developers\.cloudflare\.com)\//;
-const imgBusy=new Map();
+const IMG_AGE=7*864e5,MISS_AGE=864e5,imgBusy=new Map(),imgMem=new Map();
+const imgHash=u=>crypto.createHash('sha1').update(u).digest('hex');
+// Leses fra minnet, ellers disk. {buf,type,t} eller {miss:true,t}
+function imgGet(u){const h=imgHash(u);if(imgMem.has(h))return imgMem.get(h);const f=path.join(IMG_DIR,h);
+  try{if(fs.existsSync(f+'.miss')){const v={miss:true,t:fs.statSync(f+'.miss').mtimeMs};imgMem.set(h,v);return v}
+    if(fs.existsSync(f)){const v={buf:fs.readFileSync(f),type:fs.readFileSync(f+'.type','utf8'),t:fs.statSync(f).mtimeMs};imgMem.set(h,v);return v}}catch(e){}
+  return null}
+// Alternativer når en adresse ikke finnes: svg→png (og omvendt) og samme navn i selfhst/icons.
+function imgAlts(u){const out=[u],m=/^(https:\/\/cdn\.jsdelivr\.net\/gh\/)(homarr-labs\/dashboard-icons|selfhst\/icons)\/(svg|png|webp)\/([^/?#]+)\.(svg|png|webp)$/.exec(u);
+  if(!m)return out;const[,cdn,repo,,name]=m,other=repo==='selfhst/icons'?'homarr-labs/dashboard-icons':'selfhst/icons';
+  for(const r of[repo,other])for(const ext of['svg','png'])out.push(`${cdn}${r}/${ext}/${name}.${ext}`);
+  return[...new Set(out)]}
+function fetchImg(u){const h=imgHash(u);if(imgBusy.has(h))return imgBusy.get(h);
+  const f=path.join(IMG_DIR,h);
+  const p=(async()=>{let last=404;
+    for(const alt of imgAlts(u)){let r;try{r=await fetch(alt,{signal:AbortSignal.timeout(10000)})}catch(e){last=502;break}
+      if(r.status===404||r.status===403){last=r.status;continue}
+      if(!r.ok){last=r.status;break}
+      const buf=Buffer.from(await r.arrayBuffer()),type=r.headers.get('content-type')||'image/png';
+      fs.writeFileSync(f+'.tmp',buf);fs.renameSync(f+'.tmp',f);fs.writeFileSync(f+'.type',type);try{fs.unlinkSync(f+'.miss')}catch(e){}
+      const v={buf,type,t:Date.now()};imgMem.set(h,v);return v}
+    if(last===404||last===403){fs.writeFileSync(f+'.miss','');const v={miss:true,t:Date.now()};imgMem.set(h,v);return v}
+    const e=new Error('HTTP '+last);e.status=last;throw e})().finally(()=>imgBusy.delete(h));
+  imgBusy.set(h,p);return p}
+function sendImg(res,v){if(v.miss){res.writeHead(404,{'Cache-Control':'public, max-age=3600'});return res.end()}
+  res.writeHead(200,{'Content-Type':v.type,'Content-Length':v.buf.length,'Cache-Control':'public, max-age=2592000, stale-while-revalidate=604800'});res.end(v.buf)}
 async function image(res,u){
   if(!IMG_OK.test(u))return res.writeHead(400).end();
-  const h=crypto.createHash('sha1').update(u).digest('hex'),f=path.join(IMG_DIR,h),meta=f+'.type';
-  const send=()=>{res.writeHead(200,{'Content-Type':fs.readFileSync(meta,'utf8'),'Cache-Control':'public, max-age=604800'});fs.createReadStream(f).pipe(res)};
-  if(fs.existsSync(f)&&fs.existsSync(meta)){send();
-    if(Date.now()-fs.statSync(f).mtimeMs>7*864e5&&!imgBusy.has(h))fetchImg(u,f,meta,h).catch(()=>{});return}
-  try{await fetchImg(u,f,meta,h);send()}
-  catch(e){res.writeHead(e.status||502,{'Cache-Control':'public, max-age=3600'});res.end()}
+  const v=imgGet(u);
+  if(v){sendImg(res,v);if(Date.now()-v.t>(v.miss?MISS_AGE:IMG_AGE))fetchImg(u).catch(()=>{});return}
+  try{sendImg(res,await fetchImg(u))}
+  catch(e){res.writeHead(e.status||502,{'Cache-Control':'no-store'});res.end()}
 }
-function fetchImg(u,f,meta,h){if(imgBusy.has(h))return imgBusy.get(h);
-  const p=(async()=>{const r=await fetch(u,{signal:AbortSignal.timeout(10000)});if(!r.ok){const e=new Error('HTTP '+r.status);e.status=r.status;throw e}
-    const b=Buffer.from(await r.arrayBuffer());fs.writeFileSync(f+'.tmp',b);fs.renameSync(f+'.tmp',f);fs.writeFileSync(meta,r.headers.get('content-type')||'image/png')})().finally(()=>imgBusy.delete(h));
-  imgBusy.set(h,p);return p}
+// Alle ikon-adresser i oppsettet (fliser, widgets osv.)
+const iconUrls=()=>[...new Set((JSON.stringify(kv).match(/https:\/\/[^"'\s\\)]+/g)||[]).filter(u=>IMG_OK.test(u)&&/\.(svg|png|webp|jpe?g|gif|ico)(\?|$)|avatars\.githubusercontent\.com/.test(u)))];
+// Last ned ikoner som mangler (ved oppstart og når oppsettet lagres)
+let iconT=null;
+function warmIcons(){clearTimeout(iconT);iconT=setTimeout(async()=>{for(const u of iconUrls()){const v=imgGet(u);if(!v||Date.now()-v.t>(v.miss?MISS_AGE:IMG_AGE))await fetchImg(u).catch(()=>{})}},1500)}
+warmIcons();
 // ── Oppdagelse: CT-er og VM-er fra Proxmox, containere fra Portainer ─────────
 // GET /api/discover gir en liste med {key,name,url,icon,source,where,note}. Bare lesing.
 // Proxmox-token trenger kun rollen PVEAuditor. Selvsignerte sertifikater godtas (LAN).
@@ -268,7 +295,7 @@ http.createServer(async(req,res)=>{
         if(k===SEC_KEY){let o={};try{o=JSON.parse(v)||{}}catch(e){}const n={};
           for(const name in o){if(!/^[A-Z0-9_]+$/.test(name))continue;n[name]=o[name]==='${'+name+'}'?(secrets[name]||process.env[name]||''):String(o[name])}
           secrets=n;wr(SEC_FILE,secrets)}
-        else{kv[k]=v;wr(KV_FILE,kv)}
+        else{kv[k]=v;wr(KV_FILE,kv);warmIcons()}
         return json(res,200,{ok:true})}
     }
     if(p==='/api/proxy')return proxy(req,res,url.searchParams.get('url')||'');
