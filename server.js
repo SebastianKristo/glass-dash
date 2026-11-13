@@ -7,10 +7,12 @@ const rd=(f,d)=>{try{return JSON.parse(fs.readFileSync(f,'utf8'))}catch(e){retur
 const wr=(f,o)=>{fs.writeFileSync(f+'.tmp',JSON.stringify(o,null,2));fs.renameSync(f+'.tmp',f)};
 let kv=rd(KV_FILE,{}),secrets=rd(SEC_FILE,{});
 // Miljøvariabler (f.eks. fra Unraid-template) brukes som fallback, men kun for kjente secret-navn
-const DEF=['PLEX_URL','PLEX_TOKEN','SONARR_URL','SONARR_KEY','RADARR_URL','RADARR_KEY','SPEEDTEST_URL','SPEEDTEST_TRACKER_API_TOKEN','CLOUDFLARE_API_TOKEN','CLOUDFLARE_ZONE_ID','IMMICH_URL','IMMICH_API_KEY','QBITTORRENT_IP','PROWLARR_URL','PROWLARR_API_URL','PROWLARR_KEY','PORTAINER_URL','PORTAINER_ENDPOINT_ID','PORTAINER_API_KEY','SONARR_API_URL','RADARR_API_URL','PROWLARR_COLLAPSE_AFTER','CLOUDFLARE_API_KEY','CLOUDFLARE_ACCOUNT_ID','CLOUDFLARE_TUNNEL_ID','ADGUARD_PASSWORD','DNS_URL','DNS_USER','DNS_PASSWORD','GLANCES_URL','PROXMOX_URL','PROXMOX_TOKEN','MINECRAFT_HOST','MINECRAFT_CONSOLE_URL'];
+const DEF=['PLEX_URL','PLEX_TOKEN','SONARR_URL','SONARR_KEY','RADARR_URL','RADARR_KEY','SPEEDTEST_URL','SPEEDTEST_TRACKER_API_TOKEN','CLOUDFLARE_API_TOKEN','CLOUDFLARE_ZONE_ID','IMMICH_URL','IMMICH_API_KEY','QBITTORRENT_IP','PROWLARR_URL','PROWLARR_API_URL','PROWLARR_KEY','PORTAINER_URL','PORTAINER_ENDPOINT_ID','PORTAINER_API_KEY','SONARR_API_URL','RADARR_API_URL','PROWLARR_COLLAPSE_AFTER','CLOUDFLARE_API_KEY','CLOUDFLARE_ACCOUNT_ID','CLOUDFLARE_TUNNEL_ID','ADGUARD_PASSWORD','DNS_URL','DNS_USER','DNS_PASSWORD','PIHOLE_URL','PIHOLE_PASSWORD','GLANCES_URL','PROXMOX_URL','PROXMOX_TOKEN','MINECRAFT_HOST','MINECRAFT_CONSOLE_URL'];
 const known=n=>DEF.includes(n)||n in secrets;
 const sec=n=>!known(n)?'':secrets[n]!=null&&secrets[n]!==''?secrets[n]:(process.env[n]||'');
 const sub=s=>String(s).replace(/\$\{(\w+)\}/g,(_,n)=>sec(n));
+// Pi-hole-adresser lagres ofte som http://ip/admin, men API-et ligger på /api
+const target=u=>sub(u).replace(/\/admin\/+api\/(auth|stats|history)/,'/api/$1');
 const masked=()=>{const o={};new Set([...DEF,...Object.keys(secrets)]).forEach(n=>o[n]=sec(n)?'${'+n+'}':'');return o};
 const MIME={'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.png':'image/png','.json':'application/json','.woff2':'font/woff2','.txt':'text/plain; charset=utf-8'};
 const body=req=>new Promise(r=>{const c=[];req.on('data',d=>c.push(d));req.on('end',()=>r(Buffer.concat(c)))});
@@ -28,7 +30,7 @@ function fillHeaders(hd){const o={};for(const k in hd){let v=String(hd[k]);
   const m=/^Basic\s+(.+)$/i.exec(v);if(m){const raw=Buffer.from(m[1],'base64').toString();if(raw.includes('${'))v='Basic '+Buffer.from(sub(raw)).toString('base64')}
   o[k]=sub(v)}return o}
 async function upstream(u,hd){
-  const r=await fetch(new URL(sub(u)),{headers:fillHeaders(hd),signal:AbortSignal.timeout(15000),redirect:'follow'});
+  const r=await fetch(new URL(target(u)),{headers:fillHeaders(hd),signal:AbortSignal.timeout(15000),redirect:'follow'});
   return{t:Date.now(),status:r.status,type:r.headers.get('content-type')||'application/octet-stream',buf:Buffer.from(await r.arrayBuffer())}}
 function refresh(key,e){if(inflight.has(key))return inflight.get(key);
   const p=upstream(e.u,e.hd).then(v=>{if(v.status<400||!e.v)e.v=v;else e.v.t=Date.now();return e.v})
@@ -40,7 +42,7 @@ async function proxy(req,res,u){
   if(req.method!=='GET'){ // POST o.l. (Pi-hole login) går rett gjennom
     const h=fillHeaders(hd),b=sub((await body(req)).toString());
     if(!Object.keys(h).some(k=>k.toLowerCase()==='content-type')&&req.headers['content-type'])h['Content-Type']=req.headers['content-type'];
-    try{const r=await fetch(new URL(sub(u)),{method:req.method,headers:h,body:b,signal:AbortSignal.timeout(15000)});
+    try{const r=await fetch(new URL(target(u)),{method:req.method,headers:h,body:b,signal:AbortSignal.timeout(15000)});
       res.writeHead(r.status,{'Content-Type':r.headers.get('content-type')||'application/json'});return res.end(Buffer.from(await r.arrayBuffer()))}
     catch(e){return json(res,502,{error:String(e.cause&&e.cause.message||e.message)})}}
   const key=u+'\n'+JSON.stringify(hd);
