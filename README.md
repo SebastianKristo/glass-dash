@@ -351,9 +351,11 @@ Uten secrets viser API-widgetene **demo-data**, merket *«Demo-data · sett secr
 
 ## Finn tjenester automatisk
 
-I edit mode finner du **⌕ finn nye tjenester**. Labdeck spør da Proxmox og Portainer og viser alt som ennå ikke er på dashbordet, med adresse og ikon. Huk av det du vil ha, velg gruppe og trykk **Legg til valgte**.
+I edit mode finner du **⌕ finn nye tjenester**. Labdeck spør da Proxmox, Unraid og Portainer og viser alt som ennå ikke er på dashbordet, med adresse og ikon. Huk av det du vil ha, velg gruppe og trykk **Legg til valgte**.
 
-Nederst i panelet kan du slå på **Legg til nye automatisk**. Da sjekker Labdeck hvert 5. minutt (mens dashbordet er åpent), og nye CT-er, VM-er og containere havner i gruppen *Nye tjenester* på første fane. Fliser som ble lagt til automatisk, forsvinner når CT-en eller containeren slettes. Fliser du har lagt til selv, røres aldri. Er Proxmox eller Portainer nede, fjernes ingenting.
+Nederst i panelet kan du slå på **Legg til nye automatisk**. Da sjekker Labdeck hvert 5. minutt (mens dashbordet er åpent), og nye CT-er, VM-er og containere havner i gruppen *Nye tjenester* på første fane. Fliser som ble lagt til automatisk, forsvinner når CT-en eller containeren slettes. Fliser du har lagt til selv, røres aldri. Er en kilde nede, fjernes ingenting fra den.
+
+**Begge veier:** Kjører Labdeck på Unraid, legger du inn Proxmox-token så den også finner CT-er og VM-er der. Kjører den på Proxmox, legger du inn Unraid-adresse og API-nøkkel så den finner containerne og VM-ene på Unraid.
 
 **Oppsett** (under Secrets):
 
@@ -361,10 +363,19 @@ Nederst i panelet kan du slå på **Legg til nye automatisk**. Da sjekker Labdec
 |---|---|
 | `PROXMOX_URL` | `https://10.68.2.245:8006` |
 | `PROXMOX_TOKEN` | `labdeck@pve!dash=xxxxxxxx-xxxx-…` |
+| `UNRAID_URL` | `http://10.69.1.126` |
+| `UNRAID_API_KEY` | Unraid → *Settings → Management Access → API Keys* (rolle **Viewer**) |
 | `PORTAINER_URL` | `https://10.68.2.50:9443` |
 | `PORTAINER_API_KEY` | `ptr_…` (Portainer → *My account* → *Access tokens*) |
 
-Du trenger bare den ene av dem. Selvsignerte sertifikater godtas.
+Du trenger bare de kildene du har. Selvsignerte sertifikater godtas.
+
+**Unraid:**
+- **Labdeck på Unraid:** Templaten monterer `/var/run/docker.sock` (kun lesing), så containerne på samme server finnes uten oppsett. Fyll inn `UNRAID_URL` + `UNRAID_API_KEY` for å få med VM-ene også.
+- **Labdeck et annet sted (f.eks. Proxmox):** Fyll inn `UNRAID_URL` + `UNRAID_API_KEY`. Krever Unraid 7.2 eller nyere (innebygd API).
+- VM-er på Unraid har ingen IP i API-et. De vises i listen, men adressen må legges inn selv.
+
+**Proxmox-LXC-scriptet** lager Proxmox-tokenet selv og spør om Unraid-adresse og API-nøkkel underveis.
 
 Lag et Proxmox-token som **bare kan lese** (i Proxmox-shell):
 ```bash
@@ -377,6 +388,7 @@ pveum user token add labdeck@pve dash --privsep 0
 **Slik finner den adressen:**
 - **CT-er:** IP fra Proxmox. Porten hentes fra en liste over kjente tjenester (Home Assistant → 8123, Jellyfin → 8096 osv.). Ellers prøver den vanlige web-porter (80, 443, 8080, 3000 …).
 - **VM-er:** krever `qemu-guest-agent` i VM-en for å få IP-en.
+- **Docker (Unraid):** publiserte porter. Containere på `br0` (egen IP) nås direkte på IP-en.
 - **Docker:** publiserte porter fra Portainer. Containere bak Gluetun får porten fra Gluetun-containeren. Databaser, Redis, Gluetun, Watchtower o.l. skjules.
 
 **Overstyre:**

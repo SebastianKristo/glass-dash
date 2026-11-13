@@ -42,4 +42,8 @@
   <Config Name="GLANCES_URL" Target="GLANCES_URL" Default="" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
   <Config Name="PROXMOX_URL" Target="PROXMOX_URL" Default="" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
   <Config Name="PROXMOX_TOKEN" Target="PROXMOX_TOKEN" Default="" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="Docker socket (finn containere automatisk)" Target="/var/run/docker.sock" Default="/var/run/docker.sock" Mode="ro" Description="Lar Labdeck se containerne på denne Unraid-serveren. Kun lesing." Type="Path" Display="always" Required="false">/var/run/docker.sock</Config>
+  <Config Name="UNRAID_URL" Target="UNRAID_URL" Default="" Mode="" Description="F.eks. http://10.69.1.126 – gir også VM-ene (krever UNRAID_API_KEY)" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="UNRAID_API_KEY" Target="UNRAID_API_KEY" Default="" Mode="" Description="Innstillinger → Management Access → API Keys (rolle Viewer)" Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="DOCKER_HOST_IP" Target="DOCKER_HOST_IP" Default="" Mode="" Description="IP-en til Unraid, brukes i lenkene til containere (tom = adressen du åpner dashbordet på)" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
 </Container>

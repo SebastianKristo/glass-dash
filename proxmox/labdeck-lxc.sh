@@ -128,6 +128,31 @@ systemctl enable -q --now labdeck
 INNER
 ok "Labdeck installert"
 
+# ── Finn tjenester automatisk: Proxmox-token (kun lesing) + valgfritt Unraid ──
+UNRAID_URL="${UNRAID_URL:-}"; UNRAID_API_KEY="${UNRAID_API_KEY:-}"
+if [ -t 0 ] && [ -z "${UNATTENDED:-}" ] && [ -z "$UNRAID_URL" ]; then
+  echo -e "\n  Har du en Unraid-server Labdeck skal finne containere og VM-er på? (Enter = hopp over)"
+  read -rp "  Unraid-adresse (f.eks. http://10.69.1.126): " UNRAID_URL
+  [ -n "$UNRAID_URL" ] && read -rsp "  Unraid API-nøkkel (Innstillinger → Management Access → API Keys): " UNRAID_API_KEY && echo
+fi
+if [ -z "${NO_PVE_TOKEN:-}" ]; then
+  msg "Lager Proxmox API-token (kun lesing) så Labdeck finner CT-er og VM-er"
+  pveum user add labdeck@pve --comment "Labdeck dashboard" >/dev/null 2>&1 || true
+  pveum acl modify / --users labdeck@pve --roles PVEAuditor >/dev/null
+  pveum user token remove labdeck@pve dash >/dev/null 2>&1 || true
+  TOKEN="$(pveum user token add labdeck@pve dash --privsep 0 --output-format json | sed -n 's/.*"value"[^"]*"\([^"]*\)".*/\1/p')"
+  PVE_IP="$(hostname -I | awk '{print $1}')"
+  ENVF="$(mktemp)"
+  { echo "PROXMOX_URL=https://${PVE_IP}:8006"; echo "PROXMOX_TOKEN=labdeck@pve!dash=${TOKEN}"
+    [ -n "$UNRAID_URL" ] && echo "UNRAID_URL=${UNRAID_URL}"; [ -n "$UNRAID_API_KEY" ] && echo "UNRAID_API_KEY=${UNRAID_API_KEY}"; } >"$ENVF"
+  pct exec "$CTID" -- touch /opt/labdeck-data/labdeck.env
+  pct exec "$CTID" -- sed -i '/^\(PROXMOX_URL\|PROXMOX_TOKEN\|UNRAID_URL\|UNRAID_API_KEY\)=/d' /opt/labdeck-data/labdeck.env
+  pct push "$CTID" "$ENVF" /tmp/labdeck-disc.env
+  pct exec "$CTID" -- bash -c 'cat /tmp/labdeck-disc.env >> /opt/labdeck-data/labdeck.env && rm /tmp/labdeck-disc.env && chmod 600 /opt/labdeck-data/labdeck.env && systemctl restart labdeck'
+  rm -f "$ENVF"
+  ok "Proxmox${UNRAID_URL:+ og Unraid} koblet til – bruk «⌕ finn nye tjenester» i edit mode"
+fi
+
 IP="$(pct exec "$CTID" -- hostname -I | awk '{print $1}')"
 SFX=""; [ "$PORT" = 80 ] || SFX=":$PORT"
 echo -e "\n ${GN}Ferdig!${CL}"
