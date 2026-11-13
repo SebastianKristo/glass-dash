@@ -313,6 +313,7 @@ Verdier i dashbordet går foran miljøvariabler.
 | `MINECRAFT_HOST` | Minecraft | `10.69.1.126:25565` |
 | `MINECRAFT_CONSOLE_URL` | Minecraft (lenke) | `http://10.69.1.126:8222` |
 | `DNS_URL` | DNS stats | `http://10.69.1.x:3000` |
+| `PIHOLE_URL` / `PIHOLE_PASSWORD` | DNS stats (begge) | `http://10.68.2.243` / Pi-hole-passord eller app-passord |
 | `ADGUARD_PASSWORD` | DNS stats | AdGuard-passord |
 | `PORTAINER_URL` / `PORTAINER_ENDPOINT_ID` / `PORTAINER_API_KEY` | Portainer | |
 | `GLANCES_URL` | Server stats | `http://10.69.1.126:61208` |
@@ -330,7 +331,7 @@ Verdier i dashbordet går foran miljøvariabler.
 | **Internet Speed** | Speedtest Tracker | Ned/opp/ping med endring mot snitt. |
 | **Weather** | Open-Meteo | Ingen nøkkel. Hold over en time for detaljer. |
 | **Server stats** | Glances eller Proxmox | CPU, RAM, disk, oppetid. |
-| **DNS stats** | AdGuard Home eller Pi-hole | Spørringer, blokkert %, 24-timers graf, topp blokkert. |
+| **DNS stats** | AdGuard Home, Pi-hole (v6) eller begge samlet | Spørringer, blokkert %, 24-timers graf, topp blokkert. Velg `adguard + pihole` i ⚙ for å summere begge. |
 | **Media Server** | Plex, Jellyfin, Emby, Tautulli | Hva som spilles nå. |
 | **Media Server History** | Plex, Jellyfin, Emby, Tautulli | Karusell med sist sett. |
 | **Media Releases** | Sonarr, Radarr, Lidarr | Kommende, nylige eller manglende. |
