@@ -189,17 +189,20 @@ Et helper-script lager en liten Debian 12-container og installerer Labdeck direk
    |---|---|---|
    | Container-ID | neste ledige | f.eks. `150` |
    | Hostname | `labdeck` | |
-   | Disk-lagring | `local-lvm` | f.eks. `local-zfs` |
+   | Disk-lagring | første aktive | lagring som støtter containere, f.eks. `local-zfs` eller `local` |
    | Nettverksbro | `vmbr0` | |
    | IP | `dhcp` | eller fast, f.eks. `10.69.1.50/24` (spør da om gateway) |
+   | Port | `80` | 80 gir adresse uten port. `7575` gir gammel oppførsel |
 
-4. Når scriptet er ferdig, skriver det ut adressen, f.eks. `http://10.69.1.50:7575`.
+4. Når scriptet er ferdig, åpner du **`http://labdeck.local`** (hostname + `.local`). IP-adressen virker også.
 
-Containeren får 1 kjerne, 512 MB RAM og 4 GB disk, og starter automatisk med Proxmox.
+Containeren får 1 kjerne, 512 MB RAM og 4 GB disk, og starter automatisk med Proxmox. Scriptet installerer `avahi-daemon`, som annonserer `<hostname>.local` på lokalnettet (mDNS/Bonjour), så ett bokmerke holder selv om IP-en endrer seg.
+
+> **`.local` virker ikke?** Mac, iPhone, iPad, Windows 10/11 og Linux støtter `.local` direkte. Android og enheter på et annet VLAN/subnett gjør det ofte ikke. Bruk da IP-en, eller lag en DNS-oppføring i AdGuard Home / Pi-hole (f.eks. `labdeck.lan` → containerens IP) og gi containeren fast IP eller DHCP-reservasjon.
 
 **Uten spørsmål** (alt via variabler):
 ```bash
-UNATTENDED=1 CTID=150 STORAGE=local-zfs NET=10.69.1.50/24 GATEWAY=10.69.1.1 \
+UNATTENDED=1 CTID=150 STORAGE=local-zfs NET=10.69.1.50/24 GATEWAY=10.69.1.1 PORT=80 MDNS=1 \
   bash -c "$(curl -fsSL https://raw.githubusercontent.com/sebastiankristo/glass-dash/main/proxmox/labdeck-lxc.sh)"
 ```
 
@@ -209,6 +212,20 @@ UNATTENDED=1 CTID=150 STORAGE=local-zfs NET=10.69.1.50/24 GATEWAY=10.69.1.1 \
 | Data | `/opt/labdeck-data` i containeren |
 | Secrets som variabler *(valgfritt)* | `/opt/labdeck-data/labdeck.env` (`NAVN=verdi` per linje), så `systemctl restart labdeck` |
 | Logg | `pct exec <ID> -- journalctl -u labdeck -f` |
+
+**Eldre installasjon på port 7575?** Kjør dette i Proxmox-shell (bytt `104` med container-ID-en) for å få `http://labdeck.local` uten å installere på nytt:
+```bash
+CT=104
+pct exec $CT -- bash -c '
+apt-get update -qq && apt-get install -y -qq avahi-daemon >/dev/null
+sed -i "s/^rlimit-nproc/#rlimit-nproc/" /etc/avahi/avahi-daemon.conf
+mkdir -p /etc/systemd/system/labdeck.service.d
+printf "[Service]\nEnvironment=PORT=80\nAmbientCapabilities=CAP_NET_BIND_SERVICE\n" > /etc/systemd/system/labdeck.service.d/port80.conf
+sed -i "/^PORT=/d" /opt/labdeck-data/labdeck.env 2>/dev/null || true
+systemctl daemon-reload && systemctl restart labdeck
+systemctl enable --now avahi-daemon && systemctl restart avahi-daemon
+'
+```
 
 > Vil du heller kjøre Docker i Proxmox, bruk [Docker Compose](#docker-compose) i en VM eller LXC med Docker.
 
