@@ -7,7 +7,7 @@ const rd=(f,d)=>{try{return JSON.parse(fs.readFileSync(f,'utf8'))}catch(e){retur
 const wr=(f,o)=>{fs.writeFileSync(f+'.tmp',JSON.stringify(o,null,2));fs.renameSync(f+'.tmp',f)};
 let kv=rd(KV_FILE,{}),secrets=rd(SEC_FILE,{});
 // Miljøvariabler (f.eks. fra Unraid-template) brukes som fallback, men kun for kjente secret-navn
-const DEF=['PLEX_URL','PLEX_TOKEN','SONARR_URL','SONARR_KEY','RADARR_URL','RADARR_KEY','SPEEDTEST_URL','SPEEDTEST_TRACKER_API_TOKEN','CLOUDFLARE_API_TOKEN','CLOUDFLARE_ZONE_ID','IMMICH_URL','IMMICH_API_KEY','QBITTORRENT_IP','PROWLARR_URL','PROWLARR_API_URL','PROWLARR_KEY','PORTAINER_URL','PORTAINER_ENDPOINT_ID','PORTAINER_API_KEY','SONARR_API_URL','RADARR_API_URL','PROWLARR_COLLAPSE_AFTER','CLOUDFLARE_API_KEY','CLOUDFLARE_ACCOUNT_ID','CLOUDFLARE_TUNNEL_ID','ADGUARD_PASSWORD','DNS_URL','DNS_USER','DNS_PASSWORD','PIHOLE_URL','PIHOLE_PASSWORD','GLANCES_URL','PROXMOX_URL','PROXMOX_TOKEN','MINECRAFT_HOST','MINECRAFT_CONSOLE_URL'];
+const DEF=['PLEX_URL','PLEX_TOKEN','SONARR_URL','SONARR_KEY','RADARR_URL','RADARR_KEY','SPEEDTEST_URL','SPEEDTEST_TRACKER_API_TOKEN','CLOUDFLARE_API_TOKEN','CLOUDFLARE_ZONE_ID','IMMICH_URL','IMMICH_API_KEY','QBITTORRENT_IP','PROWLARR_URL','PROWLARR_API_URL','PROWLARR_KEY','PORTAINER_URL','PORTAINER_ENDPOINT_ID','PORTAINER_API_KEY','SONARR_API_URL','RADARR_API_URL','PROWLARR_COLLAPSE_AFTER','CLOUDFLARE_API_KEY','CLOUDFLARE_ACCOUNT_ID','CLOUDFLARE_TUNNEL_ID','ADGUARD_PASSWORD','DNS_URL','DNS_USER','DNS_PASSWORD','PIHOLE_URL','PIHOLE_PASSWORD','GLANCES_URL','PROXMOX_URL','PROXMOX_TOKEN','UNRAID_URL','UNRAID_API_KEY','DOCKER_HOST_IP','MINECRAFT_HOST','MINECRAFT_CONSOLE_URL'];
 const known=n=>DEF.includes(n)||n in secrets;
 const sec=n=>!known(n)?'':secrets[n]!=null&&secrets[n]!==''?secrets[n]:(process.env[n]||'');
 const sub=s=>String(s).replace(/\$\{(\w+)\}/g,(_,n)=>sec(n));
@@ -168,6 +168,15 @@ function getJSON(u,headers={},ms=8000){return new Promise((resolve,reject)=>{let
   const rq=mod.request(url,{headers,rejectUnauthorized:false,timeout:ms},r=>{const c=[];r.on('data',d=>c.push(d));r.on('end',()=>{
     if(r.statusCode>=400)return reject(new Error('HTTP '+r.statusCode));try{resolve(JSON.parse(Buffer.concat(c).toString()))}catch(e){reject(e)}})});
   rq.on('timeout',()=>rq.destroy(new Error('timeout')));rq.on('error',reject);rq.end()})}
+function postJSON(u,body,headers={},ms=8000){return new Promise((resolve,reject)=>{let url;try{url=new URL(u)}catch(e){return reject(e)}
+  const mod=url.protocol==='https:'?https:http,data=JSON.stringify(body);
+  const rq=mod.request(url,{method:'POST',headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(data),...headers},rejectUnauthorized:false,timeout:ms},r=>{const c=[];r.on('data',d=>c.push(d));r.on('end',()=>{
+    if(r.statusCode>=400)return reject(new Error('HTTP '+r.statusCode));try{resolve(JSON.parse(Buffer.concat(c).toString()))}catch(e){reject(e)}})});
+  rq.on('timeout',()=>rq.destroy(new Error('timeout')));rq.on('error',reject);rq.end(data)})}
+const DOCKER_SOCK=process.env.DOCKER_SOCK||'/var/run/docker.sock';
+function sockJSON(p,ms=5000){return new Promise((resolve,reject)=>{const rq=http.request({socketPath:DOCKER_SOCK,path:p,timeout:ms},r=>{const c=[];r.on('data',d=>c.push(d));r.on('end',()=>{
+    if(r.statusCode>=400)return reject(new Error('HTTP '+r.statusCode));try{resolve(JSON.parse(Buffer.concat(c).toString()))}catch(e){reject(e)}})});
+  rq.on('timeout',()=>rq.destroy(new Error('timeout')));rq.on('error',reject);rq.end()})}
 const portOpen=(host,port,ms=700)=>new Promise(r=>{const s=net.createConnection({host,port});const d=v=>{s.destroy();r(v)};s.setTimeout(ms,()=>d(false));s.on('connect',()=>d(true));s.on('error',()=>d(false))});
 const norm=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
 // Kjente tjenester: navn, porter (første som svarer brukes), sti, ikon. hide = ingen web-side.
@@ -243,6 +252,38 @@ async function discoverProxmox(idx){
   if(!nodes.length)nodes.push('pve');
   const self=nodes.map(n=>({key:'pve-node:'+n,name:'Proxmox'+(nodes.length>1?' '+n:''),url:base.replace(/\/api2.*$/,''),icon:iconFor(idx,'proxmox'),source:'proxmox',where:'node '+n}));
   return{items:[...self,...items.filter(Boolean)],error:null}}
+// Felles for Portainer, Unraid og lokal Docker-socket: gjør Docker-containere om til fliser.
+// cs = Docker API-format (Names, Image, Labels, Ports, HostConfig.NetworkMode). c._ip = egen IP (f.eks. br0 på Unraid).
+async function dockerItems(cs,host,idx,source,keyOf,whereOf,noHostNote){const out=[];
+    const byId=new Map(cs.map(c=>[c.Id,c])),byName=new Map(cs.map(c=>[(c.Names[0]||'').replace(/^\//,''),c]));
+    for(const c of cs){const cname=(c.Names[0]||'').replace(/^\//,''),L=c.Labels||{},img=(c.Image||'').split('@')[0].split(':')[0],ib=img.split('/').pop();
+      if(/^(true|1)$/i.test(L['labdeck.hide']||''))continue;
+      const k=keyOf(cname),where=whereOf(cname);
+      const[,known]=lookup(L['labdeck.name'],cname,ib,L['com.docker.compose.service']);
+      const name=L['labdeck.name']||L['homepage.name']||known&&known.name||pretty(cname);
+      const icon=L['labdeck.icon']||iconFor(idx,known&&known.icon,ib,cname);
+      const href=L['labdeck.url']||L['homepage.href'];
+      if(href){out.push({key:k,name,url:href,icon,source,where});continue}
+      if(known&&known.hide||known&&known.self)continue;
+      if(c._stopped){out.push({key:k,name,url:'',icon,source,where,note:'stoppet'});continue}
+      let ports=c.Ports||[],netMode=(c.HostConfig&&c.HostConfig.NetworkMode)||'';
+      // Containere som deler nettverk med en annen (f.eks. Gluetun): portene ligger på den andre containeren
+      if(netMode.startsWith('container:')){const ref=netMode.slice(10),p=byId.get(ref)||[...byId.values()].find(x=>x.Id.startsWith(ref))||byName.get(ref);ports=p?p.Ports||[]:[]}
+      const pub=ports.filter(p=>p.PublicPort&&p.Type==='tcp');
+      // Egen IP (macvlan/ipvlan, f.eks. br0 på Unraid): ingen publiserte porter, nås direkte
+      if(c._ip&&!pub.length){const port=await pickPort(c._ip,known);if(!port)continue;
+        out.push({key:k,name,url:mkUrl(c._ip,port,known&&known.path||''),icon,source,where:where+' · '+c._ip});continue}
+      let port=null;
+      if(netMode==='host'){port=known&&known.ports.length?(await pickPort(host,known))||known.ports[0]:null}
+      else if(known&&known.ports.length){const hit=pub.find(p=>known.ports.includes(p.PrivatePort));port=hit?hit.PublicPort:null;
+        if(!port&&!netMode.startsWith('container:')&&pub.length===1)port=pub[0].PublicPort}
+      else{const web=pub.find(p=>[80,443,8080,3000,8000,5000,9000].includes(p.PrivatePort))||pub.find(p=>![22,53,25565,1883,8883,5432,3306,6379].includes(p.PrivatePort));port=web?web.PublicPort:null}
+      if(!port)continue;   // ingen web-port: sannsynligvis ikke en side man vil åpne
+      if(!host){out.push({key:k,name,url:'',icon,source,where,note:noHostNote});continue}
+      const priv=(pub.find(p=>p.PublicPort===port)||{}).PrivatePort;
+      const url=(HTTPS_PORTS.has(port)||HTTPS_PORTS.has(priv)?'https://':'http://')+host+(port===80?'':':'+port)+(known&&known.path||'');
+      out.push({key:k,name,url,icon,source,where})}
+  return out}
 async function discoverPortainer(idx){
   const base=sec('PORTAINER_URL').replace(/\/$/,''),key=sec('PORTAINER_API_KEY');if(!base||!key)return{items:[],error:null,skipped:true};
   const H={'X-API-Key':key},pHost=new URL(base).hostname;
@@ -252,39 +293,51 @@ async function discoverPortainer(idx){
     const pub=(ep.PublicURL||'').replace(/^\w+:\/\//,'').split(/[:/]/)[0],agent=(/^(?:tcp|https?):\/\/([^:/]+)/.exec(ep.URL||'')||[])[1];
     const host=pub||agent||(edge?'':pHost);
     let cs;try{cs=await getJSON(`${base}/api/endpoints/${ep.Id}/docker/containers/json`,H)}catch(e){continue}
-    const byId=new Map(cs.map(c=>[c.Id,c])),byName=new Map(cs.map(c=>[(c.Names[0]||'').replace(/^\//,''),c]));
-    for(const c of cs){const cname=(c.Names[0]||'').replace(/^\//,''),L=c.Labels||{},img=(c.Image||'').split('@')[0].split(':')[0],ib=img.split('/').pop();
-      if(/^(true|1)$/i.test(L['labdeck.hide']||''))continue;
-      const k='docker:'+ep.Id+':'+cname,where='Docker · '+ep.Name+' · '+cname;
-      const[,known]=lookup(L['labdeck.name'],cname,ib,L['com.docker.compose.service']);
-      const name=L['labdeck.name']||L['homepage.name']||known&&known.name||pretty(cname);
-      const icon=L['labdeck.icon']||iconFor(idx,known&&known.icon,ib,cname);
-      const href=L['labdeck.url']||L['homepage.href'];
-      if(href){out.push({key:k,name,url:href,icon,source:'docker',where});continue}
-      if(known&&known.hide||known&&known.self)continue;
-      let ports=c.Ports||[],netMode=(c.HostConfig&&c.HostConfig.NetworkMode)||'';
-      // Containere som deler nettverk med en annen (f.eks. Gluetun): portene ligger på den andre containeren
-      if(netMode.startsWith('container:')){const ref=netMode.slice(10),p=byId.get(ref)||[...byId.values()].find(x=>x.Id.startsWith(ref))||byName.get(ref);ports=p?p.Ports||[]:[]}
-      const pub=ports.filter(p=>p.PublicPort&&p.Type==='tcp');
-      let port=null;
-      if(netMode==='host'){port=known&&known.ports.length?(await pickPort(host,known))||known.ports[0]:null}
-      else if(known&&known.ports.length){const hit=pub.find(p=>known.ports.includes(p.PrivatePort));port=hit?hit.PublicPort:null;
-        if(!port&&!netMode.startsWith('container:')&&pub.length===1)port=pub[0].PublicPort}
-      else{const web=pub.find(p=>[80,443,8080,3000,8000,5000,9000].includes(p.PrivatePort))||pub.find(p=>![22,53,25565,1883,8883,5432,3306,6379].includes(p.PrivatePort));port=web?web.PublicPort:null}
-      if(!port)continue;   // ingen web-port: sannsynligvis ikke en side man vil åpne
-      if(!host){out.push({key:k,name,url:'',icon,source:'docker',where,note:'sett «Public IP» på miljøet i Portainer'});continue}
-      const priv=(pub.find(p=>p.PublicPort===port)||{}).PrivatePort;
-      const url=(HTTPS_PORTS.has(port)||HTTPS_PORTS.has(priv)?'https://':'http://')+host+(port===80?'':':'+port)+(known&&known.path||'');
-      out.push({key:k,name,url,icon,source:'docker',where})}}
+    out.push(...await dockerItems(cs,host,idx,'docker',c=>'docker:'+ep.Id+':'+c,c=>'Docker · '+ep.Name+' · '+c,'sett «Public IP» på miljøet i Portainer'))}
   return{items:out,error:null}}
+// Unraid 7.2+: GraphQL-API (Innstillinger → Management Access → API Keys, rolle Viewer holder).
+// Gir Docker-containere og VM-er. VM-er har ingen IP i API-et, så de får ikke URL automatisk.
+const own=ns=>{if(!ns||typeof ns!=='object')return'';const n=ns.Networks||ns.networks||{};
+  for(const k in n){if(/^(bridge|host|none)$/.test(k))continue;const ip=n[k]&&(n[k].IPAddress||n[k].ipAddress);if(ip)return ip}return''};
+const jsonish=v=>{if(typeof v!=='string')return v||{};try{return JSON.parse(v)}catch(e){return{}}};
+async function discoverUnraid(idx){
+  const raw=sec('UNRAID_URL').replace(/\/$/,''),key=sec('UNRAID_API_KEY');if(!raw||!key)return{items:[],error:null,skipped:true};
+  const base=raw.replace(/\/graphql$/,''),host=new URL(base).hostname,H={'x-api-key':key};
+  const q=async query=>{const j=await postJSON(base+'/graphql',{query},H);if(j.errors&&!j.data)throw new Error(j.errors[0].message);return j.data||{}};
+  const out=[{key:'unraid-node',name:'Unraid',url:base,icon:iconFor(idx,'unraid'),source:'unraid',where:'server '+host}],errs=[];
+  try{const d=await q('{ docker { containers { id names image state ports { privatePort publicPort type } labels networkSettings } } }');
+    const cs=((d.docker||{}).containers||[]).map(c=>{const L=jsonish(c.labels),ns=jsonish(c.networkSettings);
+      return{Id:c.id,Names:c.names||[],Image:c.image,Labels:L,_stopped:!/running/i.test(c.state||''),_ip:own(ns),
+        Ports:(c.ports||[]).map(p=>({PrivatePort:p.privatePort,PublicPort:p.publicPort,Type:String(p.type||'tcp').toLowerCase()})),
+        HostConfig:{NetworkMode:(ns.Networks&&Object.keys(ns.Networks).length===1&&Object.keys(ns.Networks)[0]==='host')?'host':''}}});
+    out.push(...await dockerItems(cs,host,idx,'unraid',c=>'unraid:'+c,c=>'Docker · Unraid · '+c,''))}
+  catch(e){errs.push('Docker: '+e.message)}
+  try{const d=await q('{ vms { domains { uuid name state } } }');
+    for(const v of (d.vms||{}).domains||[]){if(!v.name)continue;const[,known]=lookup(v.name);if(known&&known.hide)continue;
+      out.push({key:'unraid-vm:'+(v.uuid||v.name),name:known&&known.name||pretty(v.name),url:'',icon:iconFor(idx,known&&known.icon,v.name),source:'unraid',
+        where:'VM · Unraid · '+v.name,note:/running/i.test(v.state||'')?'kjører – legg inn adressen selv':'stoppet'})}}
+  catch(e){errs.push('VM: '+e.message)}
+  if(out.length===1&&errs.length)throw new Error(errs.join(', '));
+  return{items:out,error:errs.length?'Unraid: '+errs.join(', '):null}}
+// Lokal Docker-socket (Labdeck kjører i Docker med /var/run/docker.sock montert, f.eks. på Unraid).
+// Brukes når Unraid-API-et ikke er satt opp. Vertens IP: DOCKER_HOST_IP, ellers adressen dashbordet åpnes på.
+async function discoverSocket(idx,reqHost){
+  if(!fs.existsSync(DOCKER_SOCK))return{items:[],error:null,skipped:true};
+  const cs=await sockJSON('/containers/json');
+  const host=sec('DOCKER_HOST_IP')||(sec('UNRAID_URL')?new URL(sec('UNRAID_URL')).hostname:'')||reqHost||'';
+  for(const c of cs){const n=(c.NetworkSettings||{}).Networks||{};for(const k in n){if(/^(bridge|host|none)$/.test(k))continue;if(n[k].IPAddress){c._ip=n[k].IPAddress;break}}}
+  return{items:await dockerItems(cs,host,idx,'unraid',c=>'unraid:'+c,c=>'Docker · denne verten · '+c,'sett DOCKER_HOST_IP under Secrets'),error:null}}
 let discCache=null;
-async function discover(res,force){
+async function discover(res,force,reqHost){
   if(!force&&discCache&&Date.now()-discCache.t<60000)return json(res,200,discCache.v);
   const idx=await iconIndex();
-  const run=async(f,label)=>{try{return await f(idx)}catch(e){return{items:[],error:label+': '+(e.cause&&e.cause.message||e.message)}}};
-  const[p,d]=await Promise.all([run(discoverProxmox,'Proxmox'),run(discoverPortainer,'Portainer')]);
-  const v={t:Date.now(),items:[...p.items,...d.items],errors:[p.error,d.error].filter(Boolean),
-    sources:{proxmox:!p.skipped,portainer:!d.skipped}};
+  const run=async(f,label)=>{try{return await f(idx,reqHost)}catch(e){return{items:[],error:label+': '+(e.cause&&e.cause.message||e.message)}}};
+  const[p,d,u]=await Promise.all([run(discoverProxmox,'Proxmox'),run(discoverPortainer,'Portainer'),run(discoverUnraid,'Unraid')]);
+  // Socket bare hvis Unraid-API-et ikke ga containere (samme nøkler, unngår dobbelt)
+  const sk=(!u.skipped&&!u.error)?{items:[],skipped:true}:await run(discoverSocket,'Docker-socket');
+  const seen=new Set(),items=[...p.items,...d.items,...u.items,...sk.items].filter(i=>!seen.has(i.key)&&seen.add(i.key));
+  const v={t:Date.now(),items,errors:[p.error,d.error,u.error,sk.error].filter(Boolean),
+    sources:{proxmox:!p.skipped,portainer:!d.skipped,unraid:!u.skipped||!sk.skipped}};
   discCache={t:Date.now(),v};json(res,200,v)}
 http.createServer(async(req,res)=>{
   const url=new URL(req.url,'http://x'),p=url.pathname;
@@ -304,7 +357,7 @@ http.createServer(async(req,res)=>{
     if(p==='/api/ping')return ping(res,url.searchParams.get('url')||'');
     if(p==='/api/widgets/minecraft')return minecraft(res,url.searchParams.get('host'));
     if(p==='/api/img')return image(res,url.searchParams.get('url')||'');
-    if(p==='/api/discover')return discover(res,url.searchParams.has('fresh'));
+    if(p==='/api/discover')return discover(res,url.searchParams.has('fresh'),(req.headers.host||'').replace(/:\d+$/,'').replace(/^\[|\]$/g,''));
     if(p==='/api/health')return json(res,200,{ok:true});
     if(p.includes('{{'))return res.writeHead(404).end();   // mal-plassholdere fra før React har rendret
     let f=path.normalize(path.join(PUB,p==='/'?'index.html':decodeURIComponent(p)));
