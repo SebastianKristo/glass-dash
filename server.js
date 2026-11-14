@@ -200,7 +200,7 @@ const KNOWN={
   syncthing:S('Syncthing',[8384]),homarr:S('Homarr',[7575]),homepage:S('Homepage',[3000]),dashy:S('Dashy',[4000]),labdeck:S('Labdeck',[80,7575],{icon:'',self:true}),
   glances:S('Glances',[61208]),speedtesttracker:S('Speedtest Tracker',[80,8080],{icon:'speedtest-tracker'}),musicassistant:S('Music Assistant',[8095],{icon:'music-assistant'}),
   lyrion:S('Lyrion',[9000],{icon:'lyrion-music-server'}),lms:S('Lyrion',[9000],{icon:'lyrion-music-server'}),scrypted:S('Scrypted',[10443]),go2rtc:S('go2rtc',[1984]),
-  silo:S('Silo',[80,3000,8080]),navidrome:S('Navidrome',[4533]),subwave:S('SUB/WAVE',[3000,8080],{icon:'subwave'}),dispatcharr:S('Dispatcharr',[9191]),minio:S('MinIO',[9001]),n8n:S('n8n',[5678]),
+  silo:S('Silo',[80,3000,8080]),navidrome:S('Navidrome',[4533]),hyttebackup:S('Hytte Backup',[8090],{icon:'proxmox-backup-server'}),backup:S('Hytte Backup',[8090],{icon:'proxmox-backup-server'}),backupgui:S('Hytte Backup',[8090],{icon:'proxmox-backup-server'}),subwave:S('SUB/WAVE',[3000,8080],{icon:'subwave'}),dispatcharr:S('Dispatcharr',[9191]),minio:S('MinIO',[9001]),n8n:S('n8n',[5678]),
   // Uten web-side: skjules
   postgres:S('',[],{hide:true}),postgresql:S('',[],{hide:true}),mariadb:S('',[],{hide:true}),mysql:S('',[],{hide:true}),redis:S('',[],{hide:true}),valkey:S('',[],{hide:true}),
   mongo:S('',[],{hide:true}),mongodb:S('',[],{hide:true}),watchtower:S('',[],{hide:true}),gluetun:S('',[],{hide:true}),portaineragent:S('',[],{hide:true}),agent:S('',[],{hide:true}),
