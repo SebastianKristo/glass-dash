@@ -6,6 +6,7 @@
 <title>Hytte · Skjold Lab — ambient bakgrunn</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Onest:wght@500;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<script>if(/bare-bakgrunn/.test(location.search))document.documentElement.classList.add('no-login')</script>
 <style>
   :root{--ink:#14161F;--or:#FF6B3D;--gold:#D9A441;--mu:#8A8C93}
   *{box-sizing:border-box}
@@ -33,7 +34,7 @@
   button{height:56px;border:0;border-radius:999px;background:var(--ink);color:#fff;font:600 15px Onest,sans-serif;display:flex;align-items:center;justify-content:space-between;padding:0 10px 0 24px;cursor:pointer;transition:transform .3s cubic-bezier(.2,.8,.2,1)}
   button:hover{transform:translateY(-1px)}button:active{transform:scale(.985)}
   button span{width:38px;height:38px;border-radius:50%;background:var(--or);display:grid;place-items:center;color:var(--ink);transition:transform .4s cubic-bezier(.2,.8,.2,1)}button:hover span{transform:translateX(3px)}
-  body.no-login .login{display:none}
+  html.no-login .login,body.no-login .login{display:none}
   @media(max-width:700px){#shield{left:6%;top:5%}#cloud{right:-14%;top:auto;bottom:5%}}
 </style>
 </head>
