@@ -7,7 +7,7 @@ const http = require('http'), fs = require('fs'), path = require('path'), crypto
 const { spawn, execFile } = require('child_process');
 const { Store, TarReader, tarHeader, tarPad, BLOCK } = require('./store');
 
-const VERSION = '3.0.0';
+const VERSION = '3.1.0';
 const PORT = +process.env.PORT || 8090;
 const DATA = process.env.DATA_DIR || '/opt/backup-gui/data';
 const DEST_ROOT = process.env.DEST_ROOT || '/mnt/unraid';
@@ -22,7 +22,7 @@ const wr = (f, o) => { fs.writeFileSync(f + '.tmp', JSON.stringify(o, null, 2));
 let cfg = rd(CFG_F, {});
 cfg.nodes = cfg.nodes || {};                       // navn → {user, port, loc, host?}
 cfg.jobs = cfg.jobs || [];
-cfg.settings = { emailSummary: false, notifyOnFail: true, verifyAfterRun: true, autoPrune: true, ...(cfg.settings || {}) };
+cfg.settings = { emailSummary: false, notifyOnFail: true, verifyAfterRun: true, autoPrune: true, stagger: false, defaultLevel: 6, ...(cfg.settings || {}) };
 cfg.history = cfg.history || [];
 const saveCfg = () => { cfg.history = cfg.history.slice(-500); wr(CFG_F, cfg) };
 const slug = s => String(s).toLowerCase().normalize('NFKD').replace(/[^\w-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'jobb';
@@ -216,7 +216,7 @@ function nextRun(job) {
 }
 setInterval(() => {
   const d = new Date(); let ch = false;
-  for (const j of cfg.jobs) { const k = slotKey(j, d); if (k && j.lastKey !== k) { j.lastKey = k; ch = true; enqueue(j, 'plan') }
+  for (const j of cfg.jobs) { const k = slotKey(j, d); if (k && j.lastKey !== k) { j.lastKey = k; ch = true; if (cfg.settings.stagger) setTimeout(() => enqueue(j, 'plan'), Math.floor(Math.random() * 600e3)); else enqueue(j, 'plan') }
     if (j.waiting) { const n = nodeByName(j.node); if (n && n.online) { log(j.node, `${j.id}: noden er tilbake`, 'ok'); enqueue(j, 'plan'); ch = true } } }
   const today = stamp(d).slice(0, 10);
   if (cfg.settings.emailSummary && d.getHours() === 7 && cfg.lastSummary !== today) {
@@ -282,11 +282,11 @@ http.createServer(async (req, res) => {
       return json(res, 200, {
         version: VERSION, self: tailnet.self || { name: selfName, ip: '', os: 'linux', online: true, tunnel: 'Lokal' }, tailnet: { ok: tailnet.ok, version: tailnet.version, suffix: tailnet.suffix },
         nodes: nodeList(), jobs, disk: d, store: { bytes: store.bytes, blocks: store.have.size }, settings: cfg.settings, pubkey: pubKey(), destRoot: DEST_ROOT,
-        running: running && { id: running.id, pct: running.pct, phase: running.phase, done: running.done, total: running.total }, log: logBuf.slice(-40), history: cfg.history.slice(-100),
+        running: running && { id: running.id, pct: running.pct, phase: running.phase, done: running.done, total: running.total }, log: logBuf.slice(-40), history: cfg.history.slice(-500),
         restores: rest,
       });
     }
-    if (p === '/api/settings' && req.method === 'POST') { const b = await body(req); for (const k of ['emailSummary', 'notifyOnFail', 'verifyAfterRun', 'autoPrune']) if (k in b) cfg.settings[k] = !!b[k]; if ('notifyNode' in b) cfg.settings.notifyNode = b.notifyNode || null; saveCfg(); return json(res, 200, { ok: true }) }
+    if (p === '/api/settings' && req.method === 'POST') { const b = await body(req); for (const k of ['emailSummary', 'notifyOnFail', 'verifyAfterRun', 'autoPrune', 'stagger']) if (k in b) cfg.settings[k] = !!b[k]; if ([1, 3, 6, 9, 19].includes(+b.defaultLevel)) cfg.settings.defaultLevel = +b.defaultLevel; if ('notifyNode' in b) cfg.settings.notifyNode = b.notifyNode || null; saveCfg(); return json(res, 200, { ok: true }) }
     if (p === '/api/password' && req.method === 'POST') { const b = await body(req); if (!b.password || b.password.length < 6) return json(res, 400, { error: 'Minst 6 tegn' }); const salt = crypto.randomBytes(16).toString('hex'); cfg.auth = { salt, hash: hash(b.password, salt) }; saveCfg(); return json(res, 200, { ok: true }) }
     let m;
     if ((m = /^\/api\/nodes\/([^/]+)\/ping$/.exec(p)) && req.method === 'POST') {
