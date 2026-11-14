@@ -51,7 +51,7 @@ button:disabled{opacity:.45;cursor:default!important}
 .fr{display:grid;grid-template-columns:minmax(0,2.4fr) .8fr .9fr .6fr .9fr;gap:12px;align-items:center;height:54px;padding:0 14px 0 8px;border:0;border-radius:999px;text-align:left;cursor:pointer;background:transparent;width:100%}.fr:hover{background:var(--soft)}
 .odc .oda{display:none}.odc:hover .oda{display:grid}.odc:hover .odl{visibility:hidden}
 
-.lg-bg{position:absolute;inset:0;width:100%;height:100%;border:0;z-index:0}
+.lg-bg{position:absolute;inset:0;width:100%;height:100%;border:0;z-index:0;opacity:0;transition:opacity 1.2s ease}.lg-bg.on{opacity:1}
 .lg{position:relative;min-height:100dvh;display:grid;place-items:center;padding:20px;overflow:hidden;background:radial-gradient(120% 80% at 50% 0%,#EDEDE8 0%,#E2E2DC 60%,#DDDDD6 100%)}
 .lg-arcs{position:absolute;inset:0;width:100%;height:100%}
 .lg-s1,.lg-s2{stroke-dasharray:14 86;animation:lgRun 9s linear infinite}.lg-s2{animation-duration:7s;animation-delay:-3s}
@@ -131,12 +131,12 @@ function route(){const p=location.pathname.replace(/\/$/,'')||'/';view=Object.ke
 function go(v){view=v;history.pushState({},'',VIEWS[v][2]);render();if(v==='files')initFiles();window.scrollTo(0,0)}
 window.onpopstate=()=>{route();render();if(view==='files')initFiles()};
 async function boot(){route();const w=await fetch('/api/whoami').then(r=>r.json());if(!w.authed)return showLogin(w.setup);await refresh();if(view==='files')initFiles();sse()}
-function showLogin(setup){clearTimeout(poll);if($('#lf')&&!setup)return;app.innerHTML=`<div class="lg"><iframe class="lg-bg" src="/ambient.html?bare-bakgrunn" title="" aria-hidden="true" tabindex="-1"></iframe>
+function showLogin(setup){clearTimeout(poll);if($('#lf')&&!setup)return;app.innerHTML=`<div class="lg"><iframe class="lg-bg" id="lgbg" src="/ambient.html?bare-bakgrunn&v=4" title="" aria-hidden="true" tabindex="-1"></iframe>
  <form id="lf" class="card lg-card" style="width:min(420px,100%);padding:36px 40px 40px;gap:20px;position:relative;z-index:2">
  <div style="display:flex;align-items:center;gap:14px">${SKJOLD(30)}<div style="display:flex;flex-direction:column;line-height:1.2"><span style="font-weight:700;letter-spacing:.14em;font-size:12px">HYTTE</span><span style="font-weight:600;letter-spacing:.1em;font-size:10px;color:var(--mu)">SKJOLD LAB</span></div></div>
  <span class="t22">${setup?'Velg et passord':'Logg inn'}</span><input class="inp" type="password" id="pw" autocomplete="current-password" enterkeyhint="go" placeholder="${setup?'Minst 6 tegn':'Passord'}" autofocus>
  <button type="submit" class="bp" style="justify-content:space-between">${setup?'Lagre og fortsett':'Logg inn'}<span class="ar">${I('arrow-right',16,2)}</span></button><span id="le" style="color:var(--err);font-size:13px"></span></form></div>`;
- const pw=$('#pw');const card=$('#lf');Promise.race([document.fonts?document.fonts.ready:Promise.resolve(),new Promise(r=>setTimeout(r,1200))]).then(()=>{card.classList.add('ready');pw.focus()});pw.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('#lf').requestSubmit()}};$('#lf').onsubmit=async e=>{e.preventDefault();if(!pw.value)return;try{await api('/api/login',{body:{password:$('#pw').value}});boot()}catch(x){$('#le').textContent=x.message}}}
+ const pw=$('#pw');const card=$('#lf');const bg=$('#lgbg'),bgReady=new Promise(r=>{bg.onload=r});Promise.race([Promise.all([document.fonts?document.fonts.ready:0,bgReady]),new Promise(r=>setTimeout(r,1800))]).then(()=>{bg.classList.add('on');card.classList.add('ready');pw.focus()});pw.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('#lf').requestSubmit()}};$('#lf').onsubmit=async e=>{e.preventDefault();if(!pw.value)return;try{await api('/api/login',{body:{password:$('#pw').value}});boot()}catch(x){$('#le').textContent=x.message}}}
 async function refresh(){try{[S]=await Promise.all([api('/api/state'),loadDevices()])}catch(e){return}const a=document.activeElement;if(!$('aside')||!(a&&a.tagName==='INPUT'&&app.contains(a)))render();clearTimeout(poll);poll=setTimeout(refresh,S.running?2000:10000)}
 let rt=null;const soon=()=>{clearTimeout(rt);rt=setTimeout(refresh,300)};
 function sse(){try{const es=new EventSource('/api/events');es.addEventListener('coord.log',e=>{S&&S.log.push(JSON.parse(e.data));if(view==='sync')drawLog();soon()});
