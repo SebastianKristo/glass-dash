@@ -27,7 +27,7 @@ if ! node -e "process.exit(typeof require('zlib').zstdCompressSync==='function'?
   apt-get install -y -qq nodejs >/dev/null
 fi
 mkdir -p /opt/backup-gui/public/vendor /opt/backup-gui/data
-for f in server.js store.js public/index.html public/icon.svg public/icon-180.png public/vendor/lucide.min.js; do curl -fsSL "$RAW/$f" -o "/opt/backup-gui/$f"; done
+for f in server.js store.js public/index.html public/ambient.html public/icon.svg public/icon-180.png public/vendor/lucide.min.js; do curl -fsSL "$RAW/$f" -o "/opt/backup-gui/$f"; done
 chmod 700 /opt/backup-gui/data
 cat >/etc/systemd/system/backup-gui.service <<UNIT
 [Unit]
@@ -55,7 +55,7 @@ SHA=$(curl -fsSL -H 'Accept: application/vnd.github.sha' "https://api.github.com
 [ ${#SHA} -eq 40 ] || { echo "Fant ikke siste commit på GitHub, bruker $BRANCH"; SHA="$BRANCH"; }
 RAW="https://raw.githubusercontent.com/SebastianKristo/glass-dash/$SHA/extras/backup-gui"
 mkdir -p /opt/backup-gui/public/vendor
-for f in server.js store.js public/index.html public/icon.svg public/icon-180.png public/vendor/lucide.min.js; do
+for f in server.js store.js public/index.html public/ambient.html public/icon.svg public/icon-180.png public/vendor/lucide.min.js; do
   curl -fsSL "$RAW/$f" -o "/opt/backup-gui/$f.new" && mv "/opt/backup-gui/$f.new" "/opt/backup-gui/$f"
 done
 systemctl restart backup-gui

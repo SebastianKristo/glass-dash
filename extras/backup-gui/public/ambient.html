@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hytte · Skjold Lab — ambient bakgrunn</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@500;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+  :root{--ink:#14161F;--or:#FF6B3D;--gold:#D9A441;--mu:#8A8C93}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:#E4E4DF;font-family:Onest,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  #scene{position:fixed;inset:0;width:100vw;height:100vh;perspective:1400px;overflow:hidden}
+  .layer{position:absolute;inset:-6%;will-change:transform}
+  .layer svg{width:100%;height:100%;display:block}
+  .blob{position:absolute;will-change:transform,opacity;pointer-events:none}
+  .float{position:absolute;will-change:transform;transform-style:preserve-3d}
+  .float svg{display:block;width:100%;height:auto;overflow:visible}
+  #shield{left:10%;top:15%;width:clamp(100px,8.5vw,180px)}
+  #cloud{right:6%;top:44%;width:clamp(210px,21vw,440px)}
+  .shadow{position:absolute;border-radius:50%;background:radial-gradient(closest-side,rgba(60,60,52,.22),rgba(60,60,52,0));will-change:transform,opacity;pointer-events:none}
+  #grain{position:fixed;inset:0;pointer-events:none;opacity:.045;mix-blend-mode:overlay;background-size:192px}
+
+  /* Innloggingsboks: valgfri, ren HTML oppå */
+  .login{position:fixed;inset:0;display:grid;place-items:center;padding:20px;pointer-events:none}
+  .card{pointer-events:auto;width:min(420px,100%);background:rgba(255,255,255,.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-radius:40px;padding:36px 40px 40px;display:flex;flex-direction:column;gap:20px;box-shadow:0 40px 80px rgba(20,22,31,.10),inset 0 1px 0 rgba(255,255,255,.9);opacity:0;transform:translateY(14px) scale(.985);animation:in 1s cubic-bezier(.2,.8,.2,1) .25s forwards}
+  @keyframes in{to{opacity:1;transform:none}}
+  .brand{display:flex;align-items:center;gap:14px}
+  .bars{display:flex;align-items:flex-end;gap:4px;height:30px}.bars i{width:4.5px;border-radius:3px;background:var(--ink)}.bars i:nth-child(3){background:var(--gold)}
+  .bt{display:flex;flex-direction:column;line-height:1.25}.bt b{font-size:12px;letter-spacing:.14em}.bt span{font-size:10px;letter-spacing:.1em;color:var(--mu);font-weight:600}
+  h1{margin:0;font-size:24px;font-weight:600;letter-spacing:-.02em;color:var(--ink)}
+  input{height:52px;border-radius:999px;border:1.5px solid var(--ink);background:#F6F6F3;padding:0 20px;font:400 14px 'JetBrains Mono',monospace;outline:none;color:var(--ink)}
+  button{height:56px;border:0;border-radius:999px;background:var(--ink);color:#fff;font:600 15px Onest,sans-serif;display:flex;align-items:center;justify-content:space-between;padding:0 10px 0 24px;cursor:pointer;transition:transform .3s cubic-bezier(.2,.8,.2,1)}
+  button:hover{transform:translateY(-1px)}button:active{transform:scale(.985)}
+  button span{width:38px;height:38px;border-radius:50%;background:var(--or);display:grid;place-items:center;color:var(--ink);transition:transform .4s cubic-bezier(.2,.8,.2,1)}button:hover span{transform:translateX(3px)}
+  body.no-login .login{display:none}
+  @media(max-width:700px){#shield{left:6%;top:5%}#cloud{right:-14%;top:auto;bottom:5%}}
+</style>
+</head>
+<body>
+<!-- Legg ?bare-bakgrunn i URL-en (eller class="no-login" på body) for å skjule innloggingsboksen -->
+<div id="scene">
+  <!-- Lag 0: himmel og lysskifte -->
+  <div class="layer" id="L0" data-depth="0.15">
+    <svg viewBox="0 0 2048 1152" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <radialGradient id="sky" cx="50%" cy="0%" r="95%"><stop offset="0" stop-color="#EFEFEA"/><stop offset=".55" stop-color="#E5E5DF"/><stop offset="1" stop-color="#DADAD3"/></radialGradient>
+        <radialGradient id="glow" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#FFFFFF" stop-opacity=".75"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></radialGradient>
+        <filter id="soft" x="-50%" y="-200%" width="200%" height="500%"><feGaussianBlur stdDeviation="22"/></filter>
+      </defs>
+      <rect width="2048" height="1152" fill="url(#sky)"/>
+    </svg>
+    <div class="blob" id="glowA" style="left:42%;top:4%;width:74%;height:72%;background:radial-gradient(closest-side,rgba(255,255,255,.8),rgba(255,255,255,0))"></div>
+    <div class="blob" id="glowB" style="left:-8%;top:44%;width:60%;height:56%;background:radial-gradient(closest-side,rgba(255,255,255,.6),rgba(255,255,255,0))"></div>
+  </div>
+  <!-- Lag 1: store myke buer og lysbånd -->
+  <div class="layer" id="L1" data-depth="0.35">
+    <svg viewBox="0 0 2048 1152" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <linearGradient id="band" x1="0" x2="1"><stop offset="0" stop-color="#D2D2CB" stop-opacity="0"/><stop offset=".35" stop-color="#D2D2CB" stop-opacity=".55"/><stop offset="1" stop-color="#E6E6E1" stop-opacity="0"/></linearGradient>
+      </defs>
+      <path id="arc1" d="M30 290 C 200 470, 700 620, 1060 600 C 1450 580, 1900 330, 2048 10" fill="none" stroke="#FFFFFF" stroke-opacity=".75" stroke-width="3"/>
+      <path id="arc2" d="M1180 330 C 1450 260, 1640 120, 1730 0" fill="none" stroke="#FFFFFF" stroke-opacity=".55" stroke-width="2.5"/>
+      <path id="arc3" d="M-40 520 C 400 700, 900 760, 1300 720 C 1650 690, 1900 560, 2100 400" fill="none" stroke="#FFFFFF" stroke-opacity=".28" stroke-width="1.5"/>
+    </svg>
+    <div class="blob" id="sweep" style="left:0;top:18%;width:42%;height:30%"><svg viewBox="0 0 860 360" preserveAspectRatio="none" style="width:100%;height:100%;filter:blur(18px)"><path d="M20 30 Q 380 50 820 330 Q 420 210 20 30 Z" fill="#CFCFC8" opacity=".6"/></svg></div>
+    <canvas id="sparks" style="position:absolute;inset:0;width:100%;height:100%"></canvas>
+  </div>
+  <!-- Lag 2: horisont -->
+  <div class="layer" id="L2" data-depth="0.55">
+    <svg viewBox="0 0 2048 1152" preserveAspectRatio="xMidYMid slice">
+      <defs><linearGradient id="hz" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F6F6F2"/><stop offset=".25" stop-color="#ECECE7"/><stop offset="1" stop-color="#E3E3DD"/></linearGradient></defs>
+      <path id="horizon" d="M-200 1300 L-200 870 Q 1024 740 2248 870 L2248 1300 Z" fill="url(#hz)"/>
+      <path id="rim" d="M-200 870 Q 1024 740 2248 870" fill="none" stroke="#FFFFFF" stroke-opacity=".9" stroke-width="3"/>
+    </svg>
+    <div class="blob" id="pool" style="left:24%;top:76%;width:58%;height:12%;background:radial-gradient(closest-side,rgba(150,150,140,.28),rgba(150,150,140,0))"></div>
+  </div>
+
+  <div class="shadow" id="shShadow"></div>
+  <div class="shadow" id="clShadow"></div>
+
+  <!-- Svevende skjold -->
+  <div class="float" id="shield">
+    <svg viewBox="0 0 160 190">
+      <defs>
+        <linearGradient id="sF" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".55" stop-color="#F1F1ED"/><stop offset="1" stop-color="#DCDCD5"/></linearGradient>
+        <linearGradient id="sE" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E8E8E2"/></linearGradient>
+        <linearGradient id="sH" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".85"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+        <clipPath id="sC"><path d="M80 14 L142 37 Q146 39 146 45 L146 92 Q146 145 80 176 Q14 145 14 92 L14 45 Q14 39 18 37 Z"/></clipPath>
+      </defs>
+      <path d="M80 4 L150 31 Q155 33 155 40 L155 93 Q155 153 80 188 Q5 153 5 93 L5 40 Q5 33 10 31 Z" fill="url(#sE)"/>
+      <path d="M80 14 L142 37 Q146 39 146 45 L146 92 Q146 145 80 176 Q14 145 14 92 L14 45 Q14 39 18 37 Z" fill="url(#sF)"/>
+      <g clip-path="url(#sC)"><g transform="rotate(20)"><rect id="sheen" x="0" y="-60" width="60" height="320" fill="url(#sH)"/></g></g>
+      <path d="M50 96 L72 118 L114 72" fill="none" stroke="#9C9D97" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M50 93 L72 115 L114 69" fill="none" stroke="#B9BAB3" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity=".6"/>
+    </svg>
+  </div>
+
+  <!-- Svevende sky -->
+  <div class="float" id="cloud">
+    <svg viewBox="0 0 440 260">
+      <defs>
+        <radialGradient id="cF" cx=".38" cy=".22" r=".95"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".55" stop-color="#F2F2EE"/><stop offset="1" stop-color="#D6D6CF"/></radialGradient>
+        <radialGradient id="cH" cx=".35" cy=".2" r=".4"><stop offset="0" stop-color="#fff" stop-opacity=".9"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+      </defs>
+      <path d="M80 250 Q 0 250 0 175 Q 0 100 78 96 Q 100 0 222 0 Q 330 0 342 98 Q 440 96 440 175 Q 440 250 360 250 Z" fill="url(#cF)"/>
+      <ellipse id="cloudHi" cx="200" cy="70" rx="120" ry="70" fill="url(#cH)"/>
+    </svg>
+  </div>
+</div>
+<div id="grain"></div>
+
+<div class="login">
+  <form class="card" onsubmit="event.preventDefault()">
+    <div class="brand"><div class="bars"><i style="height:20px"></i><i style="height:29px"></i><i style="height:40px"></i><i style="height:29px"></i><i style="height:20px"></i></div><div class="bt"><b>HYTTE</b><span>SKJOLD LAB</span></div></div>
+    <h1>Logg inn</h1>
+    <input type="password" placeholder="Passord" autocomplete="current-password" autofocus>
+    <button type="submit">Logg inn<span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></button>
+  </form>
+</div>
+
+<script>
+(() => {
+  if (/bare-bakgrunn/.test(location.search)) document.body.classList.add('no-login');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const $ = id => document.getElementById(id);
+  const TAU = Math.PI * 2;
+  // Myk ease-in-out-sinus: alle bevegelser er summer av lange, ikke-harmoniske perioder => aldri synlig gjentakelse, ingen skjøt.
+  // Perfekt loop: hver bølge får et helt antall perioder innenfor LOOP, så t=LOOP ser identisk ut med t=0.
+  const LOOP = 30000;
+  const kOf = p => Math.max(1, Math.round(LOOP / p));
+  const w = (t, p, ph = 0) => Math.sin((t % LOOP) / LOOP * kOf(p) * TAU + ph);
+  const ph01 = (t, p) => ((t % LOOP) / LOOP * kOf(p)) % 1; // sagtann 0..1 med samme loop
+
+  // ── Lysglimt som flyter langs buene (canvas, samme koordinater som SVG-en med «slice») ──
+  const cvs = $('sparks'), ctx = cvs.getContext('2d');
+  const paths = [['arc1', 3, 26], ['arc2', 2, 20], ['arc3', 2, 34]], sparks = [];
+  for (const [id, n, dur] of paths) {
+    const p = $(id), L = p.getTotalLength(), N = 600, pts = [];
+    for (let i = 0; i <= N; i++) { const q = p.getPointAtLength(i / N * L); pts.push(q.x, q.y) } // forhåndsberegnet: ingen DOM-kall per frame
+    for (let i = 0; i < n; i++) sparks.push({ pts, N, dur: dur * 1000 * (0.85 + ((i * 7 + id.length) % 5) / 16), off: i / n + ((i * 3 + id.length) % 4) / 40 });
+  }
+  let vt = { s: 1, ox: 0, oy: 0, dpr: 1 };
+  function sizeCanvas() { const r = cvs.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1); cvs.width = r.width * dpr; cvs.height = r.height * dpr; const s = Math.max(r.width / 2048, r.height / 1152); vt = { s: s * dpr, ox: (r.width - 2048 * s) / 2 * dpr, oy: (r.height - 1152 * s) / 2 * dpr, dpr } }
+  sizeCanvas(); addEventListener('resize', sizeCanvas);
+  const sprite = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'), g = x.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(.35, 'rgba(255,255,255,.7)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 64); return c })();
+  function drawSparks(t) {
+    ctx.clearRect(0, 0, cvs.width, cvs.height);
+    for (const s of sparks) {
+      const u = (ph01(t, s.dur) + s.off) % 1, fade = Math.sin(u * Math.PI);
+      for (let i = 0; i < 8; i++) {
+        const uu = u - i * .0055; if (uu < 0) continue;
+        const j = Math.round(uu * s.N) * 2, x = s.pts[j] * vt.s + vt.ox, y = s.pts[j + 1] * vt.s + vt.oy;
+        const r = (10 - i * 1.15) * (.6 + .4 * fade) * vt.s * 1.6;
+        ctx.globalAlpha = fade * (1 - i / 8) * .95; ctx.drawImage(sprite, x - r, y - r, r * 2, r * 2);
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // ── Svak filmkorn for «video»-følelse (statisk tekstur, tegnes én gang) ──
+  { const cv = document.createElement('canvas'), cx = cv.getContext('2d'); cv.width = cv.height = 192; const im = cx.createImageData(192, 192); for (let i = 0; i < im.data.length; i += 4) { const v = 128 + (Math.random() - .5) * 255; im.data[i] = im.data[i + 1] = im.data[i + 2] = v; im.data[i + 3] = 255 } cx.putImageData(im, 0, 0); $('grain').style.backgroundImage = `url(${cv.toDataURL()})` }
+
+  // ── Parallakse: mus/gyro med myk demping ──
+  let mx = 0, my = 0, tx = 0, ty = 0;
+  addEventListener('pointermove', e => { tx = e.clientX / innerWidth - .5; ty = e.clientY / innerHeight - .5 }, { passive: true });
+  addEventListener('deviceorientation', e => { if (e.gamma != null) { tx = Math.max(-.5, Math.min(.5, e.gamma / 60)); ty = Math.max(-.5, Math.min(.5, (e.beta - 45) / 60)) } }, { passive: true });
+
+  const layers = [...document.querySelectorAll('.layer')].map(el => ({ el, d: +el.dataset.depth }));
+  const shield = $('shield'), cloud = $('cloud'), shS = $('shShadow'), clS = $('clShadow');
+  const glowA = $('glowA'), glowB = $('glowB'), sweep = $('sweep'), pool = $('pool'), sheen = $('sheen'), cloudHi = $('cloudHi');
+  const arcs = document.querySelector('#L1 svg'); arcs.style.willChange = 'opacity';
+
+  function placeShadows() {
+    const r1 = shield.getBoundingClientRect(), r2 = cloud.getBoundingClientRect();
+    Object.assign(shS.style, { left: r1.left + r1.width * .05 + 'px', top: r1.bottom + r1.height * .18 + 'px', width: r1.width * .9 + 'px', height: r1.width * .18 + 'px' });
+    Object.assign(clS.style, { left: r2.left + r2.width * .08 + 'px', top: r2.bottom + r2.height * .04 + 'px', width: r2.width * .84 + 'px', height: r2.width * .12 + 'px' });
+  }
+
+  let t0 = performance.now(), manual = null;
+  window.renderAt = ms => { manual = ms; mx = my = tx = ty = 0; render(ms) };
+  function frame(now) { if (manual == null) render(reduce ? 0 : now - t0); requestAnimationFrame(frame) }
+  function render(t) {
+    // demp parallakse (kritisk dempet, frame-uavhengig)
+    const k = 1 - Math.pow(.0015, 1 / 60);
+    mx += (tx - mx) * k; my += (ty - my) * k;
+
+    // Lag: langsom bølge + parallakse
+    for (const { el, d } of layers) {
+      const bx = w(t, 41000 / d * .35) * 10 * d, by = w(t, 33000 / d * .35, 1.3) * 8 * d;
+      el.style.transform = `translate3d(${bx - mx * 46 * d}px,${by - my * 30 * d}px,0)`;
+    }
+    // Lysskifte (kun transform/opacity => GPU-komponert, ingen ny rasterisering)
+    glowA.style.transform = `translate3d(${w(t, 47000) * 110}px,${w(t, 39000, 1) * 45}px,0) scale(${1 + w(t, 31000) * .06})`;
+    glowA.style.opacity = .6 + .4 * (w(t, 23000) * .5 + .5);
+    glowB.style.transform = `translate3d(${w(t, 53000, 2) * 90}px,0,0)`; glowB.style.opacity = .45 + .4 * (w(t, 29000, .7) * .5 + .5);
+    sweep.style.transform = `translate3d(${w(t, 37000) * 34}px,${w(t, 31000, 1) * 12}px,0)`; sweep.style.opacity = .7 + .3 * w(t, 19000, 2);
+    pool.style.transform = `translate3d(${w(t, 43000) * 26}px,0,0) scaleX(${1 + w(t, 27000) * .05})`;
+    arcs.style.opacity = .8 + .2 * w(t, 17000);
+    drawSparks(t);
+
+    // Skjold: vektløs sveving med 3D-rotasjon
+    const sy = w(t, 7600) * 16 + w(t, 13100, 1) * 6, sx = w(t, 11300, .4) * 8;
+    const rX = w(t, 9100, .8) * 9 - my * 10, rY = w(t, 12700) * 14 + mx * 18, rZ = w(t, 10300, 2) * 3;
+    shield.style.transform = `translate3d(${sx - mx * 70}px,${sy - my * 50}px,0) rotateX(${rX}deg) rotateY(${rY}deg) rotateZ(${rZ}deg)`;
+    sheen.style.transform = `translateX(${-60 + (ph01(t, 15000) * 1.6 - .3) * 260}px)`;
+    const lift = (w(t, 7600) + 1) / 2; // høyere => mindre, svakere skygge
+    shS.style.transform = `translate3d(${sx - mx * 50}px,0,0) scale(${1.08 - lift * .22})`; shS.style.opacity = .85 - lift * .4;
+
+    // Sky: langsom drift og pust
+    const cxv = w(t, 16000) * 34 + w(t, 27000, 1) * 12, cyv = w(t, 11900, .6) * 10;
+    const cs = 1 + w(t, 14300, 1.1) * .018;
+    cloud.style.transform = `translate3d(${cxv - mx * 90}px,${cyv - my * 60}px,0) rotateY(${w(t, 21000) * 8 + mx * 10}deg) rotateX(${-my * 6}deg) scale(${cs})`;
+    cloudHi.style.transform = `translateX(${w(t, 18000) * 40}px)`;
+    const clift = (w(t, 11900, .6) + 1) / 2;
+    clS.style.transform = `translate3d(${cxv - mx * 70}px,0,0) scale(${1.04 - clift * .1},1)`; clS.style.opacity = .8 - clift * .25;
+  }
+  addEventListener('resize', placeShadows);
+  // vent på layout før skyggene plasseres
+  requestAnimationFrame(() => { placeShadows(); requestAnimationFrame(frame) });
+})();
+</script>
+</body>
+</html>
