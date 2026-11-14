@@ -48,7 +48,7 @@ async function refreshTailnet() {
   const prevOnline = Object.fromEntries(tailnet.peers.map(p => [p.name, p.online]));
   tailnet = { ok: true, self: mk(j.Self, true), peers: Object.values(j.Peer || {}).map(p => mk(p)), version: (j.Version || '').split('-')[0], suffix: j.MagicDNSSuffix || '', t: Date.now() };
   selfName = tailnet.self.name;
-  for (const p of tailnet.peers) if (p.name in prevOnline && prevOnline[p.name] !== p.online) log(p.name, p.online ? 'kom online' : 'gikk offline', p.online ? 'ok' : 'warn');
+  for (const p of tailnet.peers) if (p.name in prevOnline && prevOnline[p.name] !== p.online) { log(p.name, p.online ? 'kom online' : 'gikk offline', p.online ? 'ok' : 'warn'); emit('node.status', { name: p.name, online: p.online, lastSeen: p.lastSeen, tunnel: p.tunnel }) }
 }
 function tsPing(ip) {
   return new Promise(ok => execFile('tailscale', ['ping', '--c', '1', '--timeout', '5s', ip], { timeout: 9000 }, (e, out) => {
@@ -65,6 +65,14 @@ function nodeList() {
   const peers = tailnet.peers.map(p => ({ ...p, ...(cfg.nodes[p.name] || {}), ping: pings[p.ip] || null }));
   for (const [name, n] of Object.entries(cfg.nodes)) if (n.host && !peers.some(p => p.name === name)) peers.push({ name, host: n.host, dns: n.host, ip: n.host, os: n.os || '', online: n.online ?? true, tunnel: 'Uten tailscale', lastSeen: null, ...n, ping: null, manual: true });
   return peers;
+}
+function classify(n) {
+  const os = (n.os || '').toLowerCase(), h = ((n.host || '') + ' ' + (n.name || '')).toLowerCase();
+  if (/android|ios|ipados/.test(os) || /iphone|ipad|pixel|galaxy|phone|tablet/.test(h)) return /ipad|tablet|tab\b/.test(h) || os === 'ipados' ? 'tablet' : 'mobile';
+  if (/homeassistant|hass|esp|shelly|tasmota|iot|pikvm|octo/.test(h)) return 'iot';
+  if (/macbook|mbp|mba|laptop|thinkpad/.test(h)) return 'laptop';
+  if (/windows|macos/.test(os)) return 'desktop';
+  return 'server';
 }
 const nodeByName = n => nodeList().find(x => x.name === n);
 
@@ -249,7 +257,7 @@ function disk() { return new Promise(ok => execFile('df', ['-B1', '--output=size
 // ── HTTP ─────────────────────────────────────────────────────────────────────
 const json = (res, code, o) => { res.writeHead(code, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(o)) };
 const body = req => new Promise(r => { let b = ''; req.on('data', d => { b += d; if (b.length > 1e6) req.destroy() }); req.on('end', () => { try { r(JSON.parse(b || '{}')) } catch (e) { r({}) } }) });
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.txt': 'text/plain; charset=utf-8' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.webmanifest': 'application/manifest+json', '.txt': 'text/plain; charset=utf-8' };
 const rest = {}; // gjenoppretting-progresjon
 
 http.createServer(async (req, res) => {
@@ -277,6 +285,7 @@ http.createServer(async (req, res) => {
       clients.add(res); const iv = setInterval(() => { res.write(': ping\n\n'); if (running) emit('job.progress', { id: running.id, pct: running.pct, phase: running.phase }) }, 2000);
       req.on('close', () => { clearInterval(iv); clients.delete(res) }); return;
     }
+    if (p === '/api/tailnet/devices') return json(res, 200, nodeList().map(n => ({ name: n.name, host: n.host, ip: n.ip, os: n.os, online: n.online, lastSeen: n.lastSeen, tunnel: n.tunnel, ping: n.ping, loc: n.loc || '', manual: !!n.manual, kind: classify(n) })));
     if (p === '/api/state') {
       const d = await disk(), jobs = cfg.jobs.map(jobView);
       return json(res, 200, {

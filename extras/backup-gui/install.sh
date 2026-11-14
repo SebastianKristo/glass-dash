@@ -25,7 +25,7 @@ if ! node -e "process.exit(typeof require('zlib').zstdCompressSync==='function'?
   apt-get install -y -qq nodejs >/dev/null
 fi
 mkdir -p /opt/backup-gui/public/vendor /opt/backup-gui/data
-for f in server.js store.js public/index.html public/vendor/lucide.min.js; do curl -fsSL "$RAW/$f?$(date +%s)" -o "/opt/backup-gui/$f"; done
+for f in server.js store.js public/index.html public/icon.svg public/icon-180.png public/vendor/lucide.min.js; do curl -fsSL "$RAW/$f?$(date +%s)" -o "/opt/backup-gui/$f"; done
 chmod 700 /opt/backup-gui/data
 cat >/etc/systemd/system/backup-gui.service <<UNIT
 [Unit]
@@ -47,7 +47,7 @@ UNIT
 cat >/usr/local/bin/update-backup-gui <<UPD
 #!/usr/bin/env bash
 set -e
-for f in server.js store.js public/index.html public/vendor/lucide.min.js; do curl -fsSL "$RAW/\$f?\$(date +%s)" -o "/opt/backup-gui/\$f"; done
+for f in server.js store.js public/index.html public/icon.svg public/icon-180.png public/vendor/lucide.min.js; do curl -fsSL "$RAW/\$f?\$(date +%s)" -o "/opt/backup-gui/\$f"; done
 systemctl restart backup-gui && echo "Hytte Backup oppdatert ✓"
 UPD
 chmod +x /usr/local/bin/update-backup-gui
