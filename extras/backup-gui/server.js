@@ -24,7 +24,9 @@ cfg.nodes = cfg.nodes || {};                       // navn → {user, port, loc,
 cfg.jobs = cfg.jobs || [];
 cfg.settings = { emailSummary: false, notifyOnFail: true, verifyAfterRun: true, autoPrune: true, stagger: false, defaultLevel: 6, ...(cfg.settings || {}) };
 cfg.history = cfg.history || [];
+let newKey = false; if (!cfg.apiKey) { cfg.apiKey = crypto.randomBytes(18).toString('hex'); newKey = true }
 const saveCfg = () => { cfg.history = cfg.history.slice(-500); wr(CFG_F, cfg) };
+if (newKey) saveCfg();
 const slug = s => String(s).toLowerCase().normalize('NFKD').replace(/[^\w-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'jobb';
 
 // ── Logg (koordineringslogg) + SSE ──────────────────────────────────────────
@@ -277,6 +279,20 @@ http.createServer(async (req, res) => {
       const tok = crypto.randomBytes(24).toString('hex'); sessions.set(tok, Date.now() + 30 * 864e5);
       res.setHeader('Set-Cookie', `bsid=${tok}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${30 * 86400}`); return json(res, 200, { ok: true });
     }
+    if (p === '/api/widget') {
+      const k = req.headers['x-api-key'] || url.searchParams.get('key') || '';
+      if (!cfg.apiKey || k.length !== cfg.apiKey.length || !crypto.timingSafeEqual(Buffer.from(k), Buffer.from(cfg.apiKey))) return json(res, 401, { error: 'Feil API-nøkkel' });
+      const d = await disk(), jobs = cfg.jobs.map(jobView), now = Date.now(), day = cfg.history.filter(h => h.start > now - 864e5);
+      const orig = jobs.reduce((a, j) => a + (j.orig || 0), 0), last = cfg.history.filter(h => h.status === 'ok').slice(-1)[0];
+      const next = jobs.filter(j => j.enabled && j.nextRun).sort((a, b) => a.nextRun - b.nextRun)[0];
+      return json(res, 200, { app: 'hytte', version: VERSION, node: selfName,
+        jobs: { total: jobs.length, ok: jobs.filter(j => j.status === 'ok').length, fail: jobs.filter(j => j.status === 'fail').length, running: jobs.filter(j => j.status === 'running').length },
+        lastOk: last ? last.end || last.start : null, next: next ? { id: next.id, at: next.nextRun } : null,
+        orig, stored: store.bytes, saved: orig ? Math.max(0, 1 - store.bytes / orig) : 0,
+        disk: { used: d.used, size: d.size }, today: { runs: day.length, fail: day.filter(h => h.status === 'fail').length, bytes: day.reduce((a, h) => a + (h.newBytes || 0), 0) },
+        nodes: { total: nodeList().length, online: nodeList().filter(n => n.online).length },
+        list: jobs.map(j => ({ id: j.id, node: j.node, status: j.status, last: j.last ? j.last.end : null })) });
+    }
     if (!authed(req)) return json(res, 401, { error: 'Ikke logget inn' });
     if (p === '/api/logout') { const m = /bsid=([a-f0-9]+)/.exec(req.headers.cookie || ''); if (m) sessions.delete(m[1]); return json(res, 200, { ok: true }) }
 
@@ -290,7 +306,7 @@ http.createServer(async (req, res) => {
       const d = await disk(), jobs = cfg.jobs.map(jobView);
       return json(res, 200, {
         version: VERSION, self: tailnet.self || { name: selfName, ip: '', os: 'linux', online: true, tunnel: 'Lokal' }, tailnet: { ok: tailnet.ok, version: tailnet.version, suffix: tailnet.suffix },
-        nodes: nodeList(), jobs, disk: d, store: { bytes: store.bytes, blocks: store.have.size }, settings: cfg.settings, pubkey: pubKey(), destRoot: DEST_ROOT,
+        nodes: nodeList(), jobs, disk: d, store: { bytes: store.bytes, blocks: store.have.size }, settings: cfg.settings, apiKey: cfg.apiKey, pubkey: pubKey(), destRoot: DEST_ROOT,
         running: running && { id: running.id, pct: running.pct, phase: running.phase, done: running.done, total: running.total }, log: logBuf.slice(-40), history: cfg.history.slice(-500),
         restores: rest,
       });
