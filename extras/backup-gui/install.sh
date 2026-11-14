@@ -55,9 +55,14 @@ SHA=$(curl -fsSL -H 'Accept: application/vnd.github.sha' "https://api.github.com
 [ ${#SHA} -eq 40 ] || { echo "Fant ikke siste commit på GitHub, bruker $BRANCH"; SHA="$BRANCH"; }
 RAW="https://raw.githubusercontent.com/SebastianKristo/glass-dash/$SHA/extras/backup-gui"
 mkdir -p /opt/backup-gui/public/vendor
-for f in server.js store.js public/index.html public/ambient.html public/icon.svg public/icon-180.png public/vendor/lucide.min.js; do
-  curl -fsSL "$RAW/$f" -o "/opt/backup-gui/$f.new" && mv "/opt/backup-gui/$f.new" "/opt/backup-gui/$f"
+# Fillisten hentes fra repoet, så nye filer kommer med uten at dette skriptet må byttes
+FILES=$(curl -fsSL "$RAW/files.txt" 2>/dev/null || echo "server.js store.js public/index.html public/ambient.html public/icon.svg public/icon-180.png public/vendor/lucide.min.js")
+for f in $FILES; do
+  mkdir -p "/opt/backup-gui/$(dirname "$f")"
+  curl -fsSL "$RAW/$f" -o "/opt/backup-gui/$f.new" && mv "/opt/backup-gui/$f.new" "/opt/backup-gui/$f" || echo "Klarte ikke å hente $f"
 done
+# Oppdater også dette skriptet selv fra installeren
+curl -fsSL "$RAW/install.sh" | sed -n "/^cat >\/usr\/local\/bin\/update-backup-gui <<'UPD'$/,/^UPD$/p" | sed '1d;$d' > /tmp/ubg.new && [ -s /tmp/ubg.new ] && install -m 755 /tmp/ubg.new /usr/local/bin/update-backup-gui || true
 systemctl restart backup-gui
 sleep 1
 echo "Hytte oppdatert til ${SHA:0:7} ✓  ($(curl -s localhost:${PORT:-8090}/api/health))"
