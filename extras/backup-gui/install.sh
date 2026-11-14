@@ -18,14 +18,18 @@ set -euo pipefail
 RAW="$1"; PORT="$2"; DEST_ROOT="$3"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
-apt-get install -y -qq nodejs rsync openssh-client curl ca-certificates >/dev/null
-mkdir -p /opt/backup-gui/public /opt/backup-gui/data
-curl -fsSL "$RAW/server.js" -o /opt/backup-gui/server.js
-curl -fsSL "$RAW/public/index.html" -o /opt/backup-gui/public/index.html
+apt-get install -y -qq rsync openssh-client curl ca-certificates tar >/dev/null
+# Node 22 (zstd i zlib krever 22.15+)
+if ! node -e "process.exit(typeof require('zlib').zstdCompressSync==='function'?0:1)" 2>/dev/null; then
+  curl -fsSL https://deb.nodesource.com/setup_22.x | bash - >/dev/null
+  apt-get install -y -qq nodejs >/dev/null
+fi
+mkdir -p /opt/backup-gui/public/vendor /opt/backup-gui/data
+for f in server.js store.js public/index.html public/vendor/lucide.min.js; do curl -fsSL "$RAW/$f?$(date +%s)" -o "/opt/backup-gui/$f"; done
 chmod 700 /opt/backup-gui/data
 cat >/etc/systemd/system/backup-gui.service <<UNIT
 [Unit]
-Description=Hytte Backup web-GUI
+Description=Hytte backup
 After=network-online.target
 Wants=network-online.target
 
@@ -43,8 +47,7 @@ UNIT
 cat >/usr/local/bin/update-backup-gui <<UPD
 #!/usr/bin/env bash
 set -e
-curl -fsSL "$RAW/server.js?\$(date +%s)" -o /opt/backup-gui/server.js
-curl -fsSL "$RAW/public/index.html?\$(date +%s)" -o /opt/backup-gui/public/index.html
+for f in server.js store.js public/index.html public/vendor/lucide.min.js; do curl -fsSL "$RAW/\$f?\$(date +%s)" -o "/opt/backup-gui/\$f"; done
 systemctl restart backup-gui && echo "Hytte Backup oppdatert ✓"
 UPD
 chmod +x /usr/local/bin/update-backup-gui
@@ -54,46 +57,8 @@ systemctl enable -q --now backup-gui
 systemctl restart backup-gui
 INNER
 
-# ── 2. ZFS-hjelper på verten (snapshots etter hver kjøring) ─────────────────
-SRC="$(pct config "$CTID" | awk -v d="$DEST_ROOT" -F'[ ,]' '/^mp[0-9]+:/ {for(i=1;i<=NF;i++) if($i=="mp="d) print $2}' | head -1)"
-DS=""
-[ -n "$SRC" ] && DS="$(zfs list -H -o name "$SRC" 2>/dev/null || true)"
-if [ -z "$DS" ]; then
-  echo "⚠ Fant ikke ZFS-datasettet bak $DEST_ROOT i CT $CTID (mp-kilde: ${SRC:-ingen}). Snapshots blir ikke tatt."
-else
-  echo "➜ ZFS-hjelper for datasettet $DS ($SRC)"
-  curl -fsSL "$RAW/hytte-zfs?$(date +%s)" -o /usr/local/sbin/hytte-zfs && chmod 755 /usr/local/sbin/hytte-zfs
-  echo "DATASET=$DS" > /etc/hytte-zfs.conf
-  cat >/etc/systemd/system/hytte-zfs.service <<'UNIT'
-[Unit]
-Description=Hytte Backup ZFS-hjelper
-[Service]
-Type=oneshot
-ExecStart=/usr/local/sbin/hytte-zfs
-UNIT
-  cat >/etc/systemd/system/hytte-zfs.path <<UNIT
-[Unit]
-Description=Hytte Backup ZFS-forespørsler
-[Path]
-PathExistsGlob=$SRC/.hytte/req/*.json
-[Install]
-WantedBy=multi-user.target
-UNIT
-  cat >/etc/systemd/system/hytte-zfs.timer <<'UNIT'
-[Unit]
-Description=Hytte Backup ZFS-oversikt
-[Timer]
-OnBootSec=30
-OnUnitActiveSec=60
-[Install]
-WantedBy=timers.target
-UNIT
-  mkdir -p "$SRC/.hytte/req" "$SRC/.hytte/res"
-  chown -R 100000:100000 "$SRC/.hytte" 2>/dev/null || true
-  systemctl daemon-reload
-  systemctl enable -q --now hytte-zfs.path hytte-zfs.timer
-  systemctl start hytte-zfs.service
-fi
+# ── 2. v3 trenger ikke ZFS-hjelperen lenger (arkivet har egne versjoner) ──
+systemctl disable --now hytte-zfs.path hytte-zfs.timer >/dev/null 2>&1 || true
 
 IP="$(pct exec "$CTID" -- hostname -I | awk '{print $1}')"
 echo

@@ -1,355 +1,385 @@
-// Hytte Backup – rsync-backup fra Unraid til ZFS, med et ZFS-snapshot etter hver kjøring.
-// Kjører i en LXC uten ZFS-tilgang. Snapshots lages av en liten hjelper på Proxmox-verten
-// (hytte-zfs), som leser forespørsler fra DEST_ROOT/.hytte/req og svarer i .hytte/res.
-// Ingen avhengigheter: Node + rsync + ssh.
+// Hytte 3 – selvhostet backup over Tailscale.
+// Henter filer fra noder over SSH (tar-strøm), lagrer dem som zstd-komprimerte, deduplisert 4 MiB-blokker,
+// og lar deg bla i og gjenopprette fra hvert snapshot uten å pakke ut arkivet.
+// Ingen avhengigheter: Node 22.15+, ssh, tailscale (valgfritt).
 'use strict';
 const http = require('http'), fs = require('fs'), path = require('path'), crypto = require('crypto');
 const { spawn, execFile } = require('child_process');
+const { Store, TarReader, tarHeader, tarPad, BLOCK } = require('./store');
 
-const VERSION = '2.4';
+const VERSION = '3.0.0';
 const PORT = +process.env.PORT || 8090;
 const DATA = process.env.DATA_DIR || '/opt/backup-gui/data';
 const DEST_ROOT = process.env.DEST_ROOT || '/mnt/unraid';
 const PUB = path.join(__dirname, 'public');
 const KEY = path.join(DATA, 'id_ed25519'), KNOWN = path.join(DATA, 'known_hosts');
-const CFG_F = path.join(DATA, 'config.json'), HIST_F = path.join(DATA, 'history.json');
-const HY = path.join(DEST_ROOT, '.hytte'), REQ = path.join(HY, 'req'), RES = path.join(HY, 'res');
+const CFG_F = path.join(DATA, 'config.json');
 fs.mkdirSync(DATA, { recursive: true });
-try { fs.mkdirSync(REQ, { recursive: true }); fs.mkdirSync(RES, { recursive: true }) } catch (e) {}
+const store = new Store(path.join(DEST_ROOT, '.hytte-store'));
 
 const rd = (f, d) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')) } catch (e) { return d } };
 const wr = (f, o) => { fs.writeFileSync(f + '.tmp', JSON.stringify(o, null, 2)); fs.renameSync(f + '.tmp', f) };
 let cfg = rd(CFG_F, {});
-cfg.remote = cfg.remote || { host: '', user: 'root', port: 22 };
+cfg.nodes = cfg.nodes || {};                       // navn → {user, port, loc, host?}
 cfg.jobs = cfg.jobs || [];
 cfg.settings = { emailSummary: false, notifyOnFail: true, verifyAfterRun: true, autoPrune: true, ...(cfg.settings || {}) };
-cfg.shareSizes = cfg.shareSizes || {};
-let hist = rd(HIST_F, []);
-const saveCfg = () => wr(CFG_F, cfg), saveHist = () => wr(HIST_F, hist.slice(-1000));
-// Eldre jobber (v1) får nye felt
-for (const j of cfg.jobs) { j.retentionDays = j.retentionDays || 30; if (j.schedule && j.schedule.type === 'manual') j.schedule.type = 'daily' }
-for (const h of hist) if (!h.status) { h.status = h.stopped ? 'fail' : h.ok ? 'ok' : 'fail'; h.message = h.message || h.error || '' }
+cfg.history = cfg.history || [];
+const saveCfg = () => { cfg.history = cfg.history.slice(-500); wr(CFG_F, cfg) };
+const slug = s => String(s).toLowerCase().normalize('NFKD').replace(/[^\w-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'jobb';
+
+// ── Logg (koordineringslogg) + SSE ──────────────────────────────────────────
+const logBuf = [], clients = new Set();
+function emit(type, data) { const s = `event: ${type}\ndata: ${JSON.stringify(data)}\n\n`; for (const c of clients) c.write(s) }
+function log(node, msg, kind = 'info') { const l = { t: Date.now(), node, msg, kind }; logBuf.push(l); if (logBuf.length > 200) logBuf.shift(); emit('coord.log', l) }
+let selfName = 'hytte';
+
+// ── Tailscale ────────────────────────────────────────────────────────────────
+let tailnet = { ok: false, self: null, peers: [], version: null, suffix: null, t: 0 };
+const pings = {};                                    // ip → {ms, tunnel, t}
+function tsJSON() {
+  return new Promise(ok => execFile('tailscale', ['status', '--json'], { timeout: 8000, maxBuffer: 8e6 }, (e, out) => { try { ok(e ? null : JSON.parse(out)) } catch (x) { ok(null) } }));
+}
+const shortName = p => (p.DNSName || '').split('.')[0] || p.HostName;
+function tunnelOf(p) { if (!p.Online) return 'Frakoblet'; if (p.CurAddr) return 'Direkte'; return p.Relay ? 'DERP · ' + p.Relay : 'Direkte' }
+async function refreshTailnet() {
+  const j = await tsJSON(); if (!j || !j.Self) { tailnet.ok = false; return }
+  const mk = (p, isSelf) => ({ name: shortName(p), host: p.HostName, dns: (p.DNSName || '').replace(/\.$/, ''), ip: (p.TailscaleIPs || [])[0] || '', os: p.OS || '', online: isSelf ? true : !!p.Online,
+    lastSeen: p.LastSeen && !p.LastSeen.startsWith('0001') ? Date.parse(p.LastSeen) : null, tunnel: isSelf ? 'Lokal' : tunnelOf(p), relay: p.Relay || '', self: !!isSelf });
+  const prevOnline = Object.fromEntries(tailnet.peers.map(p => [p.name, p.online]));
+  tailnet = { ok: true, self: mk(j.Self, true), peers: Object.values(j.Peer || {}).map(p => mk(p)), version: (j.Version || '').split('-')[0], suffix: j.MagicDNSSuffix || '', t: Date.now() };
+  selfName = tailnet.self.name;
+  for (const p of tailnet.peers) if (p.name in prevOnline && prevOnline[p.name] !== p.online) log(p.name, p.online ? 'kom online' : 'gikk offline', p.online ? 'ok' : 'warn');
+}
+function tsPing(ip) {
+  return new Promise(ok => execFile('tailscale', ['ping', '--c', '1', '--timeout', '5s', ip], { timeout: 9000 }, (e, out) => {
+    const m = /via (\S+) in ([\d.]+)ms/.exec(out || ''); if (!m) return ok(null);
+    const derp = /^DERP\((\w+)\)/.exec(m[1]); const r = { ms: Math.round(+m[2]), tunnel: derp ? 'DERP · ' + derp[1] : 'Direkte', t: Date.now() }; pings[ip] = r; ok(r);
+  }));
+}
+async function pingAll() { for (const p of tailnet.peers) if (p.online) await tsPing(p.ip) }
+setInterval(refreshTailnet, 30000); setInterval(pingAll, 180000);
+refreshTailnet().then(pingAll);
+
+// Alle kjente noder: tailnet-peers + manuelt lagt til (host uten tailscale)
+function nodeList() {
+  const peers = tailnet.peers.map(p => ({ ...p, ...(cfg.nodes[p.name] || {}), ping: pings[p.ip] || null }));
+  for (const [name, n] of Object.entries(cfg.nodes)) if (n.host && !peers.some(p => p.name === name)) peers.push({ name, host: n.host, dns: n.host, ip: n.host, os: n.os || '', online: n.online ?? true, tunnel: 'Uten tailscale', lastSeen: null, ...n, ping: null, manual: true });
+  return peers;
+}
+const nodeByName = n => nodeList().find(x => x.name === n);
 
 // ── SSH ──────────────────────────────────────────────────────────────────────
-if (!fs.existsSync(KEY)) execFile('ssh-keygen', ['-t', 'ed25519', '-N', '', '-C', 'hytte-backup', '-f', KEY], () => {});
+if (!fs.existsSync(KEY)) execFile('ssh-keygen', ['-t', 'ed25519', '-N', '', '-C', 'hytte', '-f', KEY], () => {});
 const pubKey = () => { try { return fs.readFileSync(KEY + '.pub', 'utf8').trim() } catch (e) { return '' } };
-const sshArgs = () => ['-i', KEY, '-p', String(cfg.remote.port || 22), '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10',
-  '-o', 'ServerAliveInterval=30', '-o', 'StrictHostKeyChecking=accept-new', '-o', 'UserKnownHostsFile=' + KNOWN];
-const target = () => (cfg.remote.user || 'root') + '@' + cfg.remote.host;
 const q = s => "'" + String(s).replace(/'/g, "'\\''") + "'";
-function ssh(cmd, ms = 20000) {
-  return new Promise((ok, no) => {
-    if (!cfg.remote.host) return no(new Error('Ingen Unraid-adresse satt'));
-    execFile('ssh', [...sshArgs(), target(), cmd], { timeout: ms, maxBuffer: 16e6 }, (e, out, err) =>
-      e ? no(new Error((err || e.message).trim().split('\n').pop() || 'SSH feilet')) : ok(out));
-  });
+function sshTarget(name) {
+  const n = nodeByName(name) || { name, ip: name }, c = cfg.nodes[name] || {};
+  return { addr: (c.user || 'root') + '@' + (n.ip || n.host || name), port: String(c.port || 22) };
 }
-let conn = { online: false, pingMs: null, checked: 0, error: '' };
-async function ping() {
-  if (!cfg.remote.host) { conn = { online: false, pingMs: null, checked: Date.now(), error: 'Ikke satt opp' }; return conn }
-  const t = Date.now();
-  try { await ssh('true', 12000); conn = { online: true, pingMs: Date.now() - t, checked: Date.now(), error: '' } }
-  catch (e) { conn = { online: false, pingMs: null, checked: Date.now(), error: e.message } }
-  return conn;
+const sshArgs = t => ['-i', KEY, '-p', t.port, '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10', '-o', 'ServerAliveInterval=30', '-o', 'StrictHostKeyChecking=accept-new', '-o', 'UserKnownHostsFile=' + KNOWN, t.addr];
+function ssh(node, cmd, ms = 20000) {
+  return new Promise((ok, no) => execFile('ssh', [...sshArgs(sshTarget(node)), cmd], { timeout: ms, maxBuffer: 64e6 }, (e, out, err) =>
+    e ? no(new Error((err || e.message).trim().split('\n').pop() || 'SSH feilet')) : ok(out)));
 }
-setInterval(ping, 60000); setTimeout(ping, 1500);
-// Unraid-varsel (følger varslingsinnstillingene i Unraid, f.eks. e-post)
 function notify(subject, desc, level = 'normal') {
-  const cmd = `/usr/local/emhttp/webGui/scripts/notify -e ${q('Hytte Backup')} -s ${q(subject)} -d ${q(desc)} -i ${q(level)}`;
-  return ssh(cmd).catch(() => {});
+  const n = cfg.settings.notifyNode; if (!n) return Promise.resolve();
+  return ssh(n, `/usr/local/emhttp/webGui/scripts/notify -e ${q('Hytte')} -s ${q(subject)} -d ${q(desc)} -i ${q(level)}`).catch(() => {});
 }
 
 // ── Innlogging ───────────────────────────────────────────────────────────────
 const hash = (pw, salt) => crypto.scryptSync(pw, salt, 32).toString('hex');
 const sessions = new Map();
 const authed = req => { const m = /(?:^|;\s*)bsid=([a-f0-9]+)/.exec(req.headers.cookie || ''); const t = m && sessions.get(m[1]); return !!(t && t > Date.now()) };
-function login(res, pw) {
-  if (!cfg.auth) { const salt = crypto.randomBytes(16).toString('hex'); cfg.auth = { salt, hash: hash(pw, salt) }; saveCfg() }
-  else if (!crypto.timingSafeEqual(Buffer.from(hash(pw, cfg.auth.salt), 'hex'), Buffer.from(cfg.auth.hash, 'hex'))) return json(res, 401, { error: 'Feil passord' });
-  const tok = crypto.randomBytes(24).toString('hex'); sessions.set(tok, Date.now() + 30 * 864e5);
-  res.setHeader('Set-Cookie', `bsid=${tok}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${30 * 86400}`); json(res, 200, { ok: true });
-}
 
-// ── ZFS via vert-hjelperen ───────────────────────────────────────────────────
-const helperMeta = () => rd(path.join(HY, 'meta.json'), null);       // {dataset, zfsVersion, t}
-const snapList = () => rd(path.join(HY, 'snapshots.json'), []);      // [{name, creation, written}]
-const helperOk = () => { const m = helperMeta(); return !!(m && Date.now() - m.t * 1000 < 10 * 60e3) };
-function zfsReq(op, args = {}, ms = 60000) {
-  return new Promise((ok, no) => {
-    if (!helperOk()) return no(new Error('ZFS-hjelperen på Proxmox svarer ikke (kjør installasjonen på nytt fra Proxmox-verten)'));
-    const id = Date.now() + '-' + crypto.randomBytes(3).toString('hex');
-    fs.writeFileSync(path.join(REQ, id + '.json.tmp'), JSON.stringify({ op, ...args }));
-    fs.renameSync(path.join(REQ, id + '.json.tmp'), path.join(REQ, id + '.json'));
-    const f = path.join(RES, id + '.json'), t0 = Date.now();
-    const iv = setInterval(() => {
-      if (fs.existsSync(f)) { clearInterval(iv); const r = rd(f, {}); try { fs.unlinkSync(f) } catch (e) {} r.ok ? ok(r) : no(new Error(r.error || 'ZFS-feil')) }
-      else if (Date.now() - t0 > ms) { clearInterval(iv); no(new Error('Tidsavbrudd mot ZFS-hjelperen')) }
-    }, 500);
+// ── Unntak ───────────────────────────────────────────────────────────────────
+function excluder(list) {
+  const rx = (list || []).filter(Boolean).map(p => {
+    const dir = p.endsWith('/'), pat = p.replace(/\/$/, ''), re = pat.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[^/]*').replace(/\?/g, '[^/]');
+    return pat.includes('/') ? new RegExp('^' + re + (dir ? '(/|$)' : '$')) : new RegExp('(^|/)' + re + (dir ? '(/|$)' : '$'));
   });
+  return p => rx.some(r => r.test(p));
 }
-const slug = s => String(s).toLowerCase().normalize('NFKD').replace(/[^\w-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'jobb';
-const stamp = d => { const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}` };
-const snapPrefix = j => 'hytte-' + slug(j.dest) + '-';
 
 // ── Kjøring ──────────────────────────────────────────────────────────────────
 let running = null; const queue = [];
-const safeDest = d => String(d || '').replace(/\.\./g, '').replace(/^\/+|\/+$/g, '').replace(/[^\w\-./ æøåÆØÅ]/g, '_') || 'backup';
-const fmtB = b => b == null ? '—' : b >= 1e12 ? (b / 1e12).toFixed(2) + ' TB' : b >= 1e9 ? (b / 1e9).toFixed(1) + ' GB' : b >= 1e6 ? Math.round(b / 1e6) + ' MB' : b >= 1e3 ? Math.round(b / 1e3) + ' kB' : b + ' B';
 function enqueue(job, why) {
   if ((running && running.id === job.id) || queue.some(x => x.id === job.id)) return false;
-  queue.push({ id: job.id, why }); setImmediate(next); return true;
+  const n = nodeByName(job.node); if (n && !n.online) { job.waiting = true; saveCfg(); log(job.node, `${job.id} venter på node`, 'warn'); return 'waiting' }
+  job.waiting = false; queue.push({ id: job.id, why }); setImmediate(next); emit('job.status', { id: job.id, status: 'queued' }); return true;
 }
-function rsyncRun(args, run) {
-  return new Promise(resolve => {
-    const p = spawn('rsync', args); run.proc = p; let buf = '';
-    const onData = d => {
-      buf += d.toString(); const parts = buf.split(/[\r\n]/); buf = parts.pop();
-      for (const l of parts) {
-        const m = /^\s*([\d,]+)\s+(\d+)%\s+(\S+\/s)\s+(\d+:\d+:\d+)/.exec(l);
-        if (m) { run.doneBytes = +m[1].replace(/,/g, ''); run.pct = +m[2]; run.speed = m[3]; run.eta = m[4]; continue }
-        if (l.trim()) { run.log.push(l); if (run.log.length > 500) run.log.shift() }
-      }
-    };
-    p.stdout.on('data', onData); p.stderr.on('data', onData);
-    p.on('close', code => resolve(code)); p.on('error', e => { run.log.push(e.message); resolve(127) });
+const snapId = d => { const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}` };
+async function runJob(job, run) {
+  const exc = excluder(job.excludes), src = job.path.replace(/\/+$/, '') || '/';
+  // 1. Liste over filer på noden
+  run.phase = 'liste';
+  const out = await ssh(job.node, `cd ${q(src)} && find . -xdev -mindepth 1 \\( -type f -o -type d -o -type l \\) -printf '%y\\t%s\\t%T@\\t%m\\t%l\\t%P\\0'`, 900000);
+  const prev = store.listSnaps(job.id).pop(), prevM = prev ? store.loadSnap(job.id, prev.id) : null;
+  const entries = [], changed = []; let total = 0;
+  for (const rec of out.split('\0')) {
+    if (!rec) continue; const parts = rec.split('\t'); if (parts.length < 6) continue;
+    const [y, s, t, m, l] = parts, p = parts.slice(5).join('\t'); if (!p || exc(p)) continue;
+    const mtime = Math.floor(+t), mode = parseInt(m, 8), size = +s;
+    if (y === 'd') entries.push([p, 'd', 0, mtime, mode]);
+    else if (y === 'l') entries.push([p, 'l', 0, mtime, mode, l]);
+    else { const pe = prevM && prevM.byPath.get(p);
+      if (pe && pe[1] === 'f' && pe[2] === size && pe[3] === mtime) entries.push([p, 'f', size, mtime, mode, pe[5], pe[6]]);
+      else { const e = [p, 'f', size, mtime, mode, [], null]; entries.push(e); changed.push(e); total += size } }
+  }
+  // 2. Hent endrede filer som én tar-strøm og del dem i blokker
+  run.phase = 'sync'; run.total = total; run.done = 0; let newBytes = 0, newBlocks = 0;
+  const byName = new Map(changed.map(e => [e[0], e])), got = new Set();
+  if (changed.length) await new Promise((resolve, reject) => {
+    const t = sshTarget(job.node);
+    const p = spawn('ssh', [...sshArgs(t), `cd ${q(src)} && tar -cf - --null --no-recursion --ignore-failed-read -T - 2>/dev/null; true`]); run.proc = p;
+    const tr = new TarReader((name, size) => {
+      const e = byName.get(name); let buf = [], blen = 0; const sha = crypto.createHash('sha256'), blocks = [];
+      const flush = () => { if (!blen) return; const b = buf.length === 1 ? buf[0] : Buffer.concat(buf, blen); buf = []; blen = 0;
+        const r = store.put(b, job.level || 6); blocks.push([r[0], r[1], r[2]]); if (r[3]) { newBytes += r[1]; newBlocks++ } };
+      return { data(d) { sha.update(d); run.done += d.length; let o = 0;
+          while (o < d.length) { const n = Math.min(BLOCK - blen, d.length - o); buf.push(Buffer.from(d.subarray(o, o + n))); blen += n; o += n; if (blen === BLOCK) flush() }
+          run.pct = total ? Math.min(99, Math.floor(run.done / total * 100)) : 99 },
+        end() { flush(); if (e) { e[5] = blocks; e[6] = sha.digest('hex'); e[2] = blocks.reduce((a, b) => a + b[2], 0); got.add(name) } } };
+    });
+    p.stdout.on('data', d => { try { tr.write(d) } catch (x) { p.kill(); reject(x) } });
+    let err = ''; p.stderr.on('data', d => err += d);
+    p.on('close', c => run.stopped ? reject(new Error('Stoppet manuelt')) : c === 0 ? resolve() : reject(new Error(err.trim().split('\n').pop() || 'SSH brutt (kode ' + c + ')')));
+    p.on('error', reject);
+    p.stdin.end(changed.map(e => e[0]).join('\0') + '\0');
   });
+  const vanished = changed.filter(e => !got.has(e[0])).length;
+  const final = entries.filter(e => e[1] !== 'f' || e[6] != null);
+  // 3. Snapshot-manifest
+  run.phase = 'snapshot';
+  const uniq = new Map(); let orig = 0, files = 0;
+  for (const e of final) if (e[1] === 'f') { files++; orig += e[2]; for (const b of e[5]) uniq.set(b[0], b[1]) }
+  const stored = [...uniq.values()].reduce((a, b) => a + b, 0), now = new Date();
+  const m = { v: 1, id: snapId(now), job: job.id, createdAt: now.getTime(), level: job.level || 6, src: { node: job.node, path: src }, entries: final, warnings: vanished,
+    stats: { files, orig, stored, blocks: uniq.size, newBytes, newBlocks, changed: changed.length, full: !prev } };
+  store.saveSnap(m);
+  return { m, vanished };
 }
-async function verify(job, dest) {
-  // Sammenlign sjekksummer for et tilfeldig utvalg filer (opptil 25)
-  const files = await new Promise(ok => execFile('find', [dest, '-type', 'f', '-size', '-200M', '-not', '-path', '*/.*'], { maxBuffer: 64e6, timeout: 120000 }, (e, out) => ok((out || '').split('\n').filter(Boolean))));
-  if (!files.length) return { checked: 0, bad: [] };
-  const pick = [], n = Math.min(25, files.length); for (let i = 0; i < n; i++) pick.push(files.splice(Math.floor(Math.random() * files.length), 1)[0]);
-  const rel = pick.map(f => path.relative(dest, f));
-  const sum = f => new Promise(ok => { const h = crypto.createHash('sha256'); fs.createReadStream(f).on('data', d => h.update(d)).on('end', () => ok(h.digest('hex'))).on('error', () => ok('')) });
-  const local = await Promise.all(pick.map(sum));
-  const out = await ssh(`cd ${q(job.src)} && sha256sum -- ${rel.map(q).join(' ')} 2>/dev/null`, 180000).catch(e => e.message ? '' : '');
-  const remote = {}; for (const l of out.split('\n')) { const m = /^([a-f0-9]{64})\s+\*?(.+)$/.exec(l); if (m) remote[m[2]] = m[1] }
-  const bad = rel.filter((r, i) => remote[r] && remote[r] !== local[i]);
-  return { checked: Object.keys(remote).length, bad };
+async function verify(job, m) {
+  const files = m.entries.filter(e => e[1] === 'f' && e[2] > 0 && e[2] < 200e6); if (!files.length) return { checked: 0, bad: 0 };
+  const pick = []; for (let i = 0, n = Math.min(25, files.length); i < n; i++) pick.push(files.splice(Math.floor(Math.random() * files.length), 1)[0]);
+  const outp = await ssh(job.node, `cd ${q(m.src.path)} && sha256sum -- ${pick.map(e => q(e[0])).join(' ')} 2>/dev/null`, 180000).catch(() => '');
+  const remote = {}; for (const l of outp.split('\n')) { const r = /^([a-f0-9]{64})\s+\*?(.+)$/.exec(l); if (r) remote[r[2]] = r[1] }
+  // Sjekk også at blokkene i arkivet gir samme sjekksum
+  let bad = 0, checked = 0;
+  for (const e of pick) { if (!remote[e[0]]) continue; checked++; const h = crypto.createHash('sha256'); for (const b of store.readFile(e)) h.update(b); const d = h.digest('hex'); if (d !== e[6] || remote[e[0]] !== e[6]) bad++ }
+  return { checked, bad };
 }
 async function next() {
   if (running || !queue.length) return;
   const { id, why } = queue.shift(), job = cfg.jobs.find(j => j.id === id); if (!job) return next();
-  const dest = path.join(DEST_ROOT, safeDest(job.dest)); fs.mkdirSync(dest, { recursive: true });
-  const run = { id: job.id, name: job.name, why, start: Date.now(), pct: 0, speed: '', eta: '', doneBytes: 0, log: [], phase: 'sync' };
-  running = run;
-  const args = ['-aHX', '--partial', '--numeric-ids', '--info=progress2,stats2', '--no-inc-recursive', '-s'];
-  if (job.mirror) args.push('--delete', '--delete-excluded');
-  if (job.bwlimit) args.push('--bwlimit=' + job.bwlimit);
-  for (const x of job.excludes || []) if (x.trim()) args.push('--exclude', x.trim());
-  args.push('-e', 'ssh ' + sshArgs().map(a => /\s/.test(a) ? q(a) : a).join(' '));
-  args.push(target() + ':' + job.src.replace(/\/?$/, '/'), dest + '/');
-  let code = await rsyncRun(args, run);
-  // Ett nytt forsøk ved brutt forbindelse (kode 12/30/35/255)
-  if (!run.stopped && [12, 30, 35, 255].includes(code)) { run.log.push('Tilkobling brutt – prøver igjen om 60 s'); run.retried = true; await new Promise(r => setTimeout(r, 60000)); if (!run.stopped) code = await rsyncRun(args, run) }
-  const L = run.log.join('\n'), num = re => { const m = re.exec(L); return m ? +m[1].replace(/,/g, '') : null };
-  const total = num(/Total file size:\s*([\d,]+)/), sent = num(/Total transferred file size:\s*([\d,]+)/), files = num(/Number of regular files transferred:\s*([\d,]+)/);
-  let status = run.stopped ? 'fail' : code === 0 ? 'ok' : (code === 23 || code === 24) ? 'warn' : 'fail', msg = '';
-  if (status === 'warn') { const n = run.log.filter(l => /^rsync: |vanished|Permission denied|failed:/.test(l)).length; msg = `${n || 'Noen'} ${n === 1 ? 'fil' : 'filer'} ble hoppet over (låst eller endret underveis). Data er ellers sikret.` }
-  if (status === 'fail') msg = run.stopped ? 'Stoppet manuelt' : (run.log.filter(x => /error|failed|denied|refused|No such|timed out/i.test(x)).slice(-2).join(' · ') || 'rsync avsluttet med kode ' + code);
-  let snap = null;
-  if (status !== 'fail') {
-    run.phase = 'snapshot';
-    try { const r = await zfsReq('snapshot', { name: snapPrefix(job) + stamp(new Date()) }); snap = r.name; msg = msg || 'Snapshot opprettet' }
-    catch (e) { if (status === 'ok') status = 'warn'; msg = (msg ? msg + ' ' : '') + 'Snapshot ikke tatt: ' + e.message }
-  }
-  if (status !== 'fail' && cfg.settings.verifyAfterRun) {
-    run.phase = 'verify';
-    try { const v = await verify(job, dest); if (v.bad.length) { status = 'warn'; msg = `Verifisering: ${v.bad.length} av ${v.checked} filer avviker` } else if (v.checked) msg += ` · ${v.checked} filer verifisert` } catch (e) {}
-  }
-  if (run.retried && status !== 'fail') msg += ' · tilkobling brutt, prøvde igjen';
-  const rec = { id: crypto.randomBytes(4).toString('hex'), job: job.id, name: job.name, why, start: run.start, end: Date.now(), status,
-    bytes: sent, total, files, snapshot: snap, message: msg, tail: run.log.slice(-30) };
-  hist.push(rec); saveHist();
-  job.last = { status, start: rec.start, end: rec.end, message: msg }; if (total != null) job.sizeBytes = total; saveCfg();
-  if (status === 'fail' && cfg.settings.notifyOnFail) notify(`Backup feilet: ${job.name}`, msg, 'alert');
-  running = null;
-  if (cfg.settings.autoPrune) prune().catch(() => {});
+  const run = { id: job.id, why, start: Date.now(), pct: 0, done: 0, total: 0, phase: 'liste' }; running = run;
+  log(selfName, `starter ${job.id} (${job.node} → ${selfName})`, 'run'); emit('job.status', { id: job.id, status: 'running' });
+  let status = 'ok', msg = '', m = null;
+  try {
+    const r = await runJob(job, run); m = r.m;
+    msg = `${fmtB(m.stats.newBytes)} nye data · ${m.stats.changed} endrede filer`;
+    if (r.vanished) { status = 'warn'; msg = `${r.vanished} ${r.vanished === 1 ? 'fil' : 'filer'} kunne ikke leses (låst eller slettet underveis). Resten er sikret.` }
+    if (cfg.settings.verifyAfterRun) { run.phase = 'verifiserer'; const v = await verify(job, m); if (v.bad) { status = 'warn'; msg = `Verifisering: ${v.bad} av ${v.checked} filer avviker` } else if (v.checked) msg += ` · ${v.checked} sjekksummer OK` }
+  } catch (e) { status = 'fail'; msg = e.message }
+  const rec = { id: crypto.randomBytes(4).toString('hex'), job: job.id, start: run.start, end: Date.now(), status, message: msg, snap: m && m.id, newBytes: m ? m.stats.newBytes : 0 };
+  cfg.history.push(rec); job.last = { status, end: rec.end, message: msg }; saveCfg();
+  log(selfName, status === 'fail' ? `${job.id} feilet: ${msg}` : `${job.id} ferdig · snapshot ${m.id} · ${fmtB(m.stats.newBytes)} nye blokker`, status);
+  if (status === 'fail' && cfg.settings.notifyOnFail) notify(`Backup feilet: ${job.id}`, msg, 'alert');
+  running = null; emit('job.status', { id: job.id, status });
+  if (cfg.settings.autoPrune && status !== 'fail') prune();
   next();
 }
+const fmtB = b => b == null ? '—' : b >= 1e12 ? (b / 1e12).toFixed(2) + ' TB' : b >= 1e9 ? (b / 1e9).toFixed(1) + ' GB' : b >= 1e6 ? Math.round(b / 1e6) + ' MB' : b >= 1e3 ? Math.round(b / 1e3) + ' kB' : b + ' B';
 
 // ── Opprydding ───────────────────────────────────────────────────────────────
-let pruning = false;
-async function prune(force) {
-  if (pruning || (!force && !helperOk())) return; pruning = true;
-  try {
-    const keep = cfg.jobs.map(j => ({ prefix: snapPrefix(j), days: j.retentionDays || 30 }));
-    const t = Date.now(), r = await zfsReq('prune', { keep }, 300000);
-    if (r.removed && r.removed.length) {
-      hist.push({ id: crypto.randomBytes(4).toString('hex'), job: 'system', name: 'Opprydding', start: t, end: Date.now(), status: 'ok', bytes: null,
-        message: `${r.removed.length} ${r.removed.length === 1 ? 'snapshot' : 'snapshots'} fjernet` }); saveHist();
-    }
-  } finally { pruning = false }
+function prune() {
+  if (running) return; let removed = 0;
+  for (const j of cfg.jobs) { const snaps = store.listSnaps(j.id), keep = (j.retentionDays || 30) * 864e5;
+    for (const s of snaps.slice(0, -1)) if (Date.now() - s.createdAt > keep) { store.dropSnap(j.id, s.id); removed++ } }
+  if (removed) { const g = store.gc(); log(selfName, `opprydding: ${removed} snapshots og ${g.blocks} blokker fjernet (${fmtB(g.bytes)})`, 'ok') }
 }
 
 // ── Planlegging ──────────────────────────────────────────────────────────────
-// schedule.type: hourly | 6h | daily | weekly. time 'HH:MM' (daily/weekly; for 6h gir timen startfasen), day 0-6 (0=søndag)
+const stamp = d => { const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}` };
 function slotKey(job, d) {
   const s = job.schedule || {}; if (job.enabled === false) return null;
   const [h, m] = String(s.time || '02:00').split(':').map(Number);
   if (s.type === 'hourly') return d.getMinutes() >= (m || 0) ? 'h' + stamp(d).slice(0, 13) : null;
-  if (s.type === '6h') { // kl. h, h+6, h+12, h+18
-    const back = ((d.getHours() - (h % 6)) % 6 + 6) % 6, start = new Date(d.getTime() - back * 3600e3); start.setMinutes(m, 0, 0);
-    if (start > d) return null; return 's' + stamp(start).slice(0, 13) }
+  if (s.type === '6h') { const back = ((d.getHours() - (h % 6)) % 6 + 6) % 6, st = new Date(d.getTime() - back * 3600e3); st.setMinutes(m, 0, 0); return st > d ? null : 's' + stamp(st).slice(0, 13) }
   if (d.getHours() < h || (d.getHours() === h && d.getMinutes() < m)) return null;
   if (s.type === 'weekly' && d.getDay() !== +(s.day || 0)) return null;
   return 'd' + stamp(d).slice(0, 10);
 }
 function nextRun(job) {
-  if (job.enabled === false) return null;
-  const now = Date.now(), cur = slotKey(job, new Date(now));
-  for (let i = 1; i <= 8 * 24 * 12; i++) { const t = new Date(now + i * 5 * 60000); t.setSeconds(0, 0); const k = slotKey(job, t); if (k && k !== cur && k !== job.lastKey) {
-    // finn første minutt i dette vinduet
-    for (let b = 0; b < 5; b++) { const tb = new Date(t.getTime() - (4 - b) * 60000); if (slotKey(job, tb) === k) return tb.getTime() } return t.getTime() } }
+  if (job.enabled === false) return null; const now = Date.now(), cur = slotKey(job, new Date(now));
+  for (let i = 1; i <= 8 * 24 * 60; i++) { const t = new Date(now + i * 60000); t.setSeconds(0, 0); const k = slotKey(job, t); if (k && k !== cur && k !== job.lastKey) return t.getTime() }
   return null;
 }
-let lastSummary = cfg.lastSummary || '';
 setInterval(() => {
   const d = new Date(); let ch = false;
-  for (const j of cfg.jobs) { const k = slotKey(j, d); if (k && j.lastKey !== k) { j.lastKey = k; ch = true; enqueue(j, 'plan') } }
+  for (const j of cfg.jobs) { const k = slotKey(j, d); if (k && j.lastKey !== k) { j.lastKey = k; ch = true; enqueue(j, 'plan') }
+    if (j.waiting) { const n = nodeByName(j.node); if (n && n.online) { log(j.node, `${j.id}: noden er tilbake`, 'ok'); enqueue(j, 'plan'); ch = true } } }
   const today = stamp(d).slice(0, 10);
-  if (cfg.settings.emailSummary && d.getHours() === 7 && lastSummary !== today) {
-    lastSummary = cfg.lastSummary = today; ch = true;
-    const since = Date.now() - 864e5, h = hist.filter(x => x.start > since && x.job !== 'system');
-    const bad = h.filter(x => x.status !== 'ok'), bytes = h.reduce((a, x) => a + (x.bytes || 0), 0);
-    notify(bad.length ? `Backup: ${bad.length} med advarsel/feil siste døgn` : 'Backup: alt OK siste døgn',
-      `${h.length} kjøringer, ${fmtB(bytes)} overført.` + (bad.length ? ' ' + bad.map(x => x.name + ': ' + x.message).join(' | ') : ''), bad.length ? 'warning' : 'normal');
+  if (cfg.settings.emailSummary && d.getHours() === 7 && cfg.lastSummary !== today) {
+    cfg.lastSummary = today; ch = true; const h = cfg.history.filter(x => x.start > Date.now() - 864e5), bad = h.filter(x => x.status !== 'ok');
+    notify(bad.length ? `Hytte: ${bad.length} med advarsel/feil` : 'Hytte: alt OK siste døgn', `${h.length} kjøringer, ${fmtB(h.reduce((a, x) => a + (x.newBytes || 0), 0))} nye data.`, bad.length ? 'warning' : 'normal');
   }
   if (ch) saveCfg();
 }, 30000);
-for (const j of cfg.jobs) { const k = slotKey(j, new Date()); if (k && !j.lastKey) j.lastKey = k }
+for (const j of cfg.jobs) if (!j.lastKey) j.lastKey = slotKey(j, new Date());
 
-// ── Shares på Unraid ─────────────────────────────────────────────────────────
-let sizing = false;
-async function sizeShares(paths) {
-  if (sizing) return; sizing = true;
-  try { for (const p of paths) { const c = cfg.shareSizes[p]; if (c && Date.now() - c.t < 864e5) continue;
-    try { const out = await ssh(`nice -n 19 du -sb ${q(p)} 2>/dev/null | cut -f1`, 1800000); cfg.shareSizes[p] = { b: +out.trim() || 0, t: Date.now() }; saveCfg() } catch (e) {} } }
-  finally { sizing = false }
+// ── Migrering fra v2 (rsync-jobber) ──────────────────────────────────────────
+if (cfg.remote && cfg.remote.host && !cfg.migratedV3) {
+  const name = cfg.remote.host; cfg.nodes[name] = { ...(cfg.nodes[name] || {}), user: cfg.remote.user || 'root', port: cfg.remote.port || 22 };
+  cfg.jobs = cfg.jobs.map(j => j.node ? j : { id: slug(j.dest || j.name), node: name, path: j.src, schedule: j.schedule, level: 6, retentionDays: j.retentionDays || 30, excludes: j.excludes || [], enabled: j.enabled !== false, created: j.created || Date.now() });
+  cfg.settings.notifyNode = cfg.settings.notifyNode || name; cfg.migratedV3 = true; saveCfg();
 }
+// Når tailscale har svart: bytt IP-navn på noder til tailnet-navn
+setTimeout(() => { let ch = false; for (const j of cfg.jobs) { const p = tailnet.peers.find(x => x.ip === j.node); if (p) { cfg.nodes[p.name] = { ...(cfg.nodes[j.node] || {}), ...(cfg.nodes[p.name] || {}) }; if (cfg.settings.notifyNode === j.node) cfg.settings.notifyNode = p.name; j.node = p.name; ch = true } } if (ch) saveCfg() }, 5000);
 
-// ── Hjelpere ─────────────────────────────────────────────────────────────────
-function disk() {
-  return new Promise(ok => execFile('df', ['-B1', '--output=size,used,avail', DEST_ROOT], (e, out) => {
-    if (e) return ok(null); const [s, u, a] = out.trim().split('\n').pop().trim().split(/\s+/).map(Number); ok({ size: s, used: u, avail: a });
-  }));
+// ── Visningsdata ─────────────────────────────────────────────────────────────
+function jobView(j) {
+  const snaps = store.listSnaps(j.id), last = snaps[snaps.length - 1], r = running && running.id === j.id;
+  return { id: j.id, node: j.node, path: j.path, dests: [selfName], schedule: j.schedule, level: j.level || 6, retentionDays: j.retentionDays, excludes: j.excludes || [], enabled: j.enabled !== false,
+    orig: last ? last.stats.orig : null, stored: last ? last.stats.stored : null, snapshots: snaps.length, last: j.last || null, nextRun: nextRun(j),
+    status: r ? 'running' : queue.some(x => x.id === j.id) ? 'queued' : j.waiting ? 'waiting' : j.last ? j.last.status : 'scheduled',
+    progress: r ? running.pct : null, phase: r ? running.phase : null };
 }
-const json = (res, code, o) => { res.writeHead(code, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(o)) };
-const body = req => new Promise(r => { let b = ''; req.on('data', d => { b += d; if (b.length > 1e6) req.destroy() }); req.on('end', () => { try { r(JSON.parse(b || '{}')) } catch (e) { r({}) } }) });
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml' };
-const ourSnaps = () => snapList().filter(s => /@hytte-/.test(s.name));
-function snapsFor(j) { const p = snapPrefix(j); return ourSnaps().filter(s => s.name.split('@')[1].startsWith(p)) }
-function pubJob(j) {
-  const r = running && running.id === j.id, snaps = snapsFor(j);
-  return { id: j.id, name: j.name, src: j.src, dest: j.dest, schedule: j.schedule, retentionDays: j.retentionDays, excludes: j.excludes || [], mirror: !!j.mirror,
-    bwlimit: j.bwlimit || '', enabled: j.enabled !== false, last: j.last || null, sizeBytes: j.sizeBytes ?? null, versionCount: snaps.length,
-    status: r ? 'running' : queue.some(x => x.id === j.id) ? 'queued' : j.last ? j.last.status : 'new', progress: r ? running.pct : null,
-    phase: r ? running.phase : null, nextRun: nextRun(j) };
-}
+function disk() { return new Promise(ok => execFile('df', ['-B1', '--output=size,used,avail', DEST_ROOT], (e, out) => { if (e) return ok(null); const [s, u, a] = out.trim().split('\n').pop().trim().split(/\s+/).map(Number); ok({ size: s, used: u, avail: a }) })) }
 
 // ── HTTP ─────────────────────────────────────────────────────────────────────
+const json = (res, code, o) => { res.writeHead(code, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(o)) };
+const body = req => new Promise(r => { let b = ''; req.on('data', d => { b += d; if (b.length > 1e6) req.destroy() }); req.on('end', () => { try { r(JSON.parse(b || '{}')) } catch (e) { r({}) } }) });
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.txt': 'text/plain; charset=utf-8' };
+const rest = {}; // gjenoppretting-progresjon
+
 http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x'), p = url.pathname;
   try {
     if (!p.startsWith('/api/')) {
-      const f = path.join(PUB, /^\/(versjoner|historikk|innstillinger)?\/?$/.test(p) ? 'index.html' : path.normalize(p).replace(/^(\.\.[/\\])+/, ''));
+      const f = path.join(PUB, /^\/(backupsteder|filer)?\/?$/.test(p) ? 'index.html' : path.normalize(p).replace(/^(\.\.[/\\])+/, ''));
       if (!f.startsWith(PUB) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); return res.end() }
-      res.writeHead(200, { 'Content-Type': MIME[path.extname(f)] || 'application/octet-stream' }); return fs.createReadStream(f).pipe(res);
+      res.writeHead(200, { 'Content-Type': MIME[path.extname(f)] || 'application/octet-stream', 'Cache-Control': f.includes('/vendor/') ? 'max-age=604800' : 'no-cache' }); return fs.createReadStream(f).pipe(res);
     }
-    if (p === '/api/health') return json(res, 200, { ok: true, app: 'hytte-backup', version: VERSION });
-    if (p === '/api/login' && req.method === 'POST') { const b = await body(req); if (!b.password || b.password.length < 6) return json(res, 400, { error: 'Minst 6 tegn' }); return login(res, b.password) }
+    if (p === '/api/health') return json(res, 200, { ok: true, app: 'hytte', version: VERSION });
     if (p === '/api/whoami') return json(res, 200, { authed: authed(req), setup: !cfg.auth });
+    if (p === '/api/login' && req.method === 'POST') {
+      const b = await body(req); if (!b.password || b.password.length < 6) return json(res, 400, { error: 'Minst 6 tegn' });
+      if (!cfg.auth) { const salt = crypto.randomBytes(16).toString('hex'); cfg.auth = { salt, hash: hash(b.password, salt) }; saveCfg() }
+      else if (!crypto.timingSafeEqual(Buffer.from(hash(b.password, cfg.auth.salt), 'hex'), Buffer.from(cfg.auth.hash, 'hex'))) return json(res, 401, { error: 'Feil passord' });
+      const tok = crypto.randomBytes(24).toString('hex'); sessions.set(tok, Date.now() + 30 * 864e5);
+      res.setHeader('Set-Cookie', `bsid=${tok}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${30 * 86400}`); return json(res, 200, { ok: true });
+    }
     if (!authed(req)) return json(res, 401, { error: 'Ikke logget inn' });
     if (p === '/api/logout') { const m = /bsid=([a-f0-9]+)/.exec(req.headers.cookie || ''); if (m) sessions.delete(m[1]); return json(res, 200, { ok: true }) }
 
+    if (p === '/api/events') {
+      res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', Connection: 'keep-alive' }); res.write(': ok\n\n');
+      clients.add(res); const iv = setInterval(() => { res.write(': ping\n\n'); if (running) emit('job.progress', { id: running.id, pct: running.pct, phase: running.phase }) }, 2000);
+      req.on('close', () => { clearInterval(iv); clients.delete(res) }); return;
+    }
     if (p === '/api/state') {
-      const meta = helperMeta(), ours = ourSnaps();
+      const d = await disk(), jobs = cfg.jobs.map(jobView);
       return json(res, 200, {
-        version: VERSION, remote: cfg.remote, destRoot: DEST_ROOT, pubkey: pubKey(), settings: cfg.settings, disk: await disk(),
-        connection: { ...conn, zfsVersion: meta && meta.zfsVersion || null, dataset: meta && meta.dataset || null, helper: helperOk() },
-        jobs: cfg.jobs.map(pubJob), snapshotCount: ours.length,
-        oldestSnapshot: ours.length ? Math.min(...ours.map(s => s.creation * 1000)) : null,
-        running: running && { id: running.id, pct: running.pct, speed: running.speed, eta: running.eta, doneBytes: running.doneBytes, phase: running.phase },
-        history: hist.slice(-400).map(h => ({ ...h, tail: undefined })),
+        version: VERSION, self: tailnet.self || { name: selfName, ip: '', os: 'linux', online: true, tunnel: 'Lokal' }, tailnet: { ok: tailnet.ok, version: tailnet.version, suffix: tailnet.suffix },
+        nodes: nodeList(), jobs, disk: d, store: { bytes: store.bytes, blocks: store.have.size }, settings: cfg.settings, pubkey: pubKey(), destRoot: DEST_ROOT,
+        running: running && { id: running.id, pct: running.pct, phase: running.phase, done: running.done, total: running.total }, log: logBuf.slice(-40), history: cfg.history.slice(-100),
+        restores: rest,
       });
     }
-    if (p === '/api/settings' && req.method === 'POST') {
-      const b = await body(req);
-      if (b.remote) { cfg.remote = { host: String(b.remote.host || '').trim(), user: String(b.remote.user || 'root').trim(), port: +b.remote.port || 22 }; ping() }
-      if (b.settings) for (const k of ['emailSummary', 'notifyOnFail', 'verifyAfterRun', 'autoPrune']) if (k in b.settings) cfg.settings[k] = !!b.settings[k];
-      saveCfg(); return json(res, 200, { ok: true });
+    if (p === '/api/settings' && req.method === 'POST') { const b = await body(req); for (const k of ['emailSummary', 'notifyOnFail', 'verifyAfterRun', 'autoPrune']) if (k in b) cfg.settings[k] = !!b[k]; if ('notifyNode' in b) cfg.settings.notifyNode = b.notifyNode || null; saveCfg(); return json(res, 200, { ok: true }) }
+    if (p === '/api/password' && req.method === 'POST') { const b = await body(req); if (!b.password || b.password.length < 6) return json(res, 400, { error: 'Minst 6 tegn' }); const salt = crypto.randomBytes(16).toString('hex'); cfg.auth = { salt, hash: hash(b.password, salt) }; saveCfg(); return json(res, 200, { ok: true }) }
+    let m;
+    if ((m = /^\/api\/nodes\/([^/]+)\/ping$/.exec(p)) && req.method === 'POST') {
+      const n = nodeByName(decodeURIComponent(m[1])); if (!n) return json(res, 404, { error: 'Ukjent node' });
+      if (n.manual) { const t = Date.now(); try { await ssh(n.name, 'true', 10000); return json(res, 200, { ms: Date.now() - t, loss: 0, via: 'ssh' }) } catch (e) { return json(res, 200, { ms: null, loss: 100, error: e.message }) } }
+      const r = await tsPing(n.ip); log(n.name, r ? `ping ${r.ms} ms · ${r.tunnel}` : 'ping: ingen svar', r ? 'info' : 'warn'); return json(res, 200, r ? { ms: r.ms, loss: 0, tunnel: r.tunnel } : { ms: null, loss: 100 });
     }
-    if (p === '/api/test' && req.method === 'POST') {
-      try { const out = await ssh('echo OK; hostname; rsync --version | head -1'); const [, host, rs] = out.trim().split('\n'); await ping(); return json(res, 200, { ok: true, host, rsync: rs, pingMs: conn.pingMs }) }
-      catch (e) { return json(res, 200, { ok: false, error: e.message }) }
+    if ((m = /^\/api\/nodes\/([^/]+)$/.exec(p)) && req.method === 'PATCH') {
+      const name = decodeURIComponent(m[1]), b = await body(req); cfg.nodes[name] = { ...(cfg.nodes[name] || {}) };
+      for (const k of ['user', 'loc', 'host', 'os']) if (k in b) cfg.nodes[name][k] = String(b[k] || '').trim() || undefined; if ('port' in b) cfg.nodes[name].port = +b.port || 22; saveCfg(); return json(res, 200, { ok: true });
     }
-    if (p === '/api/notify-test' && req.method === 'POST') { await notify('Testvarsel fra Hytte Backup', 'Varsling fungerer.'); return json(res, 200, { ok: true }) }
+    if ((m = /^\/api\/nodes\/([^/]+)\/test$/.exec(p)) && req.method === 'POST') {
+      const name = decodeURIComponent(m[1]); try { const o = await ssh(name, 'hostname; (tar --version | head -1); (sha256sum --version | head -1)'); return json(res, 200, { ok: true, info: o.trim().split('\n') }) } catch (e) { return json(res, 200, { ok: false, error: e.message }) }
+    }
     if (p === '/api/browse') {
-      const dir = (url.searchParams.get('path') || '/mnt/user').replace(/\/+$/, '') || '/';
-      try {
-        const out = await ssh(`cd ${q(dir)} && find . -mindepth 1 -maxdepth 1 -type d ! -name '.*' -printf '%f\\n' | sort -f`);
-        const dirs = out.split('\n').filter(Boolean), full = dirs.map(d => (dir === '/' ? '' : dir) + '/' + d);
-        if (dir === '/mnt/user') sizeShares(full);
-        return json(res, 200, { path: dir, dirs: dirs.map((d, i) => ({ name: d, path: full[i], size: cfg.shareSizes[full[i]]?.b ?? null })) });
-      } catch (e) { return json(res, 200, { path: dir, dirs: [], error: e.message }) }
-    }
-    if (p === '/api/size') {
-      const dir = url.searchParams.get('path') || '';
-      try { const out = await ssh(`nice -n 19 du -sb ${q(dir)} 2>/dev/null | cut -f1`, 900000); const b = +out.trim() || 0; cfg.shareSizes[dir] = { b, t: Date.now() }; saveCfg(); return json(res, 200, { bytes: b }) }
-      catch (e) { return json(res, 200, { error: e.message }) }
+      const node = url.searchParams.get('node'), dir = (url.searchParams.get('path') || '/').replace(/\/+$/, '') || '/';
+      try { const o = await ssh(node, `cd ${q(dir)} && find . -mindepth 1 -maxdepth 1 -type d ! -name '.*' -printf '%f\\n' | sort -f`); const dirs = o.split('\n').filter(Boolean); return json(res, 200, { path: dir, dirs: dirs.map(d => ({ name: d, path: (dir === '/' ? '' : dir) + '/' + d })) }) }
+      catch (e) { return json(res, 200, { path: dir, dirs: [], error: e.message }) }
     }
     if (p === '/api/jobs' && req.method === 'POST') {
-      const b = await body(req); if (!b.src) return json(res, 400, { error: 'Velg en mappe' });
-      let j = b.id && cfg.jobs.find(x => x.id === b.id); const isNew = !j;
-      const base = path.basename(b.src), destName = safeDest(b.dest || (isNew ? base : j.dest));
-      if (cfg.jobs.some(x => x !== j && x.dest === destName)) return json(res, 400, { error: `Mappen «${destName}» brukes allerede av en annen jobb` });
-      if (!j) { j = { id: crypto.randomBytes(4).toString('hex'), created: Date.now() }; cfg.jobs.push(j) }
+      const b = await body(req); if (!b.node || !b.path) return json(res, 400, { error: 'Velg node og mappe' });
+      let j = b.orig && cfg.jobs.find(x => x.id === b.orig); const id = slug(b.id || (b.node + '-' + path.basename(b.path)));
+      if (cfg.jobs.some(x => x !== j && x.id === id)) return json(res, 400, { error: `Jobb-id «${id}» finnes allerede` });
+      if (j && j.id !== id && store.listSnaps(j.id).length) return json(res, 400, { error: 'Id kan ikke endres når jobben har snapshots' });
+      if (!j) { j = { created: Date.now() }; cfg.jobs.push(j) }
       const sc = b.schedule || {};
-      Object.assign(j, {
-        name: String(b.name || base.charAt(0).toUpperCase() + base.slice(1)).slice(0, 60), src: String(b.src), dest: destName,
-        excludes: (b.excludes || []).map(String).filter(Boolean).slice(0, 50), mirror: b.mirror !== false, enabled: b.enabled !== false,
-        bwlimit: String(b.bwlimit || '').replace(/[^\dkKmM]/g, ''), retentionDays: [7, 30, 90, 365].includes(+b.retentionDays) ? +b.retentionDays : 30,
-        schedule: { type: ['hourly', '6h', 'daily', 'weekly'].includes(sc.type) ? sc.type : 'daily', time: /^\d\d:\d\d$/.test(sc.time) ? sc.time : '02:00', day: +(sc.day || 0) },
-      });
-      j.lastKey = slotKey(j, new Date());
-      saveCfg(); if (b.runNow) enqueue(j, 'manuell');
-      return json(res, 200, { ok: true, job: pubJob(j) });
+      Object.assign(j, { id, node: String(b.node), path: String(b.path), level: [1, 3, 6, 9, 19].includes(+b.level) ? +b.level : 6, retentionDays: [7, 30, 90, 365].includes(+b.retentionDays) ? +b.retentionDays : 30,
+        excludes: (b.excludes || []).map(String).filter(Boolean).slice(0, 50), enabled: b.enabled !== false,
+        schedule: { type: ['hourly', '6h', 'daily', 'weekly'].includes(sc.type) ? sc.type : 'daily', time: /^\d\d:\d\d$/.test(sc.time) ? sc.time : '02:00', day: +(sc.day || 0) } });
+      j.lastKey = slotKey(j, new Date()); saveCfg(); log(selfName, `jobb ${id} lagret (${j.node}:${j.path})`);
+      if (b.runNow) enqueue(j, 'manuell'); return json(res, 200, { ok: true, job: jobView(j) });
     }
-    let m;
-    if ((m = /^\/api\/jobs\/(\w+)$/.exec(p)) && req.method === 'DELETE') { cfg.jobs = cfg.jobs.filter(j => j.id !== m[1]); saveCfg(); return json(res, 200, { ok: true }) }
-    if ((m = /^\/api\/jobs\/(\w+)\/run$/.exec(p)) && req.method === 'POST') {
-      const j = cfg.jobs.find(x => x.id === m[1]); if (!j) return json(res, 404, { error: 'Fant ikke jobben' });
-      return json(res, 200, { ok: enqueue(j, 'manuell') });
-    }
-    if (p === '/api/run-all' && req.method === 'POST') { let n = 0; for (const j of cfg.jobs) if (j.enabled !== false && enqueue(j, 'manuell')) n++; return json(res, 200, { ok: true, queued: n }) }
+    if ((m = /^\/api\/jobs\/([\w-]+)$/.exec(p)) && req.method === 'DELETE') { cfg.jobs = cfg.jobs.filter(j => j.id !== m[1]); saveCfg(); log(selfName, `jobb ${m[1]} slettet (arkivet beholdes)`); return json(res, 200, { ok: true }) }
+    if ((m = /^\/api\/jobs\/([\w-]+)\/run$/.exec(p)) && req.method === 'POST') { const j = cfg.jobs.find(x => x.id === m[1]); if (!j) return json(res, 404, { error: 'Fant ikke jobben' }); return json(res, 200, { ok: enqueue(j, 'manuell') }) }
+    if (p === '/api/jobs/run-all' && req.method === 'POST') { let n = 0, w = 0; for (const j of cfg.jobs) if (j.enabled !== false) { const r = enqueue(j, 'manuell'); if (r === true) n++; else if (r === 'waiting') w++ } return json(res, 200, { ok: true, queued: n, waiting: w }) }
     if (p === '/api/stop' && req.method === 'POST') { if (running && running.proc) { running.stopped = true; running.proc.kill('SIGTERM') } queue.length = 0; return json(res, 200, { ok: true }) }
-    if (p === '/api/snapshots') {
-      const list = ourSnaps().map(s => {
-        const sn = s.name.split('@')[1], j = cfg.jobs.find(x => sn.startsWith(snapPrefix(x)));
-        return { name: s.name, snap: sn, jobId: j ? j.id : null, job: j ? j.name : sn.replace(/^hytte-|-\d{4}-\d\d-\d\d_\d{4}$/g, ''), createdAt: s.creation * 1000, deltaBytes: s.written ?? null };
-      }).sort((a, b) => b.createdAt - a.createdAt);
-      return json(res, 200, { snapshots: list, helper: helperOk() });
+    if ((m = /^\/api\/jobs\/([\w-]+)\/snapshots$/.exec(p))) {
+      const list = store.listSnaps(m[1]);
+      return json(res, 200, list.map(s => ({ id: s.id, createdAt: s.createdAt, level: s.level, stats: s.stats, warnings: s.warnings, src: s.src })).reverse());
+    }
+    // Arkiv: ls / stat / file
+    if ((m = /^\/api\/archive\/([\w-]+)\/([\w-]+)\/(ls|stat|file)$/.exec(p))) {
+      const [, job, sid, op] = m; let man; try { man = store.loadSnap(job, sid) } catch (e) { return json(res, 404, { error: 'Fant ikke snapshotet' }) }
+      const rel = (url.searchParams.get('path') || '').replace(/^\/+|\/+$/g, '');
+      if (op === 'ls') {
+        const d = man.dirs.get(rel); if (!d) return json(res, 404, { error: 'Fant ikke mappen' });
+        const items = [...d.kids].map(name => { const fp = rel ? rel + '/' + name : name, e = man.byPath.get(fp), sub = man.dirs.get(fp);
+          if (sub && (!e || e[1] === 'd')) return { name, dir: true, size: sub.size, csize: sub.csize, children: sub.kids.size, mtime: sub.mtime || (e && e[3]) };
+          if (!e) return null; return { name, dir: false, link: e[1] === 'l' ? e[5] : undefined, size: e[2], csize: e[1] === 'f' ? e[5].reduce((a, b) => a + b[1], 0) : 0, mtime: e[3] } }).filter(Boolean)
+          .sort((a, b) => (b.dir - a.dir) || a.name.localeCompare(b.name, 'nb'));
+        return json(res, 200, { path: rel, items, blocks: man.stats.blocks, level: man.level, src: man.src });
+      }
+      const e = man.byPath.get(rel); if (!e || e[1] !== 'f') return json(res, 404, { error: 'Fant ikke filen' });
+      if (op === 'stat') return json(res, 200, { size: e[2], csize: e[5].reduce((a, b) => a + b[1], 0), blocks: e[5].length, sha256: e[6], mtime: e[3], mode: e[4] });
+      const head = +url.searchParams.get('head') || 0, dl = url.searchParams.has('download');
+      res.writeHead(200, { 'Content-Type': dl ? 'application/octet-stream' : 'text/plain; charset=utf-8', 'Content-Length': head ? Math.min(head, e[2]) : e[2],
+        ...(dl ? { 'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(path.basename(rel))}` } : {}) });
+      for (const b of store.readFile(e, head || Infinity)) { if (!res.write(b)) await new Promise(r => res.once('drain', r)) }
+      return res.end();
     }
     if (p === '/api/restore' && req.method === 'POST') {
-      const b = await body(req), s = snapList().find(x => x.name === b.name); if (!s) return json(res, 404, { error: 'Fant ikke snapshotet' });
-      const sn = s.name.split('@')[1], j = cfg.jobs.find(x => sn.startsWith(snapPrefix(x))); if (!j) return json(res, 400, { error: 'Jobben til snapshotet finnes ikke lenger' });
-      const from = path.join(DEST_ROOT, '.zfs', 'snapshot', sn, safeDest(j.dest));
-      if (!fs.existsSync(from)) return json(res, 400, { error: 'Snapshot-mappen er ikke synlig i containeren (' + from + ')' });
-      if (running) return json(res, 409, { error: 'Vent til jobben som kjører er ferdig' });
-      const to = b.mode === 'inplace' ? j.src.replace(/\/?$/, '/') : j.src.replace(/\/?$/, '') + '_gjenopprettet_' + sn.slice(-15) + '/';
-      const run = { id: 'restore', name: 'Gjenoppretting ' + j.name, start: Date.now(), pct: 0, log: [], phase: 'restore' }; running = run;
-      const args = ['-aHX', '--numeric-ids', '--info=progress2,stats2', '-s', '-e', 'ssh ' + sshArgs().map(a => /\s/.test(a) ? q(a) : a).join(' '), from + '/', target() + ':' + to];
-      const code = await rsyncRun(args, run);
-      const sent = (/Total transferred file size:\s*([\d,]+)/.exec(run.log.join('\n')) || [])[1];
-      const st = code === 0 ? 'ok' : code === 23 || code === 24 ? 'warn' : 'fail';
-      hist.push({ id: crypto.randomBytes(4).toString('hex'), job: j.id, name: 'Gjenoppretting · ' + j.name, start: run.start, end: Date.now(), status: st,
-        bytes: sent ? +sent.replace(/,/g, '') : null, message: st !== 'fail' ? `${sn} → ${to}` : 'rsync kode ' + code, tail: run.log.slice(-30) }); saveHist();
-      running = null; setImmediate(next);
-      return json(res, 200, { ok: st !== 'fail', to, error: st === 'fail' ? run.log.slice(-2).join(' · ') : undefined });
+      const b = await body(req); let man; try { man = store.loadSnap(b.job, b.snap) } catch (e) { return json(res, 404, { error: 'Fant ikke snapshotet' }) }
+      const rel = String(b.path || '').replace(/^\/+|\/+$/g, ''), target = String(b.targetPath || '').trim(), node = String(b.node || '');
+      if (!node || !target.startsWith('/')) return json(res, 400, { error: 'Velg node og en absolutt målsti' });
+      const list = man.entries.filter(e => rel === '' || e[0] === rel || e[0].startsWith(rel + '/'));
+      if (!list.length) return json(res, 404, { error: 'Ingenting å gjenopprette' });
+      const single = list.length === 1 && list[0][1] === 'f' && list[0][0] === rel;
+      const total = list.reduce((a, e) => a + (e[1] === 'f' ? e[2] : 0), 0), key = crypto.randomBytes(4).toString('hex');
+      rest[key] = { job: b.job, path: rel, node, target, pct: 0, done: 0, total, status: 'running', start: Date.now() };
+      json(res, 200, { ok: true, key });
+      // Målmappe: for én fil er target full filsti, ellers mappen innholdet legges i
+      const base = single ? path.posix.dirname(target) : target, strip = single ? path.posix.dirname(rel) : rel;
+      const t = sshTarget(node), proc = spawn('ssh', [...sshArgs(t), `mkdir -p ${q(base)} && tar -xf - -C ${q(base)}`]);
+      let err = ''; proc.stderr.on('data', d => err += d);
+      const done = new Promise(r => proc.on('close', r));
+      const w = async buf => { if (!proc.stdin.write(buf)) await new Promise(r => proc.stdin.once('drain', r)) };
+      try {
+        log(selfName, `gjenoppretter ${b.job}:${rel || '/'} → ${node}:${target}`, 'run');
+        for (const e of list) {
+          let name = strip && strip !== '.' ? e[0].slice(strip.length + 1) : e[0]; if (single) name = path.posix.basename(target); if (!name) continue;
+          if (e[1] === 'd') await w(tarHeader(name, { type: '5', mode: e[4], mtime: e[3] }));
+          else if (e[1] === 'l') await w(tarHeader(name, { type: '2', mode: e[4], mtime: e[3], link: e[5] }));
+          else { await w(tarHeader(name, { size: e[2], mode: e[4], mtime: e[3] })); for (const buf of store.readFile(e)) { await w(buf); rest[key].done += buf.length; rest[key].pct = total ? Math.floor(rest[key].done / total * 100) : 100; emit('restore.progress', { key, pct: rest[key].pct }) } await w(tarPad(e[2])) }
+        }
+        await w(Buffer.alloc(1024)); proc.stdin.end(); const code = await done;
+        if (code) throw new Error(err.trim().split('\n').pop() || 'tar feilet på noden');
+        let check = '';
+        if (single && list[0][6]) { const o = await ssh(node, `sha256sum -- ${q(target)}`).catch(() => ''); check = o.startsWith(list[0][6]) ? 'sjekksum OK' : 'sjekksum avviker' }
+        Object.assign(rest[key], { status: 'ok', pct: 100, check }); log(node, `gjenopprettet ${fmtB(total)} fra ${selfName}${check ? ' · ' + check : ''}`, 'ok');
+      } catch (e) { try { proc.kill() } catch (x) {} Object.assign(rest[key], { status: 'fail', error: e.message }); log(node, `gjenoppretting feilet: ${e.message}`, 'fail') }
+      emit('restore.progress', { key, pct: rest[key].pct, status: rest[key].status }); return;
     }
-    if (p === '/api/prune' && req.method === 'POST') { try { await prune(true); return json(res, 200, { ok: true }) } catch (e) { return json(res, 200, { ok: false, error: e.message }) } }
-    if (p === '/api/log') { const h = hist.find(x => x.id === url.searchParams.get('id')); return json(res, 200, h || {}) }
-    if (p === '/api/password' && req.method === 'POST') { const b = await body(req); if (!b.password || b.password.length < 6) return json(res, 400, { error: 'Minst 6 tegn' }); const salt = crypto.randomBytes(16).toString('hex'); cfg.auth = { salt, hash: hash(b.password, salt) }; saveCfg(); return json(res, 200, { ok: true }) }
+    if (p === '/api/prune' && req.method === 'POST') { prune(); return json(res, 200, { ok: true }) }
     json(res, 404, { error: 'Ukjent' });
-  } catch (e) { if (!res.headersSent) json(res, 500, { error: e.message }) }
-}).listen(PORT, () => console.log('Hytte Backup ' + VERSION + ' på port ' + PORT + ', mål ' + DEST_ROOT));
+  } catch (e) { if (!res.headersSent) json(res, 500, { error: e.message }); else res.end() }
+}).listen(PORT, () => { console.log('Hytte ' + VERSION + ' på port ' + PORT + ', arkiv i ' + store.root); log(selfName, `Hytte ${VERSION} startet · ${store.have.size} blokker i arkivet`, 'ok') });

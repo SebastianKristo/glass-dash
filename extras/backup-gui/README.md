@@ -1,16 +1,16 @@
-# Hytte Backup
+# Hytte 3
 
-Web-GUI for backup fra Unraid (eller en annen SSH-vert) til en ZFS-mappe på Proxmox.
-Backup-containeren *henter* filene med rsync over SSH, så Unraid trenger bare en SSH-nøkkel.
+Selvhostet backup over Tailscale. Hytte henter filer fra nodene dine over SSH, lagrer dem som
+zstd-komprimerte og deduplisert 4 MiB-blokker, og lar deg bla i og gjenopprette fra hvert snapshot
+uten å pakke ut arkivet.
 
-- Velg mapper på Unraid i en mappevelger, ingen stier å skrive
-- Daglig, ukentlig, hver time eller manuelt
-- Live fremdrift, stopp/fortsett, historikk og logg per kjøring
-- Unntak (Immich: `thumbs/` og `encoded-video/` legges til automatisk)
-- Speiling av slettinger, båndbreddegrense
-- ZFS-snapshot etter hver kjøring (per jobb, med oppbevaring 7/30/90/365 dager) og gjenoppretting fra GUI-et
-- Varsler og morgenoppsummering via Unraid-varsler, verifisering med sjekksummer
-- Passordbeskyttet, ingen avhengigheter (Node + rsync + ssh)
+- **Oversikt & Noder:** tailnet-topologi fra `tailscale status` med ping og direkte/DERP, jobber med plan, nivå, original/lagret/spart og status
+- **Backupsteder & Synk:** dette backupstedet, kapasitet og koordineringslogg (live via SSE)
+- **Komprimert Filutforsker:** arkiver per jobb, snapshots, filtre, forhåndsvisning, nedlasting og gjenoppretting til valgfri node
+- Endrede filer hentes som én tar-strøm over SSH. Uendrede filer gjenbrukes fra forrige snapshot
+- Oppbevaring 7/30/90/365 dager, opprydding frigjør blokker ingen snapshot bruker
+- Verifisering med sjekksummer, varsler via Unraid
+- Ingen avhengigheter: Node 22.15+ (zstd i zlib), ssh, tar, tailscale (valgfritt)
 
 ## Installere
 
@@ -20,7 +20,13 @@ På Proxmox-verten (CT 103 = backup-containeren med `/mnt/unraid` montert):
 CTID=103 bash -c "$(curl -fsSL https://raw.githubusercontent.com/SebastianKristo/glass-dash/backup-gui/extras/backup-gui/install.sh)"
 ```
 
-Åpne `http://<CT-IP>:8090`, velg passord, og følg stegene under **Innstillinger**.
-Installasjonen legger også inn en liten ZFS-hjelper på verten (`/usr/local/sbin/hytte-zfs`, systemd `hytte-zfs.path`/`.timer`) som tar og rydder snapshots på datasettet bak `/mnt/unraid`. Den rører bare snapshots som heter `hytte-…`.
+Åpne `http://<CT-IP>:8090`, velg passord, kopier SSH-nøkkelen fra Innstillinger (tannhjulet nede til venstre)
+og legg den inn på nodene du vil ta backup av.
 
-Oppdatere: kjør installasjonskommandoen på nytt.
+## Lagring
+
+`DEST_ROOT/.hytte-store/blocks/xx/<sha256>`: komprimerte blokker. `snaps/<jobb>/<id>.json.zst`: manifester.
+
+## Neste versjon
+
+Flere backupsteder med leder, kvorum og replikering mellom seg (Backupsteder & Synk).

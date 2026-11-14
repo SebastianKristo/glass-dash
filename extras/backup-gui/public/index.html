@@ -3,277 +3,315 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Hytte Backup</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%231c1c20'/><text x='16' y='23' font-size='20' font-weight='700' text-anchor='middle' fill='%23ecc56a' font-family='sans-serif'>↻</text></svg>">
+<title>Hytte</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2318181B' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'><rect width='20' height='5' x='2' y='3' rx='1'/><path d='M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8'/><path d='M10 12h4'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="/vendor/lucide.min.js"></script>
 <style>
-:root{--ok:oklch(0.78 0.15 150);--warn:oklch(0.82 0.14 75);--run:oklch(0.78 0.12 245);--fail:oklch(0.7 0.17 25);--acc:#ecc56a}
+:root{--bg:#F9F9F8;--sf:#FFFFFF;--line:#E4E4E7;--row:#F0F0EF;--ctl:#DCDCE0;--t:#18181B;--t2:#3F3F46;--mu:#71717A;--fa:#A1A1AA;--ok:#2F9E6B;--okl:#B9DCC9;--warn:#B7791F;--err:#C53030;--mono:ui-monospace,'SF Mono','IBM Plex Mono',monospace}
 *{box-sizing:border-box}
-body{margin:0;background:#0f0f11;color:#ececee;font-family:Geist,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
-a{color:#ecc56a;text-decoration:none}a:hover{color:#f5d68c}
-input,select,button{font-family:inherit}
-.mono{font-family:"Geist Mono",ui-monospace,monospace}
-.lbl{font:500 10.5px "Geist Mono",monospace;letter-spacing:.08em}
-.root{display:grid;grid-template-columns:clamp(196px,18vw,232px) minmax(0,1fr);min-height:100vh;background:#0f0f11}
-aside{border-right:1px solid #222227;padding:22px 14px;display:flex;flex-direction:column;gap:28px;background:#0c0c0e;position:sticky;top:0;height:100vh}
-.logo{width:34px;height:34px;border-radius:9px;background:#1c1c20;border:1px solid #2a2a30;display:grid;place-items:center;color:#ecc56a;font-size:18px;font-weight:700;flex:none}
-.nav{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border-radius:8px;border:0;cursor:pointer;text-align:left;font-size:13.5px;font-weight:500;background:transparent;color:#9a9aa2;width:100%}
-.nav:hover{background:#1a1a1e;color:#ececee}.nav.on{background:#1c1c20;color:#ececee}
-.nav .d{width:6px;height:6px;border-radius:2px;background:#3a3a42}.nav.on .d{background:#ecc56a}
-.nav .c{font:500 11px "Geist Mono",monospace;color:#6b6b74}
-main{padding:28px clamp(20px,3vw,40px) 60px;display:flex;flex-direction:column;gap:28px;max-width:1360px;width:100%;min-width:0}
-.bp{padding:10px 18px;border-radius:9px;border:0;background:#ecc56a;color:#1a1608;font-size:13.5px;font-weight:600;cursor:pointer;white-space:nowrap}.bp:hover{background:#f3d27f}
-.bs{padding:10px 16px;border-radius:9px;border:1px solid #2c2c32;background:#17171a;color:#ececee;font-size:13.5px;font-weight:500;cursor:pointer;white-space:nowrap}.bs:hover{background:#1f1f23}
-.br{padding:6px 11px;border-radius:7px;border:1px solid #2c2c32;background:transparent;color:#d4d4d8;font-size:12.5px;cursor:pointer;white-space:nowrap}.br:hover{background:#222227}
-.br.mut{color:#8b8b93;padding:6px 10px}.br.mut:hover{color:#ececee}
-button:disabled{opacity:.5;cursor:default}
-.card{border:1px solid #23232a;border-radius:12px;background:#151518}
-.ph{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #222227;gap:12px;flex-wrap:wrap}
-.ph b{font-size:15px;font-weight:600}.ph small{font-size:12.5px;color:#7d7d86}
-.th{display:grid;padding:10px 20px;font:500 10.5px "Geist Mono",monospace;letter-spacing:.08em;color:#5d5d66;border-bottom:1px solid #1f1f24}
-.tr{display:grid;align-items:center;padding:14px 20px;border-bottom:1px solid #1d1d22;font-size:13.5px}.tr:hover{background:#18181c}.tr:last-child{border-bottom:0}
-.gj{grid-template-columns:minmax(220px,2.2fr) 1.1fr 1.1fr .8fr .7fr 1fr 150px}
-.gv{grid-template-columns:minmax(260px,2.4fr) 1fr 1.2fr .8fr 130px}
-.gh{grid-template-columns:1.2fr 1.4fr .8fr .8fr .9fr minmax(160px,1.6fr)}
-.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:20px;font-size:12px;font-weight:500}
-.pill i,.sdot{width:6px;height:6px;border-radius:50%;display:inline-block}
-.stat{padding:20px;display:flex;flex-direction:column;gap:10px}.stat .v{font-size:28px;font-weight:600;letter-spacing:-.02em}.stat .s{font-size:12.5px;color:#8b8b93}
-.inp{padding:10px 12px;border-radius:8px;border:1px solid #2c2c32;background:#0f0f11;color:#ececee;font:400 13px "Geist Mono",monospace;outline:none;width:100%}.inp:focus{border-color:#ecc56a}
-.fl{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#8b8b93}
-.tg{width:40px;height:23px;border-radius:12px;border:0;padding:2px;cursor:pointer;display:flex;background:#34343b;flex:none}.tg.on{background:#ecc56a;justify-content:flex-end}.tg span{width:19px;height:19px;border-radius:50%;background:#fff}
-.seg{display:flex;gap:4px;padding:4px;background:#0f0f11;border:1px solid #26262b;border-radius:9px}.seg button{flex:1;padding:8px;border-radius:6px;border:0;background:transparent;color:#8b8b93;font-size:13px;font-weight:500;cursor:pointer}.seg button.on{background:#26262c;color:#ececee}
-.ov{position:fixed;inset:0;background:rgba(5,5,7,.72);backdrop-filter:blur(4px);display:grid;place-items:center;z-index:50;padding:20px;overflow:auto}
-.dlg{width:560px;max-width:100%;background:#151518;border:1px solid #2a2a30;border-radius:14px;box-shadow:0 30px 80px rgba(0,0,0,.6);overflow:hidden}
-.dh{padding:20px 24px;border-bottom:1px solid #222227;display:flex;justify-content:space-between;align-items:center}.dh b{font-size:17px;font-weight:600}.dh small{font-size:12.5px;color:#7d7d86}
-.db{padding:22px 24px;display:flex;flex-direction:column;gap:20px;max-height:64vh;overflow:auto}
-.df{padding:16px 24px;border-top:1px solid #222227;display:flex;justify-content:space-between;align-items:center;gap:12px;background:#121215}
-.x{border:0;background:none;color:#7d7d86;font-size:20px;cursor:pointer}
-.share{padding:10px 12px;border-radius:8px;border:1px solid #2a2a30;background:#111113;color:#ececee;text-align:left;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;font:400 12.5px "Geist Mono",monospace;min-width:0}
-.share.on{border-color:#ecc56a;background:#1f1c12}.share>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.share .open{color:#6b6b74;padding:0 2px 0 8px;font-size:15px;line-height:1}.share .open:hover{color:#ecc56a}
-.crumb{display:flex;gap:2px;flex-wrap:wrap;font:400 12px "Geist Mono",monospace;color:#6b6b74;align-items:center}.crumb a{color:#9a9aa2;cursor:pointer;padding:2px 4px;border-radius:4px}.crumb a:hover{background:#1f1f24;color:#ececee}
-.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;border:1px solid #2c2c32;font:400 12px "Geist Mono",monospace;color:#d4d4d8;background:#111113}.chip button{border:0;background:none;color:#6b6b74;cursor:pointer;padding:0}
-.chip.add{border-style:dashed;color:#7d7d86;cursor:pointer}.chip.add:hover{color:#ecc56a;border-color:#ecc56a}
-.toast{position:fixed;bottom:22px;left:50%;transform:translate(-50%,90px);background:#1c1c20;border:1px solid #2c2c32;padding:10px 16px;border-radius:10px;font-size:13px;transition:.25s;z-index:60}.toast.on{transform:translate(-50%,0)}
-pre.log{margin:0;background:#0f0f11;border:1px solid #23232a;border-radius:9px;padding:12px;max-height:340px;overflow:auto;white-space:pre-wrap;font:400 11.5px/1.5 "Geist Mono",monospace;color:#b4b4bb}
-.key{background:#0f0f11;border:1px solid #2c2c32;border-radius:8px;padding:10px 12px;font:400 11.5px/1.5 "Geist Mono",monospace;color:#9a9aa2;word-break:break-all}
-@media(max-width:760px){.root{grid-template-columns:1fr}aside{position:static;height:auto;gap:16px}aside .cbox{display:none}.empty{grid-template-columns:1fr!important;padding:28px!important}}
+body{margin:0;background:var(--bg);color:var(--t);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;font-size:13px;-webkit-font-smoothing:antialiased}
+a{color:var(--ok);text-decoration:none}button,input,select{font-family:inherit;font-size:inherit;color:inherit}
+::selection{background:rgba(24,24,27,.1)}
+.m{font-family:var(--mono)}
+.lbl{font:500 10.5px var(--mono);letter-spacing:.06em;color:var(--fa)}
+.ic{display:inline-flex;flex:none;line-height:0}
+.root{display:grid;grid-template-columns:224px minmax(0,1fr);min-height:100vh}
+aside{border-right:1px solid var(--line);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;background:var(--bg)}
+.nav{display:flex;align-items:center;gap:10px;height:32px;padding:0 10px;border:0;border-radius:6px;cursor:pointer;font-size:13px;text-align:left;background:transparent;color:var(--mu);width:100%}
+.nav:hover{background:#F4F4F3;color:var(--t)}.nav.on{background:#EFEFEE;color:var(--t)}
+.nav .c{margin-left:auto;font:400 11px var(--mono);color:var(--fa)}
+header.top{height:60px;display:flex;align-items:center;gap:14px;padding:0 48px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:5}
+.content{padding:40px 48px 72px;display:flex;flex-direction:column;gap:32px;max-width:1480px;width:100%}
+.b1,.b2{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:30px;padding:0 11px;border-radius:8px;font-size:12.5px;cursor:pointer;white-space:nowrap}
+.b1{border:1px solid var(--t);background:var(--t);color:#fff;font-weight:500}.b1:hover{background:var(--t2)}
+.b2{border:1px solid var(--ctl);background:var(--sf);color:var(--t)}.b2:hover{background:#F4F4F3}
+.bi{width:28px;height:28px;display:grid;place-items:center;border:1px solid var(--ctl);border-radius:6px;background:transparent;color:var(--t2);cursor:pointer}.bi:hover{background:#F4F4F3;color:var(--t)}
+button:disabled{opacity:.45;cursor:default!important}
+.pnl{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--sf)}
+.ph{height:56px;display:flex;align-items:center;gap:10px;padding:0 22px;border-bottom:1px solid var(--line)}.ph b{font-weight:500}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--sf)}
+.kpi{padding:22px 24px;display:flex;flex-direction:column;gap:8px;min-width:0;border-right:1px solid var(--line);margin-right:-1px;border-bottom:1px solid var(--line);margin-bottom:-1px}
+.kpi .k{font-size:12px;color:var(--mu)}.kpi .v{font-weight:600;font-size:26px;letter-spacing:-.025em}.kpi .s{font:400 11.5px var(--mono);color:var(--fa);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpis.sm .v{font-size:18px;letter-spacing:-.015em}
+.dot{width:6px;height:6px;border-radius:50%;display:inline-block;flex:none}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:8px 14px;font-size:12px}.kv>span:nth-child(odd){color:var(--mu)}.kv>span:nth-child(even){font-family:var(--mono);text-align:right;word-break:break-all}
+.th,.trow{display:grid;gap:12px;align-items:center;padding:0 22px}
+.th{height:40px;border-bottom:1px solid var(--line);font:500 10.5px var(--mono);letter-spacing:.05em;color:var(--fa)}
+.trow{min-height:58px;padding-top:8px;padding-bottom:8px;border-bottom:1px solid var(--row)}.trow:hover{background:#F7F7F6}.trow:last-child{border-bottom:0}
+.gjob{grid-template-columns:minmax(200px,1.7fr) minmax(200px,1.7fr) .9fr .6fr .6fr .7fr .7fr 1.2fr 1fr 44px}
+.gvault{grid-template-columns:1.3fr .8fr 1fr .8fr 1.3fr .6fr .8fr}
+.tab{height:26px;padding:0 10px;border:0;border-radius:5px;cursor:pointer;font-size:12px;background:transparent;color:var(--mu)}.tab.on{background:#F0F0EF;color:var(--t)}
+.seg{display:flex;border:1px solid var(--ctl);border-radius:6px;overflow:hidden}.seg button{flex:1;height:28px;border:0;border-right:1px solid var(--ctl);margin-right:-1px;cursor:pointer;font-size:12px;background:var(--sf);color:var(--mu);white-space:nowrap;padding:0 8px}.seg button.on{background:#F0F0EF;color:var(--t)}
+.inp{height:32px;padding:0 10px;border:1px solid var(--ctl);border-radius:6px;background:var(--sf);font:400 12.5px var(--mono);outline:none;width:100%}.inp:focus{border-color:var(--t)}
+.chip{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 8px;border-radius:5px;cursor:pointer;font:400 11px var(--mono);white-space:nowrap;border:1px solid var(--ctl);background:var(--sf);color:var(--t2)}
+.chip.on{border-color:var(--ok);background:rgba(47,158,107,.07);color:var(--t)}
+.ov{position:fixed;inset:0;background:rgba(24,24,27,.16);backdrop-filter:blur(6px);display:grid;place-items:center;z-index:50;padding:20px;overflow:auto}
+.dlg{width:640px;max-width:100%;background:var(--sf);border:1px solid var(--line);border-radius:14px;box-shadow:0 24px 60px rgba(24,24,27,.12);overflow:hidden}
+.dh{height:60px;display:flex;align-items:center;gap:10px;padding:0 22px;border-bottom:1px solid var(--line)}.dh b{font-weight:600;font-size:14px}
+.db{padding:20px 22px;display:flex;flex-direction:column;gap:18px;max-height:66vh;overflow:auto}
+.df{padding:14px 22px;border-top:1px solid var(--line);display:flex;align-items:center;gap:8px;background:var(--bg)}
+.fld{display:flex;flex-direction:column;gap:8px}
+.tg{width:34px;height:20px;border-radius:10px;border:0;padding:2px;cursor:pointer;display:flex;background:var(--ctl);flex:none}.tg.on{background:var(--ok);justify-content:flex-end}.tg span{width:16px;height:16px;border-radius:50%;background:#fff}
+.toast{position:fixed;bottom:22px;left:50%;transform:translate(-50%,90px);background:var(--t);color:#fff;padding:9px 14px;border-radius:8px;font-size:12.5px;transition:.25s;z-index:60}.toast.on{transform:translate(-50%,0)}
+.hatch{background:repeating-linear-gradient(135deg,#FAFAF9 0 8px,#F3F3F2 8px 16px)}
+pre.code{margin:0;padding:12px;border:1px solid var(--line);border-radius:6px;background:var(--bg);font:400 11.5px/1.6 var(--mono);color:var(--t2);white-space:pre-wrap;word-break:break-word;max-height:240px;overflow:auto}
+.row{display:grid;grid-template-columns:minmax(0,2.4fr) .8fr .8fr .6fr .9fr;gap:12px;align-items:center;height:42px;padding:0 18px;border:0;border-bottom:1px solid var(--row);text-align:left;cursor:pointer;background:transparent;width:100%}.row:hover{background:#F7F7F6}
+@media(max-width:900px){.root{grid-template-columns:1fr}aside{position:static;height:auto}header.top,.content{padding-left:20px;padding-right:20px}}
 </style>
 </head>
 <body>
-<div id="app"></div>
-<div id="ovl"></div>
-<div class="toast" id="toast"></div>
+<div id="app"></div><div id="ovl"></div><div class="toast" id="toast"></div>
 <script>
-const C=['oklch(0.82 0.13 85)','oklch(0.78 0.12 245)','oklch(0.78 0.12 160)','oklch(0.76 0.12 320)','oklch(0.78 0.12 30)','oklch(0.78 0.12 200)'];
-const OKL={ok:'0.78 0.15 150',warn:'0.82 0.14 75',run:'0.78 0.12 245',fail:'0.7 0.17 25'};
-const col=(k,a)=>OKL[k]?`oklch(${OKL[k]}${a!=null?' / '+a:''})`:a!=null?`rgba(139,139,147,${a})`:'#8b8b93';
-const ST={ok:{l:'OK',k:'ok'},warn:{l:'Advarsel',k:'warn'},running:{l:'Kjører',k:'run'},fail:{l:'Feilet',k:'fail'},queued:{l:'I kø',k:'run'},new:{l:'Ny',k:'none'}};
-const VIEWS={overview:['Oversikt','/'],versions:['Versjoner','/versjoner'],history:['Historikk','/historikk'],settings:['Innstillinger','/innstillinger']};
-const DAYS=['søn','man','tir','ons','tor','fre','lør'],MON=['jan','feb','mar','apr','mai','jun','jul','aug','sep','okt','nov','des'];
+// ── Ikoner (lucide) ──
+const I=(name,sz=15,sw=1.5)=>{const L=window.lucide&&lucide.icons,n=L&&L[name.replace(/(^|-)([a-z0-9])/g,(_,a,b)=>b.toUpperCase())];if(!n)return`<span class="ic" style="width:${sz}px;height:${sz}px"></span>`;
+ const kids=(n[0]==='svg'?n[2]:n).map(([t,a])=>`<${t} ${Object.entries(a).map(([k,v])=>`${k}="${v}"`).join(' ')}/>`).join('');
+ return`<span class="ic"><svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" style="display:block">${kids}</svg></span>`};
 const $=s=>document.querySelector(s),app=$('#app'),ovl=$('#ovl');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const jsq=s=>esc(String(s??'').replace(/\\/g,'\\\\').replace(/'/g,"\\'"));
+const jq=s=>esc(String(s??'').replace(/\\/g,'\\\\').replace(/'/g,"\\'"));
 const toast=t=>{const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('on'),2800)};
 async function api(u,o={}){const r=await fetch(u,{method:o.method||(o.body?'POST':'GET'),headers:{'Content-Type':'application/json'},body:o.body&&JSON.stringify(o.body)});const j=await r.json().catch(()=>({}));
  if(r.status===401&&u!=='/api/login'){showLogin(false);throw new Error('auth')}if(!r.ok)throw new Error(j.error||r.statusText);return j}
-const p2=n=>String(n).padStart(2,'0');
-const hm=t=>{const d=new Date(t);return p2(d.getHours())+':'+p2(d.getMinutes())};
+const p2=n=>String(n).padStart(2,'0'),hm=t=>{const d=new Date(t);return p2(d.getHours())+':'+p2(d.getMinutes())},hms=t=>{const d=new Date(t);return hm(t)+':'+p2(d.getSeconds())};
+const dm=t=>{const d=new Date(t);return p2(d.getDate())+'.'+p2(d.getMonth()+1)};
 const sameDay=(a,b)=>new Date(a).toDateString()===new Date(b).toDateString();
-const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
-const when=t=>{if(!t)return'Aldri';const d=new Date(t),n=Date.now();if(n-t<90e3)return'Akkurat nå';if(sameDay(t,n))return'I dag '+hm(t);if(sameDay(t,n-864e5))return'I går '+hm(t);
- if(n-t<6*864e5)return cap(DAYS[d.getDay()])+' '+hm(t);return d.getDate()+'. '+MON[d.getMonth()]+' '+hm(t)};
-const whenNext=t=>{if(!t)return'—';if(sameDay(t,Date.now()))return hm(t);if(sameDay(t,Date.now()+864e5))return'I morgen '+hm(t);return cap(DAYS[new Date(t).getDay()])+' '+hm(t)};
-const dshort=t=>{const d=new Date(t);return p2(d.getDate())+'.'+p2(d.getMonth()+1)+' '+hm(t)};
-const fmtB=b=>b==null?'—':b>=1e12?(b/1e12).toFixed(2)+' TB':b>=1e9?(b/1e9).toFixed(1)+' GB':b>=1e6?Math.round(b/1e6)+' MB':b>=1e3?Math.round(b/1e3)+' kB':b+' B';
-const dur=ms=>{if(ms==null||isNaN(ms))return'—';const s=Math.round(ms/1e3);return s>=3600?Math.floor(s/3600)+'t '+p2(Math.floor(s%3600/60))+'m':Math.floor(s/60)+'m '+p2(s%60)+'s'};
+const fB=b=>b==null?'—':b>=1e12?(b/1e12).toFixed(2)+' TB':b>=1e9?(b/1e9).toFixed(1)+' GB':b>=1e6?(b/1e6).toFixed(b>=1e8?0:1)+' MB':b>=1e3?Math.round(b/1e3)+' kB':b+' B';
+const ago=t=>{if(!t)return'—';const s=(Date.now()-t)/1e3;return s<60?'nå':s<3600?Math.round(s/60)+' min siden':s<86400?Math.round(s/3600)+' t siden':Math.round(s/86400)+' d siden'};
+const DAYS=['søn','man','tir','ons','tor','fre','lør'];
 const sched=s=>!s?'—':s.type==='hourly'?'Hver time':s.type==='6h'?'Hver 6. time':s.type==='weekly'?`Ukentlig ${DAYS[s.day||0]} ${s.time}`:`Daglig ${s.time}`;
+const nextL=t=>!t?'—':sameDay(t,Date.now())?hm(t):sameDay(t,Date.now()+864e5)?'i morgen':DAYS[new Date(t).getDay()]+' '+hm(t);
+const ST={ok:['OK','var(--ok)'],running:['Kjører','var(--ok)'],queued:['I kø','var(--ok)'],scheduled:['Planlagt','var(--mu)'],warn:['Advarsel','var(--warn)'],fail:['Feilet','var(--err)'],waiting:['Venter på node','var(--fa)']};
+const VIEWS={overview:['Oversikt & Noder','network','/'],vaults:['Backupsteder & Synk','hard-drive','/backupsteder'],files:['Komprimert Filutforsker','folder-archive','/filer']};
+const nodeIcon=n=>{const s=(n.name+' '+(n.os||'')+' '+(n.type||'')).toLowerCase();return/db|postgres|sql/.test(s)?'database':/nas|unraid|truenas|synology/.test(s)?'hard-drive-download':/mac|mbp|ios|ipad/.test(s)?'laptop':/windows|pc|desk/.test(s)?'monitor':/android|phone|iphone/.test(s)?'smartphone':'server'};
 
-let S=null,view='overview',filter='Alle',restored={},poll=null,SN=null;
-function route(){const p=location.pathname.replace(/\/$/,'')||'/';view=Object.keys(VIEWS).find(k=>VIEWS[k][1]===p)||'overview'}
-function go(v,f){view=v;if(f!==undefined)filter=f;history.pushState({},'',VIEWS[v][1]);render();if(v==='versions')loadSnaps();window.scrollTo(0,0)}
-window.onpopstate=()=>{route();render();if(view==='versions')loadSnaps()};
+let S=null,view='overview',selNode=null,jobTab='Alle',poll=null,X={job:null,snaps:null,snap:null,path:[],ls:null,file:null,stat:null,preview:null,target:null,targetPath:'',restoreKey:null,dl:false},search='';
+function route(){const p=location.pathname.replace(/\/$/,'')||'/';view=Object.keys(VIEWS).find(k=>VIEWS[k][2]===p)||'overview'}
+function go(v){view=v;history.pushState({},'',VIEWS[v][2]);render();if(v==='files')initFiles();window.scrollTo(0,0)}
+window.onpopstate=()=>{route();render();if(view==='files')initFiles()};
 
-async function boot(){route();const w=await fetch('/api/whoami').then(r=>r.json());if(!w.authed)return showLogin(w.setup);await refresh();if(view==='versions')loadSnaps()}
-function showLogin(setup){clearTimeout(poll);app.innerHTML=`<div style="min-height:100vh;display:grid;place-items:center;padding:20px"><form id="lf" class="card" style="width:360px;max-width:100%;padding:28px;display:flex;flex-direction:column;gap:14px">
- <div style="display:flex;align-items:center;gap:11px"><div class="logo">↻</div><div style="display:flex;flex-direction:column;gap:2px"><span style="font-weight:600;font-size:15px">Hytte Backup</span><span style="font-size:11.5px;color:#7d7d86">${setup?'Velg et passord':'Logg inn'}</span></div></div>
- <input class="inp" type="password" id="pw" placeholder="${setup?'Nytt passord (minst 6 tegn)':'Passord'}" autofocus>
- <button class="bp">${setup?'Lagre og fortsett':'Logg inn'}</button><span id="le" style="color:${col('fail')};font-size:12.5px"></span></form></div>`;
+async function boot(){route();const w=await fetch('/api/whoami').then(r=>r.json());if(!w.authed)return showLogin(w.setup);await refresh();if(view==='files')initFiles();sse()}
+function showLogin(setup){clearTimeout(poll);app.innerHTML=`<div style="min-height:100vh;display:grid;place-items:center;padding:20px"><form id="lf" class="pnl" style="width:340px;padding:24px;display:flex;flex-direction:column;gap:14px">
+ <div style="display:flex;align-items:center;gap:10px"><span style="width:24px;height:24px;border:1px solid var(--line);border-radius:7px;display:grid;place-items:center">${I('archive',13)}</span><b style="font-size:14px">Hytte</b><span class="m" style="margin-left:auto;color:var(--fa);font-size:11px">${setup?'Velg passord':'Logg inn'}</span></div>
+ <input class="inp" type="password" id="pw" placeholder="${setup?'Nytt passord (minst 6 tegn)':'Passord'}" autofocus><button class="b1" style="height:32px">${setup?'Lagre og fortsett':'Logg inn'}</button><span id="le" style="color:var(--err);font-size:12px"></span></form></div>`;
  $('#lf').onsubmit=async e=>{e.preventDefault();try{await api('/api/login',{body:{password:$('#pw').value}});boot()}catch(x){$('#le').textContent=x.message}}}
+async function refresh(){try{S=await api('/api/state')}catch(e){return}const a=document.activeElement;if(!(a&&a.tagName==='INPUT'&&app.contains(a)))render();clearTimeout(poll);poll=setTimeout(refresh,S.running?2000:10000)}
+let rt=null;const soon=()=>{clearTimeout(rt);rt=setTimeout(refresh,300)};
+function sse(){try{const es=new EventSource('/api/events');es.addEventListener('coord.log',e=>{S&&S.log.push(JSON.parse(e.data));if(view==='vaults')drawLog();soon()});
+ es.addEventListener('job.status',soon);es.addEventListener('job.progress',e=>{const d=JSON.parse(e.data);if(S&&S.running&&S.running.id===d.id){S.running.pct=d.pct;S.running.phase=d.phase;const j=S.jobs.find(x=>x.id===d.id);if(j){j.progress=d.pct;j.phase=d.phase}const a=document.activeElement;if(view==='overview'&&!(a&&a.tagName==='INPUT')&&!ovl.innerHTML)render()}});
+ es.addEventListener('restore.progress',e=>{const d=JSON.parse(e.data);if(S){S.restores[d.key]={...(S.restores[d.key]||{}),pct:d.pct,status:d.status||'running'};if(view==='files')drawPreview()}if(d.status)soon()});es.onerror=()=>{}}catch(e){}}
 
-async function refresh(){try{S=await api('/api/state')}catch(e){return}
- // Ikke tegn om mens brukeren skriver i et felt på siden (innstillinger)
- const a=document.activeElement;if(!(a&&a.tagName==='INPUT'&&app.contains(a)))render();
- clearTimeout(poll);poll=setTimeout(refresh,S.running?1500:8000)}
-const jobsC=()=>S.jobs.map((j,i)=>({...j,color:C[i%C.length]}));
-const runsH=()=>S.history.filter(h=>h.job!=='system');
-
-function render(){
- if(!S)return;const jobs=jobsC();
- const nav=Object.keys(VIEWS).map(k=>`<button class="nav ${view===k?'on':''}" onclick="go('${k}')"><span style="display:flex;align-items:center;gap:10px"><span class="d"></span>${VIEWS[k][0]}</span><span class="c">${k==='overview'?(jobs.length||''):k==='versions'?(S.snapshotCount||''):''}</span></button>`).join('');
- const c=S.connection,on=c.online;
+// ── Avledet ──
+const vaults=()=>[{...S.self,role:'Leder',loc:(S.nodes.find(n=>n.name===S.self.name)||{}).loc||'',vault:true}];
+const sources=()=>S.nodes.filter(n=>n.name!==S.self.name);
+function render(){if(!S)return;
+ const tn=S.tailnet,suffix=tn.suffix||'',crumb=suffix.split('.')[0]||'hytte';
+ const nav=Object.keys(VIEWS).map(k=>`<button class="nav ${view===k?'on':''}" onclick="go('${k}')">${I(VIEWS[k][1])}<span>${VIEWS[k][0]}</span><span class="c">${k==='overview'?sources().length:k==='vaults'?vaults().length:S.jobs.filter(j=>j.snapshots).length}</span></button>`).join('');
  app.innerHTML=`<div class="root"><aside>
-  <div style="display:flex;align-items:center;gap:11px;padding:0 8px"><div class="logo">↻</div><div style="display:flex;flex-direction:column;gap:2px"><span style="font-weight:600;font-size:15px;letter-spacing:-.01em">Hytte Backup</span><span style="font-size:11.5px;color:#7d7d86">v${esc(S.version)} · Unraid</span></div></div>
-  <nav style="display:flex;flex-direction:column;gap:2px"><span class="lbl" style="color:#5d5d66;padding:0 10px 8px">ARBEIDSOMRÅDE</span>${nav}</nav>
-  <div class="cbox" style="margin-top:auto;display:flex;flex-direction:column;gap:10px;padding:14px;border:1px solid #222227;border-radius:10px;background:#131316">
-   <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:500"><span style="width:7px;height:7px;border-radius:50%;background:${col(on?'ok':'fail')};box-shadow:0 0 0 3px ${col(on?'ok':'fail',.18)}"></span>${S.remote.host?(on?'Tilkoblet':'Frakoblet'):'Ikke satt opp'}</div>
-   <div class="mono" style="font-size:11.5px;line-height:1.5;color:#8b8b93;word-break:break-all">${S.remote.host?esc(S.remote.user+'@'+S.remote.host):'—'}<br>→ ${esc(S.destRoot)}</div>
-   <div style="font-size:11.5px;color:#6b6b74">${on&&c.pingMs!=null?'Ping '+c.pingMs+' ms':esc(S.remote.host?(c.error||'Ingen kontakt'):'Gå til Innstillinger')}${c.zfsVersion?' · ZFS '+esc(c.zfsVersion):c.helper?'':' · ZFS-hjelper mangler'}</div>
-  </div></aside>
- <main>
-  <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap">
-   <div style="display:flex;flex-direction:column;gap:6px"><span class="lbl" style="font-size:11px;color:#6b6b74">HYTTE / ${VIEWS[view][0].toUpperCase()}</span><h1 style="margin:0;font-size:28px;font-weight:600;letter-spacing:-.025em">${VIEWS[view][0]}</h1></div>
-   <div style="display:flex;gap:10px"><button class="bs" onclick="runAll()" ${jobs.length?'':'disabled'}>Kjør alle nå</button><button class="bp" onclick="openJob()">+ Ny backup</button></div>
-  </header>
-  ${view==='overview'?overview():view==='versions'?versionsView():view==='history'?historyView():settingsView()}
- </main></div>`}
+  <div style="height:60px;display:flex;align-items:center;gap:10px;padding:0 20px;border-bottom:1px solid var(--line)"><span style="width:24px;height:24px;border:1px solid var(--line);border-radius:7px;background:var(--sf);display:grid;place-items:center">${I('archive',13)}</span><span style="font-weight:600;font-size:14px;letter-spacing:-.01em">Hytte</span><span class="m" style="font-size:11px;color:var(--fa);margin-left:auto">${esc(S.version)}</span></div>
+  <div style="padding:12px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid var(--line)">
+   <div style="display:flex;align-items:center;gap:8px;padding:7px 9px;border:1px solid var(--line);border-radius:6px" title="${tn.ok?'Tailnet':'tailscale svarer ikke i denne containeren'}"><span class="dot" style="background:${tn.ok?'var(--ok)':'var(--fa)'}"></span><span class="m" style="font-size:12px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(suffix||'tailscale mangler')}</span><span style="margin-left:auto;color:var(--fa)">${I('chevrons-up-down',12)}</span></div>
+   <label style="display:flex;align-items:center;gap:8px;padding:0 9px;height:31px;border:1px solid var(--line);border-radius:6px;color:var(--fa)">${I('search',13)}<input id="q" value="${esc(search)}" placeholder="Søk noder, jobber, filer" onkeydown="if(event.key==='Enter')doSearch(this.value)" style="border:0;outline:0;background:transparent;font-size:12.5px;min-width:0;flex:1;color:var(--t)"><span class="m" style="flex:none;font-size:10.5px;padding:1px 5px;border:1px solid var(--ctl);border-radius:4px">⌘K</span></label>
+  </div>
+  <nav style="padding:12px 8px;display:flex;flex-direction:column;gap:1px">${nav}</nav>
+  <div class="lbl" style="padding:14px 18px 8px">KOORDINERING</div>
+  <div class="kv" style="padding:0 18px"><span>Leder</span><span>${esc(S.self.name)}</span><span>Term</span><span>1</span><span>Kvorum</span><span style="color:var(--ok)">${vaults().length}/${vaults().length}</span><span>Heartbeat</span><span>lokal</span></div>
+  <div style="margin-top:auto;padding:12px 16px;border-top:1px solid var(--line);display:flex;align-items:center;gap:8px;font:400 11px var(--mono);color:var(--fa)">${I('shield-check',13)}<span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">${tn.ok?'WireGuard · tailscale '+esc(tn.version):'SSH · uten tailscale'}</span><button class="bi" style="margin-left:auto;width:24px;height:24px;border:0" title="Innstillinger" onclick="openSettings()">${I('settings',13)}</button></div>
+ </aside><main style="min-width:0;display:flex;flex-direction:column">
+  <header class="top"><span class="m" style="font-size:12px;color:var(--fa)">${esc(crumb)}</span><span style="color:var(--ctl)">/</span><span style="font-size:13.5px;font-weight:500">${VIEWS[view][0]}</span>
+   <div style="margin-left:auto;display:flex;gap:8px"><button class="b2" onclick="openVault()">${I('plus',13)}Nytt backupsted</button><button class="b1" onclick="runAll()" ${S.jobs.length?'':'disabled'}>${I('play',13)}Kjør alle</button></div></header>
+  <div class="content">${view==='overview'?overview():view==='vaults'?vaultsView():filesView()}</div></main></div>`;
+ if(view==='vaults')drawLog()}
+function doSearch(v){search=v.trim();const s=search.toLowerCase();if(!s)return;const n=S.nodes.find(x=>x.name.toLowerCase().includes(s));const j=S.jobs.find(x=>x.id.includes(s)||x.path.toLowerCase().includes(s));
+ if(j&&(!n||j.id.includes(s))){X.job=j.id;X.snap=null;X.path=[];go('files')}else if(n){selNode=n.name;go('overview')}else toast('Ingen treff')}
+document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();$('#q')&&$('#q').focus()}if(e.key==='Escape')closeOv()});
 
+// ── Oversikt ──
 function overview(){
- const jobs=jobsC(),H=runsH();
- if(!jobs.length)return`<section class="card empty" style="border-radius:14px;padding:48px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:48px;align-items:center">
-  <div style="display:flex;flex-direction:column;gap:14px"><span class="lbl" style="font-size:11px;color:#ecc56a">KOM I GANG</span><h2 style="margin:0;font-size:26px;font-weight:600;letter-spacing:-.02em">Ingen backup ennå</h2>
-   <p style="margin:0;color:#9a9aa2;font-size:14.5px;line-height:1.6">Trykk «+ Ny backup» og velg en mappe på Unraid. Hytte tar et ZFS-snapshot ved hver kjøring, så du kan gå tilbake til tidligere versjoner.</p>
-   <div style="display:flex;gap:10px;margin-top:8px"><button class="bp" style="padding:11px 18px" onclick="openJob()">+ Ny backup</button></div></div>
-  <ol style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px">${step(S.connection.online?'done':'active','01','Koble til Unraid',S.connection.online?esc(S.remote.user+'@'+S.remote.host)+' er tilkoblet':'Legg inn adresse og nøkkel under <a href="#" onclick="go(\'settings\');return false">Innstillinger</a>')}
-   ${step(S.connection.online?'active':'idle','02','Velg mappe og tidsplan','F.eks. /mnt/user/photos, daglig kl. 02:00')}${step('idle','03','Første kjøring','Vi varsler deg når den er ferdig')}</ol></section>`;
- const fails=jobs.filter(j=>j.status==='fail'),warns=jobs.filter(j=>j.status==='warn'),okN=jobs.filter(j=>j.status==='ok').length,runN=jobs.filter(j=>j.status==='running').length;
- const recentBad=H.filter(h=>h.start>Date.now()-14*864e5&&h.status!=='ok');
- let b=fails.length?{k:'fail',t:`${fails.length} av ${jobs.length} ${jobs.length===1?'jobb':'jobber'} feilet`,s:fails[0].name+': '+(fails[0].last?.message||'')}
-  :warns.length?{k:'warn',t:`${jobs.length-warns.length} av ${jobs.length} jobber er fullt beskyttet`,s:warns[0].name+': '+(warns[0].last?.message||'')}
-  :{k:'ok',t:'Alle jobber er beskyttet',s:recentBad.length?'Siste kjøring av alle jobber gikk bra.':'Ingen feil siste 14 dager.'};
- if(!fails.length&&!warns.length&&!okN)b={k:'run',t:runN?'Første backup kjører':'Venter på første kjøring',s:runN?'Et ZFS-snapshot tas når den er ferdig.':'Jobbene kjører etter planen, eller trykk «Kjør nå».'};
- const lastOk=Math.max(0,...H.filter(h=>h.status==='ok').map(h=>h.end||0));
+ const src=sources(),onl=src.filter(n=>n.online).length,jobs=S.jobs,orig=jobs.reduce((a,j)=>a+(j.orig||0),0),stored=S.store.bytes,saved=orig?Math.max(0,1-stored/orig):0;
  const nx=jobs.filter(j=>j.nextRun).sort((a,b)=>a.nextRun-b.nextRun)[0];
- const d=S.disk||{size:0,used:0,avail:0},tb=d.size>=1e12,U=x=>tb?(x/1e12).toFixed(2):(x/1e9).toFixed(1),unit=tb?'TB':'GB';
- const segs=jobs.filter(j=>j.sizeBytes).map(j=>`<span style="height:100%;width:${Math.max(.6,j.sizeBytes/d.size*100)}%;background:${j.color}"></span>`).join('');
- const day=H.filter(h=>h.start>Date.now()-864e5&&h.end);
- const t0=new Date();t0.setHours(0,0,0,0);const days=[];for(let i=13;i>=0;i--){const s=t0.getTime()-i*864e5,e=s+864e5,hs=H.filter(h=>h.start>=s&&h.start<e);days.push({s,b:hs.reduce((a,h)=>a+(h.bytes||0),0),bad:hs.some(h=>h.status==='warn'||h.status==='fail'),today:i===0})}
- const mx=Math.max(1,...days.map(x=>x.b)),lab=t=>{const x=new Date(t);return x.getDate()+'. '+MON[x.getMonth()]};
- const ev=[];if(S.running&&S.running.id!=='restore'){const j=jobs.find(x=>x.id===S.running.id);if(j)ev.push({k:'run',t:`${j.name} kjører – snapshot tas når ferdig`,time:hm(Date.now())})}
- for(const h of S.history.slice().reverse()){if(ev.length>=5)break;ev.push({k:ST[h.status]?.k,t:h.job==='system'?h.message:h.status==='ok'?`${h.name} fullført · ${fmtB(h.bytes||0)} overført`:h.status==='warn'?`${h.name} fullført med advarsel`:`${h.name} feilet`,time:sameDay(h.start,Date.now())?hm(h.end||h.start):when(h.end||h.start).replace(/ \d\d:\d\d$/,'')})}
- return`<section style="display:flex;align-items:center;justify-content:space-between;gap:20px;padding:18px 22px;border:1px solid #23232a;border-radius:12px;background:#141417;flex-wrap:wrap">
-  <div style="display:flex;align-items:center;gap:14px;min-width:0"><span style="width:10px;height:10px;border-radius:50%;flex:none;background:${col(b.k)};box-shadow:0 0 0 4px ${col(b.k,.18)}"></span><div style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font-size:15px;font-weight:600">${esc(b.t)}</span><span style="font-size:13px;color:#8b8b93">${esc(b.s)}</span></div></div>
-  <div style="display:flex;gap:28px"><div style="display:flex;flex-direction:column;gap:3px"><span class="lbl" style="color:#6b6b74">SISTE OK</span><span style="font-size:13.5px">${lastOk?when(lastOk):'—'}</span></div>
-   <div style="display:flex;flex-direction:column;gap:3px"><span class="lbl" style="color:#6b6b74">NESTE KJØRING</span><span style="font-size:13.5px">${nx?whenNext(nx.nextRun)+' · '+esc(nx.name):'—'}</span></div></div></section>
- <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px">
-  <div class="card stat"><span class="lbl" style="color:#7d7d86">LAGRING</span><div style="display:flex;align-items:baseline;gap:6px"><span class="v">${U(d.used)} ${unit}</span><span style="font-size:13px;color:#7d7d86">av ${U(d.size)} ${unit}</span></div>
-   <div style="display:flex;height:6px;border-radius:3px;overflow:hidden;background:#24242a;gap:2px">${segs}</div><span class="s">${d.size?Math.round(d.used/d.size*100):0}% brukt · ${U(d.avail)} ${unit} ledig</span></div>
-  <div class="card stat"><span class="lbl" style="color:#7d7d86">JOBBER</span><span class="v">${jobs.length}</span><span class="s"><span style="color:${col('ok')}">${okN} ok</span> · <span style="color:${col('warn')}">${warns.length} advarsel</span>${fails.length?` · <span style="color:${col('fail')}">${fails.length} feilet</span>`:''} · ${runN} kjører</span></div>
-  <div class="card stat"><span class="lbl" style="color:#7d7d86">VERSJONER</span><span class="v">${S.snapshotCount}</span><span class="s">ZFS-snapshots${S.oldestSnapshot?' · eldste '+Math.max(0,Math.floor((Date.now()-S.oldestSnapshot)/864e5))+' dager':''}</span></div>
-  <div class="card stat"><span class="lbl" style="color:#7d7d86">SISTE 24 TIMER</span><span class="v">${fmtB(day.reduce((a,h)=>a+(h.bytes||0),0))}</span><span class="s">overført i ${day.length} ${day.length===1?'kjøring':'kjøringer'}</span></div></section>
- <section class="card" style="overflow:hidden"><div class="ph"><b>Backup-jobber</b><small>Synkronisert via rsync · snapshot etter hver kjøring</small></div>
-  <div style="overflow-x:auto"><div style="min-width:940px"><div class="th gj"><span>JOBB</span><span>PLAN</span><span>SISTE KJØRING</span><span>STØRRELSE</span><span>VERSJ.</span><span>STATUS</span><span></span></div>
-  ${jobs.map(jobRow).join('')}</div></div></section>
- <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px">
-  <div class="card" style="padding:20px;display:flex;flex-direction:column;gap:18px"><div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:15px;font-weight:600">Aktivitet</span><span style="font-size:12.5px;color:#7d7d86">Data overført · siste 14 dager</span></div>
-   <div style="display:flex;align-items:flex-end;gap:8px;height:150px;border-bottom:1px solid #26262b">${days.map(x=>`<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%" title="${lab(x.s)} · ${(x.b/1e9).toFixed(1)} GB"><span style="display:block;height:${x.b?Math.max(2,x.b/mx*100):0}%;background:${x.bad?col('warn'):x.today?'#ecc56a':'#3a3a44'};border-radius:3px 3px 0 0"></span></div>`).join('')}</div>
-   <div class="mono" style="display:flex;justify-content:space-between;font-size:11px;color:#5d5d66"><span>${lab(days[0].s)}</span><span>${lab(days[7].s)}</span><span>${lab(days[13].s)}</span></div></div>
-  <div class="card" style="padding:20px;display:flex;flex-direction:column;gap:14px"><div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:15px;font-weight:600">Siste hendelser</span><button onclick="go('history')" style="border:0;background:none;color:#ecc56a;font-size:12.5px;cursor:pointer;padding:0">Se alt →</button></div>
-   ${ev.length?ev.map(e=>`<div style="display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:12px;align-items:baseline;font-size:13px"><span style="width:7px;height:7px;border-radius:50%;background:${col(e.k)}"></span><span style="color:#d4d4d8">${esc(e.t)}</span><span class="mono" style="font-size:11.5px;color:#6b6b74">${esc(e.time)}</span></div>`).join(''):'<span style="color:#6b6b74;font-size:13px">Ingen hendelser ennå.</span>'}</div></section>`}
-function step(st,n,t,s){return`<li style="display:flex;gap:14px;padding:16px;border:1px solid ${st==='active'?'#3a3322':'#26262b'};border-radius:10px;background:${st==='active'?'#1b1914':'#18181c'}"><span class="mono" style="font-weight:500;font-size:12px;color:${st==='done'?col('ok'):st==='active'?'#ecc56a':'#5d5d66'}">${st==='done'?'✓':n}</span><div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:14px;font-weight:500;${st==='idle'?'color:#9a9aa2':''}">${t}</span><span style="font-size:12.5px;color:${st==='idle'?'#6b6b74':'#7d7d86'}">${s}</span></div></li>`}
-function jobRow(j){
- const r=j.status==='running',st=ST[j.status]||ST.new,extra=r?(j.phase==='sync'?Math.round(j.progress||0)+'%':j.phase==='snapshot'?'· snapshot':'· verifiserer'):'';
- return`<div class="tr gj"><div style="display:flex;align-items:center;gap:12px;min-width:0;cursor:pointer" onclick="openJob('${j.id}')" title="Rediger"><span style="width:8px;height:28px;border-radius:3px;flex:none;background:${j.color}"></span>
-   <div style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font-weight:500">${esc(j.name)}${j.enabled?'':' <span style="color:#6b6b74;font-weight:400">(pause)</span>'}</span><span class="mono" style="font-size:11.5px;color:#7d7d86;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(j.src)}</span></div></div>
-  <span style="color:#b4b4bb">${sched(j.schedule)}</span><span style="color:#b4b4bb">${r?'Nå':when(j.last?.end)}</span>
-  <span class="mono" style="font-size:12.5px;color:#b4b4bb">${fmtB(j.sizeBytes)}</span><span class="mono" style="font-size:12.5px;color:#b4b4bb">${j.versionCount}</span>
-  <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-start"><span class="pill" style="color:${col(st.k)};background:${col(st.k,.12)}" title="${esc(j.last?.message||'')}"><i style="background:${col(st.k)}"></i>${st.l}${r?' '+extra:''}</span>
-   ${r&&j.phase==='sync'?`<span style="width:90px;height:3px;border-radius:2px;background:#26262c;overflow:hidden;display:block"><span style="display:block;height:100%;width:${j.progress||0}%;background:${col('run')}"></span></span>`:''}</div>
-  <div style="display:flex;justify-content:flex-end;gap:6px"><button class="br" onclick="runJob('${j.id}')" ${r||j.status==='queued'?'disabled':''}>${r?'Kjører…':j.status==='queued'?'I kø…':'Kjør nå'}</button><button class="br mut" onclick="go('versions','${jsq(j.name)}')">Versjoner</button></div></div>`}
-async function runJob(id){await api('/api/jobs/'+id+'/run',{method:'POST'});toast('Backup startet');refresh()}
-async function runAll(){const r=await api('/api/run-all',{method:'POST'});toast(r.queued?`${r.queued} ${r.queued===1?'jobb':'jobber'} startet`:'Alle jobber kjører allerede');refresh()}
+ const k=(l,v,s,c)=>`<div class="kpi"><span class="k">${l}</span><span class="v" style="color:${c||'var(--t)'}">${v}</span><span class="s">${s}</span></div>`;
+ const kp=k('Noder online',`${onl}/${src.length}`,`${new Set(jobs.map(j=>j.node)).size} med jobber`)+k('Beskyttet data',fB(orig),`${jobs.filter(j=>j.orig!=null).length} jobber`)+k('Lagret etter zstd',fB(stored),`${S.store.blocks} blokker · dedup`)
+  +k('Spart plass',orig?Math.round(saved*100)+'%':'—',orig?fB(Math.max(0,orig-stored))+' spart':'ingen data ennå',orig&&saved>0?'var(--ok)':'')+k('Neste kjøring',nx?nextL(nx.nextRun):'—',nx?esc(nx.id):'ingen planlagt');
+ const hasJobs=new Set(jobs.map(j=>j.node)),groups={};for(const n of src){const g=(n.loc||(hasJobs.has(n.name)?'Kilder':'Tailnet')).toUpperCase();(groups[g]=groups[g]||[]).push(n)}
+ const order=Object.keys(groups).sort((a,b)=>(a==='TAILNET')-(b==='TAILNET')||a.localeCompare(b));
+ const sel=selNode&&(S.nodes.find(n=>n.name===selNode)||(selNode===S.self.name?S.self:null));
+ const related=sel&&sel.name===S.self.name?hasJobs:new Set();
+ const nodeRow=n=>{const active=sel&&sel.name===n.name,rel=related.has(n.name),pg=n.ping&&n.ping.ms!=null?n.ping.ms+' ms':n.online?'—':'offline',derp=/DERP/.test(n.ping?.tunnel||n.tunnel||'');
+  const lit=hasJobs.has(n.name)&&n.online&&(!sel||active||rel),lc=!n.online?'#DCDCE0':lit?(derp?'var(--warn)':'var(--ok)'):'#DCDCE0',ls=!n.online||(derp&&lit)?'dashed':'solid';
+  return`<button onclick="selNode='${jq(n.name)}';render()" style="position:relative;display:flex;align-items:center;gap:10px;height:46px;padding:0 14px;border-radius:8px;cursor:pointer;text-align:left;border:1px solid ${active?'var(--ok)':rel?'var(--okl)':'var(--line)'};background:${active?'rgba(47,158,107,.07)':'var(--sf)'};width:100%">
+   <span style="color:var(--mu)">${I(nodeIcon(n),14)}</span><span class="m" style="font-weight:500;font-size:12.5px;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis">${esc(n.name)}</span>
+   <span class="m" style="font-size:11.5px;color:var(--fa);white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis;flex-shrink:2">${esc(n.ip)}</span>
+   <span class="m" style="margin-left:auto;font-size:11.5px;white-space:nowrap;flex:none;color:${n.online?(derp?'var(--warn)':'var(--t2)'):'var(--fa)'}">${pg}</span><span class="dot" style="background:${n.online?'var(--ok)':'var(--fa)'}"></span>
+   <span style="position:absolute;right:-45px;top:50%;width:44px;height:0;border-top:1px ${ls} ${lc}"></span></button>`};
+ const v=vaults()[0],d=S.disk||{used:0,size:0},vs=sel&&sel.name===v.name;
+ const vaultCard=`<button onclick="selNode='${jq(v.name)}';render()" style="position:relative;display:flex;flex-direction:column;gap:8px;padding:11px 12px;border-radius:6px;cursor:pointer;text-align:left;border:1px solid ${vs?'var(--ok)':'var(--line)'};background:${vs?'rgba(47,158,107,.07)':'var(--sf)'};width:100%">
+   <span style="display:flex;align-items:center;gap:10px;width:100%"><span style="color:var(--mu)">${I('hard-drive',14)}</span><span class="m" style="font-weight:500;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">${esc(v.name)}</span><span class="m" style="flex:none;font-size:10.5px;padding:1px 5px;border-radius:3px;color:var(--ok);border:1px solid var(--ok)">Leder</span><span class="m" style="margin-left:auto;font-size:11.5px;color:var(--t2)">lokal</span><span class="dot" style="background:var(--ok)"></span></span>
+   <span class="m" style="display:flex;gap:10px;width:100%;font-size:11px;color:var(--fa);white-space:nowrap"><span>${esc(v.ip||'—')}</span><span>${esc(v.loc||'')}</span><span style="margin-left:auto">${fB(d.used)} / ${fB(d.size)}</span></span>
+   <span style="display:block;width:100%;height:2px;background:var(--line)"><span style="display:block;height:100%;width:${d.size?d.used/d.size*100:0}%;background:var(--mu)"></span></span>
+   <span style="position:absolute;left:-45px;top:20px;width:44px;height:0;border-top:1px solid ${jobs.length?'var(--ok)':'#DCDCE0'}"></span></button>`;
+ return`<section class="kpis">${kp}</section>
+ <section class="pnl"><div class="ph">${I('network',14)}<b>Topologi</b><span class="m" style="font-size:11.5px;color:var(--fa)">${onl}/${src.length} online</span>
+  <span style="margin-left:auto;display:flex;gap:14px;font-size:11.5px;color:var(--mu)"><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:1px;background:var(--ok)"></span>Direkte</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;border-top:1px dashed var(--warn)"></span>DERP-relay</span></span></div>
+  <div style="overflow-x:auto"><div style="display:grid;grid-template-columns:minmax(0,1fr) 300px;min-width:1120px">
+   <div style="padding:28px 32px;display:grid;grid-template-columns:minmax(300px,1fr) 88px minmax(300px,1fr);border-right:1px solid var(--line)">
+    <div style="display:flex;flex-direction:column;gap:16px">${!src.length?`<div style="color:var(--fa);font-size:12.5px;line-height:1.6">${S.tailnet.ok?'Ingen andre enheter på tailnetet.':'Fant ikke tailscale i containeren. Legg til noder manuelt under «Ny jobb».'}</div>`:order.map(g=>`<div style="display:flex;flex-direction:column;gap:6px"><span class="lbl">${esc(g)}</span>${groups[g].map(nodeRow).join('')}</div>`).join('')}</div>
+    <div style="position:relative;display:flex;justify-content:center"><span style="position:absolute;top:22px;bottom:0;left:50%;width:1px;background:var(--ctl)"></span><span class="m" style="position:relative;height:fit-content;padding:3px 6px;border:1px solid var(--ctl);border-radius:4px;background:var(--bg);font-size:10px;color:var(--mu)">tailnet</span></div>
+    <div style="display:flex;flex-direction:column;gap:6px"><span class="lbl">BACKUPSTEDER</span>${vaultCard}<div class="m" style="padding:10px 2px;font-size:10.5px;color:var(--fa);line-height:1.6">Ett backupsted. Flere steder med replikering kommer i neste versjon.</div></div>
+   </div>${detail(sel)}</div></div></section>
+ <section class="pnl"><div class="ph">${I('list-checks',14)}<b>Jobber</b><div style="display:flex;gap:2px;margin-left:12px">${['Alle','Aktive','Planlagte','Feil'].map(t=>`<button class="tab ${jobTab===t?'on':''}" onclick="jobTab='${t}';render()">${t} <span class="m" style="color:var(--fa)">${jobsBy(t).length}</span></button>`).join('')}</div>
+  <span class="m" style="margin-left:auto;font-size:11.5px;color:var(--fa)">zstd · blokkdedup 4 MiB</span><button class="b2" style="margin-left:12px" onclick="openJob()">${I('plus',13)}Ny jobb</button></div>
+  <div style="overflow-x:auto"><div style="min-width:1120px"><div class="th gjob"><span>JOBB</span><span>RUTE</span><span>PLAN</span><span>NESTE</span><span>NIVÅ</span><span style="text-align:right">ORIGINAL</span><span style="text-align:right">LAGRET</span><span>SPART</span><span>STATUS</span><span></span></div>
+  ${jobsBy(jobTab).map(jobRow).join('')||`<div style="padding:28px 22px;color:var(--fa);font-size:12.5px">${jobs.length?'Ingen jobber her.':'Ingen jobber ennå. Trykk «Ny jobb» og velg en mappe på en node.'}</div>`}</div></div></section>`}
+function jobsBy(t){const J=S.jobs;return t==='Aktive'?J.filter(j=>j.status==='running'||j.status==='queued'):t==='Planlagte'?J.filter(j=>j.enabled&&j.nextRun):t==='Feil'?J.filter(j=>j.status==='fail'||j.status==='warn'):J}
+function jobRow(j){const[sl,sc]=ST[j.status]||ST.scheduled,run=j.status==='running',sv=j.orig?Math.max(0,1-j.stored/j.orig):0;
+ return`<div class="trow gjob"><div style="display:flex;flex-direction:column;gap:2px;min-width:0;cursor:pointer" onclick="openJob('${jq(j.id)}')" title="Rediger"><span class="m" style="font-weight:500;font-size:12.5px">${esc(j.id)}${j.enabled?'':' <span style="color:var(--fa);font-weight:400">(pause)</span>'}</span><span class="m" style="font-size:11px;color:var(--fa);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(j.path)}</span></div>
+  <div class="m" style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--t2);min-width:0;flex-wrap:wrap"><span>${esc(j.node)}</span><span style="color:var(--fa)">${I('arrow-right',12)}</span><span>${esc(j.dests.join(', '))}</span></div>
+  <span style="font-size:12px;color:var(--t2)">${sched(j.schedule)}</span><span class="m" style="font-size:12px;color:var(--t2)">${nextL(j.nextRun)}</span><span class="m" style="font-size:11.5px;color:var(--mu)">zstd-${j.level}</span>
+  <span class="m" style="font-size:12px;text-align:right;color:var(--t2)">${fB(j.orig)}</span><span class="m" style="font-size:12px;text-align:right">${fB(j.stored)}</span>
+  <div style="display:flex;align-items:center;gap:8px"><span style="width:48px;height:4px;background:var(--line);flex:none"><span style="display:block;height:100%;width:${sv*100}%;background:var(--ok)"></span></span><span class="m" style="font-size:11.5px;white-space:nowrap;color:${sv>.3?'var(--ok)':'var(--mu)'}">${j.orig?Math.round(sv*100)+'% · '+fB(Math.max(0,j.orig-j.stored)):'—'}</span></div>
+  <div style="display:flex;flex-direction:column;gap:4px" title="${esc(j.last?.message||'')}"><span style="display:flex;align-items:center;gap:6px;font-size:12px;color:${sc}"><span class="dot" style="background:${sc}"></span>${sl}${run?(j.phase==='sync'?' '+(j.progress||0)+'%':' · '+j.phase):''}</span>${run?`<span style="display:block;width:88px;height:2px;background:var(--line)"><span style="display:block;height:100%;width:${j.phase==='sync'?j.progress||0:100}%;background:var(--ok)"></span></span>`:''}</div>
+  <button class="bi" title="Kjør nå" onclick="runJob('${jq(j.id)}')" ${run||j.status==='queued'?'disabled':''}>${I(run||j.status==='queued'?'loader':'play',13)}</button></div>`}
+function detail(n){
+ if(!n)return`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:30px;text-align:center;color:var(--fa)">${I('mouse-pointer-click',20)}<span style="font-size:12.5px;line-height:1.6">Velg en node for å se<br>detaljer og jobber</span></div>`;
+ const isV=n.name===S.self.name,jobs=S.jobs.filter(j=>isV||j.node===n.name),pg=n.ping&&n.ping.ms!=null?n.ping.ms+' ms':isV?'lokal':'—',tun=n.ping?.tunnel||n.tunnel||'';
+ return`<div style="display:flex;flex-direction:column">
+  <div style="padding:16px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:8px"><span class="dot" style="width:7px;height:7px;background:${n.online?'var(--ok)':'var(--fa)'}"></span><span class="m" style="font-weight:500;font-size:14px">${esc(n.name)}</span><button class="bi" style="margin-left:auto;width:24px;height:24px" title="Rediger node" onclick="openNode('${jq(n.name)}')">${I('pencil',12)}</button></div>
+   <span style="font-size:12px;color:var(--mu)">${isV?'Backupsted · Leder':'Kilde'}${n.loc?' · '+esc(n.loc):''}</span></div>
+  <div class="kv" style="padding:14px 16px;border-bottom:1px solid var(--line)"><span>Tailscale IP</span><span>${esc(n.ip||'—')}</span><span>MagicDNS</span><span>${esc(n.dns||'—')}</span><span>Tunnel</span><span style="color:${/DERP/.test(tun)?'var(--warn)':n.online?'var(--ok)':'var(--fa)'}">${esc(tun||'—')}</span>
+   <span>Latens</span><span>${pg}</span><span>System</span><span>${esc(n.os||'—')}</span><span>Sist sett</span><span>${n.online?'nå':ago(n.lastSeen)}</span><span>Agent</span><span>${isV?'Hytte '+esc(S.version):'SSH · '+esc((S.nodes.find(x=>x.name===n.name)||{}).user||'root')}</span></div>
+  <div class="lbl" style="padding:12px 16px 6px">${isV?'MOTTAR FRA':'SENDER TIL'}</div>
+  <div style="padding:0 16px 12px;display:flex;flex-direction:column">${jobs.length?jobs.map(j=>`<div style="display:flex;align-items:center;gap:8px;height:30px;border-bottom:1px solid var(--row);font-size:12px"><span class="dot" style="background:${(ST[j.status]||ST.scheduled)[1]}"></span><span class="m">${esc(j.id)}</span><span class="m" style="margin-left:auto;font-size:11px;color:var(--fa)">${esc(isV?j.node:j.dests.join(', '))}</span></div>`).join(''):'<span style="font-size:12px;color:var(--fa);padding:6px 0">Ingen jobber</span>'}</div>
+  <div style="margin-top:auto;padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px"><button class="b2" style="flex:1" id="pb" onclick="pingNode('${jq(n.name)}')" ${isV?'disabled':''}>${I('activity',13)}Ping</button><button class="b2" style="flex:1" onclick="browseNode('${jq(n.name)}')" ${jobs.length?'':'disabled'}>${I('folder-open',13)}Bla i arkiv</button></div></div>`}
+async function pingNode(n){const b=$('#pb');b.innerHTML=I('loader',13)+'Pinger…';const r=await api('/api/nodes/'+encodeURIComponent(n)+'/ping',{method:'POST'});b.innerHTML=I('activity',13)+(r.ms!=null?r.ms+' ms · '+r.loss+'% tap':'Ingen svar')}
+function browseNode(n){const j=S.jobs.find(x=>(n===S.self.name||x.node===n)&&x.snapshots)||S.jobs.find(x=>x.snapshots);if(!j)return toast('Ingen arkiv ennå');X.job=j.id;X.snap=null;X.path=[];go('files')}
+async function runJob(id){const r=await api('/api/jobs/'+encodeURIComponent(id)+'/run',{method:'POST'});toast(r.ok==='waiting'?'Noden er offline, jobben venter':r.ok?'Startet':'Kjører allerede');refresh()}
+async function runAll(){const r=await api('/api/jobs/run-all',{method:'POST'});toast(`${r.queued} startet${r.waiting?' · '+r.waiting+' venter på node':''}`);refresh()}
 
-// ── Versjoner ──
-async function loadSnaps(){try{SN=await api('/api/snapshots')}catch(e){SN={snapshots:[],helper:false}}if(view==='versions')render()}
-function versionsView(){
- const jobs=jobsC(),names=['Alle',...jobs.map(j=>j.name)];if(!names.includes(filter))filter='Alle';
- const list=(SN?.snapshots||[]).filter(s=>filter==='Alle'||s.job===filter),jc=n=>(jobs.find(j=>j.name===n)||{}).color||'#5d5d66';
- return`<section class="card" style="overflow:hidden"><div class="ph"><b>ZFS-snapshots</b><div style="display:flex;gap:6px;flex-wrap:wrap">${names.map(f=>`<button onclick="filter='${jsq(f)}';render()" style="padding:6px 11px;border-radius:7px;border:1px solid ${filter===f?'#ecc56a':'#2c2c32'};background:${filter===f?'#ecc56a':'transparent'};color:${filter===f?'#1a1608':'#b4b4bb'};font-size:12.5px;cursor:pointer">${esc(f)}</button>`).join('')}</div></div>
- ${SN&&!SN.helper?`<div style="padding:14px 20px;border-bottom:1px solid #1d1d22;font-size:13px;color:${col('warn')}">ZFS-hjelperen på Proxmox svarer ikke. Kjør installasjonskommandoen på nytt fra Proxmox-verten.</div>`:''}
- <div style="overflow-x:auto"><div style="min-width:820px"><div class="th gv"><span>SNAPSHOT</span><span>JOBB</span><span>TIDSPUNKT</span><span>ENDRET</span><span></span></div>
- ${!SN?'<div class="tr" style="color:#6b6b74">Laster…</div>':list.length?list.map(s=>`<div class="tr gv" style="padding:13px 20px"><span class="mono" style="font-size:12.5px;color:#d4d4d8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:12px" title="${esc(s.name)}">${esc(s.name)}</span>
-  <span style="display:flex;align-items:center;gap:8px;color:#b4b4bb"><span style="width:7px;height:7px;border-radius:2px;background:${jc(s.job)}"></span>${esc(s.job)}</span><span style="color:#b4b4bb">${when(s.createdAt)}</span>
-  <span class="mono" style="font-size:12.5px;color:#8b8b93">${fmtB(s.deltaBytes)}</span><div style="display:flex;justify-content:flex-end"><button class="br" onclick="askRestore('${jsq(s.name)}')" ${restored[s.name]==='busy'||!s.jobId?'disabled':''}>${restored[s.name]==='done'?'Gjenopprettet ✓':restored[s.name]==='busy'?'Gjenoppretter…':'Gjenopprett'}</button></div></div>`).join('')
-  :`<div class="tr" style="color:#6b6b74">Ingen versjoner ennå. Et snapshot tas etter hver kjøring.</div>`}</div></div></section>`}
-function askRestore(name){const s=SN.snapshots.find(x=>x.name===name),j=S.jobs.find(x=>x.id===s.jobId);if(!j)return toast('Jobben finnes ikke lenger');
- const base=j.src.replace(/\/$/,'');let mode='copy';
- const draw=()=>{ovl.innerHTML=`<div class="ov" onclick="if(event.target===this)closeOv()"><div class="dlg"><div class="dh"><div style="display:flex;flex-direction:column;gap:3px"><b>Gjenopprett versjon</b><small>${esc(j.name)} · ${when(s.createdAt)}</small></div><button class="x" onclick="closeOv()">×</button></div>
-  <div class="db"><div style="display:flex;flex-direction:column;gap:8px"><span class="lbl" style="color:#7d7d86">HVOR</span><div class="seg"><button class="${mode==='copy'?'on':''}" onclick="R.m('copy')">Til ny mappe</button><button class="${mode==='inplace'?'on':''}" onclick="R.m('inplace')">Tilbake på plass</button></div></div>
-  <div style="font-size:13px;line-height:1.6;color:#9a9aa2">${mode==='copy'?`Filene kopieres til <span class="mono" style="color:#ececee">${esc(base)}_gjenopprettet_…</span> på Unraid. Ingenting eksisterende røres.`:`Filene i <span class="mono" style="color:#ececee">${esc(base)}</span> settes tilbake til denne versjonen. Filer som er lagt til etterpå, beholdes.`}</div></div>
-  <div class="df"><span class="mono" style="font-size:12px;color:#7d7d86;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.snap)}</span><div style="display:flex;gap:8px;flex:none"><button class="br" style="padding:9px 14px;font-size:13px" onclick="closeOv()">Avbryt</button><button class="bp" style="padding:9px 16px;font-size:13px" onclick="R.go()">Gjenopprett</button></div></div></div></div>`};
- window.R={m:m=>{mode=m;draw()},go:async()=>{closeOv();restored[name]='busy';render();toast('Gjenoppretter…');
-  try{const r=await api('/api/restore',{body:{name,mode}});if(!r.ok)throw new Error(r.error||'Feilet');restored[name]='done';toast('Gjenopprettet til '+r.to)}catch(e){delete restored[name];toast(e.message)}render()}};draw()}
+// ── Backupsteder ──
+function vaultsView(){const v=vaults()[0],d=S.disk||{used:0,size:0},jobs=S.jobs;
+ const k=(l,val,s,c)=>`<div class="kpi"><span class="k">${l}</span><span class="v" style="color:${c||'var(--t)'}">${val}</span><span class="s">${s}</span></div>`;
+ return`<section class="kpis sm">${k('Leder',esc(v.name),'term 1 · eneste backupsted','var(--ok)')}${k('Kvorum','1/1','ett backupsted','var(--ok)')}${k('Planleggingslås','Holdt',esc(v.name)+' · lokal')}${k('Replikeringer','0','ingen koblinger')}${k('Maks etterslep','—','ingen replikering')}</section>
+ <section class="pnl"><div class="ph">${I('hard-drive',14)}<b>Backupsteder</b><span class="m" style="font-size:11.5px;color:var(--fa)">1 node</span></div>
+  <div style="overflow-x:auto"><div style="display:grid;grid-template-columns:minmax(0,1fr) 320px;min-width:1040px"><div style="border-right:1px solid var(--line)">
+   <div class="th gvault"><span>NODE</span><span>LOKASJON</span><span>TAILSCALE IP</span><span>ROLLE</span><span>KAPASITET</span><span>LATENS</span><span>TUNNEL</span></div>
+   <div class="trow gvault" style="min-height:56px;background:#F2F2F1;box-shadow:inset 2px 0 0 var(--ok)"><span class="m" style="display:flex;align-items:center;gap:8px;font-weight:500;font-size:12.5px"><span class="dot" style="background:var(--ok)"></span>${esc(v.name)}</span><span style="font-size:12px;color:var(--t2)">${esc(v.loc||'—')}</span><span class="m" style="font-size:12px;color:var(--t2)">${esc(v.ip||'—')}</span><span class="m" style="font-size:11.5px;color:var(--ok)">Leder</span>
+    <span style="display:flex;align-items:center;gap:8px"><span style="flex:1;height:4px;background:var(--line)"><span style="display:block;height:100%;width:${d.size?d.used/d.size*100:0}%;background:var(--mu)"></span></span><span class="m" style="font-size:11px;color:var(--mu);white-space:nowrap">${fB(d.used)} / ${fB(d.size)}</span></span><span class="m" style="font-size:12px;color:var(--t2)">lokal</span><span class="m" style="font-size:11.5px;color:var(--ok)">Lokal</span></div></div>
+   <div style="display:flex;flex-direction:column"><div style="padding:16px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:6px"><span class="m" style="font-weight:500;font-size:14px">${esc(v.name)}</span><span style="font-size:12px;color:var(--mu)">Leder${v.loc?' · '+esc(v.loc):''} · ${esc(S.destRoot)}</span></div>
+    <div class="kv" style="padding:14px 16px;border-bottom:1px solid var(--line)"><span>Kapasitet</span><span>${fB(d.used)} / ${fB(d.size)}</span><span>Arkiv</span><span>${fB(S.store.bytes)} · ${S.store.blocks} blokker</span><span>Kryptering</span><span>Ikke aktivert</span><span>Båndbredde</span><span>Ubegrenset</span><span>Heartbeat</span><span>lokal</span><span>Mottar jobber</span><span>${jobs.length}</span></div>
+    <div style="padding:14px 16px;display:flex;flex-direction:column;gap:8px"><span class="lbl">ROLLE I KLYNGEN</span><div class="seg"><button class="on">Leder</button><button disabled>Følger</button><button disabled>Offsite</button></div>
+     <span style="font-size:11.5px;color:var(--fa);line-height:1.5">Leder tildeler jobber og holder planleggingslåsen. Følgere tar over ved valg hvis leder mister kvorum. Følger og Offsite blir tilgjengelig når flere backupsteder er koblet til.</span></div></div></div></div></section>
+ <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(460px,1fr));gap:24px">
+  <div class="pnl"><div class="ph">${I('git-compare-arrows',14)}<b>Replikering</b><span style="margin-left:auto;font-size:11.5px;color:var(--fa)">Klikk en celle for å slå av/på</span></div>
+   <div style="padding:14px 16px;display:flex;flex-direction:column;gap:6px"><div style="display:grid;gap:6px;grid-template-columns:120px 1fr"><span class="m" style="font-size:10.5px;color:var(--fa);align-self:end">FRA \\ TIL</span><span class="m" style="font-weight:500;font-size:11px;color:var(--mu)">${esc(v.name)}</span></div>
+    <div style="display:grid;gap:6px;grid-template-columns:120px 1fr"><span class="m" style="font-weight:500;font-size:11px;color:var(--t2);align-self:center">${esc(v.name)}</span><span class="hatch" style="height:52px;border-radius:5px;border:1px solid var(--line)"></span></div>
+    <span style="font-size:11.5px;color:var(--fa);line-height:1.5;padding-top:6px">Legg til et backupsted til for å replikere arkivet mellom steder.</span></div></div>
+  <div class="pnl" style="display:flex;flex-direction:column"><div class="ph">${I('scroll-text',14)}<b>Koordineringslogg</b><span class="m" style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ok)"><span class="dot" style="background:var(--ok)"></span>live</span></div>
+   <div id="clog" class="m" style="padding:10px 16px;display:flex;flex-direction:column;font-size:11.5px;line-height:1.5;background:var(--bg);flex:1;max-height:360px;overflow:auto"></div></div></section>`}
+function drawLog(){const el=$('#clog');if(!el||!S)return;const C={ok:'var(--ok)',run:'var(--ok)',warn:'var(--warn)',fail:'var(--err)',info:'var(--mu)'};
+ el.innerHTML=S.log.slice(-40).map(l=>`<div style="display:grid;grid-template-columns:62px 112px minmax(0,1fr);gap:10px;padding:3px 0"><span style="color:var(--fa)">${hms(l.t)}</span><span style="color:${C[l.kind]||'var(--mu)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.node)}</span><span style="color:var(--t2)">${esc(l.msg)}</span></div>`).join('')||'<span style="color:var(--fa)">Ingen hendelser ennå.</span>';el.scrollTop=el.scrollHeight}
 
-// ── Historikk ──
-function historyView(){const list=S.history.slice().reverse();let runRow='';
- if(S.running&&S.running.id!=='restore'){const j=S.jobs.find(x=>x.id===S.running.id);if(j)runRow=`<div class="tr gh" style="padding:13px 20px"><span class="mono" style="font-size:12.5px;color:#b4b4bb">${dshort(Date.now())}</span><span>${esc(j.name)}</span><span class="mono" style="font-size:12.5px;color:#8b8b93">—</span><span class="mono" style="font-size:12.5px;color:#8b8b93">${fmtB(S.running.doneBytes)}</span><span style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:${col('run')}"><i class="sdot" style="background:${col('run')}"></i>Kjører</span><span style="color:#8b8b93;font-size:13px">${S.running.phase==='sync'?'Overfører endringer · '+S.running.pct+'%':S.running.phase==='snapshot'?'Tar snapshot':'Verifiserer'}</span></div>`}
- return`<section class="card" style="overflow:hidden"><div style="overflow-x:auto"><div style="min-width:860px"><div class="th gh" style="padding:12px 20px"><span>TIDSPUNKT</span><span>JOBB</span><span>VARIGHET</span><span>OVERFØRT</span><span>STATUS</span><span>MELDING</span></div>${runRow}
- ${list.length?list.map(h=>{const st=ST[h.status]||ST.fail;return`<div class="tr gh" style="padding:13px 20px;cursor:pointer" onclick="showLog('${h.id}')"><span class="mono" style="font-size:12.5px;color:#b4b4bb">${dshort(h.start)}</span><span>${esc(h.name)}</span><span class="mono" style="font-size:12.5px;color:#8b8b93">${dur(h.end-h.start)}</span><span class="mono" style="font-size:12.5px;color:#8b8b93">${fmtB(h.bytes)}</span>
-  <span style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:${col(st.k)}"><i class="sdot" style="background:${col(st.k)}"></i>${st.l}</span><span style="color:#8b8b93;font-size:13px;overflow-wrap:anywhere">${esc(h.message)}</span></div>`}).join(''):runRow?'':'<div class="tr" style="color:#6b6b74">Ingen kjøringer ennå.</div>'}
- </div></div></section>`}
-async function showLog(id){const h=await api('/api/log?id='+id);if(!h.id)return;
- ovl.innerHTML=`<div class="ov" onclick="if(event.target===this)closeOv()"><div class="dlg" style="width:720px"><div class="dh"><div style="display:flex;flex-direction:column;gap:3px"><b>${esc(h.name)}</b><small>${when(h.start)} · ${dur(h.end-h.start)} · ${fmtB(h.bytes)} overført${h.files!=null?' · '+h.files+' filer':''}</small></div><button class="x" onclick="closeOv()">×</button></div>
- <div class="db"><span style="font-size:13px;color:${col((ST[h.status]||ST.fail).k)}">${esc(h.message)}</span><pre class="log">${esc((h.tail||[]).join('\n')||'Ingen logg.')}</pre></div></div></div>`}
+// ── Filutforsker ──
+async function initFiles(){const arch=S.jobs.filter(j=>j.snapshots);if(!X.job||!arch.some(j=>j.id===X.job))X.job=arch[0]&&arch[0].id;if(!X.job)return render();
+ if(!X.snaps||X.snaps.job!==X.job){X.snaps=null;X.snaps=Object.assign(await api('/api/jobs/'+encodeURIComponent(X.job)+'/snapshots'),{job:X.job});if(!X.snap||!X.snaps.some(s=>s.id===X.snap))X.snap=X.snaps[0]&&X.snaps[0].id}
+ await loadLs()}
+async function loadLs(){X.ls=null;X.file=null;X.stat=null;render();try{X.ls=await api(`/api/archive/${encodeURIComponent(X.job)}/${X.snap}/ls?path=${encodeURIComponent(X.path.join('/'))}`)}catch(e){X.ls={items:[],error:e.message}}render()}
+function filesView(){const arch=S.jobs.filter(j=>j.snapshots),job=S.jobs.find(j=>j.id===X.job);
+ if(!arch.length)return`<section class="pnl" style="padding:60px 30px;display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--fa);text-align:center">${I('folder-archive',22)}<span style="font-size:12.5px;line-height:1.6">Ingen arkiver ennå.<br>Kjør en jobb, så kan du bla i filene her.</span></section>`;
+ const snaps=(X.snaps&&X.snaps.job===X.job)?X.snaps:[],items=X.ls?X.ls.items:[];
+ return`<section class="pnl" style="overflow-x:auto"><div style="display:grid;grid-template-columns:220px minmax(0,1fr) 340px;min-width:1100px;min-height:680px">
+  <div style="border-right:1px solid var(--line);display:flex;flex-direction:column"><div class="ph" style="padding:0 18px;gap:8px">${I('archive',14)}<b>Arkiver</b></div>
+   <div style="padding:6px;display:flex;flex-direction:column;gap:1px">${arch.map(j=>`<button onclick="X.job='${jq(j.id)}';X.snap=null;X.path=[];initFiles()" style="display:flex;flex-direction:column;gap:2px;padding:7px 10px;border:0;border-radius:5px;text-align:left;cursor:pointer;background:${X.job===j.id?'#EFEFEE':'transparent'};color:${X.job===j.id?'var(--t)':'var(--t2)'}"><span class="m" style="font-weight:500;font-size:12px">${esc(j.id)}</span><span class="m" style="font-size:10.5px;color:var(--fa)">${esc(j.node)} · zstd-${j.level}</span></button>`).join('')}</div></div>
+  <div style="display:flex;flex-direction:column;min-width:0">
+   <div style="padding:10px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:6px;overflow-x:auto"><span style="color:var(--fa);margin-right:4px">${I('history',14)}</span>${snaps.map(s=>`<button onclick="X.snap='${s.id}';loadLs()" style="flex:none;display:flex;flex-direction:column;gap:1px;padding:5px 9px;border-radius:5px;cursor:pointer;text-align:left;border:1px solid ${X.snap===s.id?'var(--ok)':'var(--line)'};background:${X.snap===s.id?'rgba(47,158,107,.06)':'var(--sf)'}"><span class="m" style="font-weight:500;font-size:11.5px;color:${X.snap===s.id?'var(--t)':'var(--t2)'}">${dm(s.createdAt)} ${hm(s.createdAt)}</span><span class="m" style="font-size:10px;color:var(--fa)">${s.stats.full?'full':'+'+fB(s.stats.newBytes)}</span></button>`).join('')||'<span style="color:var(--fa);font-size:12px">Laster…</span>'}</div>
+   <div class="m" style="height:38px;display:flex;align-items:center;gap:2px;padding:0 10px;border-bottom:1px solid var(--line);font-size:12px;overflow:hidden">${[esc(X.job),...X.path.map(esc)].map((c,i)=>`<span style="display:flex;align-items:center;gap:2px;flex:none"><button onclick="X.path=X.path.slice(0,${i});loadLs()" style="border:0;background:none;padding:3px 5px;border-radius:4px;font:inherit;cursor:pointer;color:${i===X.path.length?'var(--t)':'var(--mu)'}">${c}</button><span style="color:#C4C4CA">${I('chevron-right',12)}</span></span>`).join('')}</div>
+   <div class="m" style="display:grid;grid-template-columns:minmax(0,2.4fr) .8fr .8fr .6fr .9fr;gap:12px;height:30px;align-items:center;padding:0 14px;border-bottom:1px solid var(--line);font-weight:500;font-size:10.5px;letter-spacing:.05em;color:var(--fa)"><span>NAVN</span><span style="text-align:right">ORIGINAL</span><span style="text-align:right">KOMPRIMERT</span><span style="text-align:right">RATIO</span><span>ENDRET</span></div>
+   <div style="overflow:auto;max-height:560px">${!X.ls?'<div style="padding:30px 14px;color:var(--fa);font-size:12.5px">Laster…</div>':X.ls.error?`<div style="padding:30px 14px;color:var(--err);font-size:12.5px">${esc(X.ls.error)}</div>`:items.length?items.map(e=>{const r=e.csize?e.size/e.csize:null,sel=X.file===e.name&&!e.dir;
+    return`<button class="row" onclick="${e.dir?`X.path.push('${jq(e.name)}');loadLs()`:e.link!=null?'':`pickFile('${jq(e.name)}')`}" style="background:${sel?'#F2F2F1':'transparent'};box-shadow:inset 2px 0 0 ${sel?'var(--ok)':'transparent'}">
+     <span style="display:flex;align-items:center;gap:9px;min-width:0"><span style="color:${e.dir?'var(--mu)':'var(--fa)'}">${I(e.dir?'folder':e.link!=null?'link':fileIcon(e.name),14)}</span><span class="m" style="font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(e.name)}${e.link!=null?' <span style="color:var(--fa)">→ '+esc(e.link)+'</span>':''}</span></span>
+     <span class="m" style="font-size:12px;color:var(--mu);text-align:right">${e.link!=null?'':fB(e.size)}</span><span class="m" style="font-size:12px;color:var(--t2);text-align:right">${e.link!=null?'':fB(e.csize)}</span><span class="m" style="font-size:12px;text-align:right;color:${r>=1.5?'var(--ok)':'var(--mu)'}">${r?r.toFixed(1)+'×':'—'}</span><span style="font-size:12px;color:var(--fa)">${e.mtime?dm(e.mtime*1000)+' '+hm(e.mtime*1000):''}</span></button>`}).join(''):'<div style="padding:30px 14px;color:var(--fa);font-size:12.5px">Tom mappe</div>'}</div>
+   <div class="m" style="margin-top:auto;height:32px;display:flex;align-items:center;gap:16px;padding:0 14px;border-top:1px solid var(--line);font-size:11px;color:var(--fa);white-space:nowrap;overflow:hidden"><span style="display:flex;align-items:center;gap:6px;color:var(--ok)"><span class="dot" style="background:var(--ok)"></span>montert read-only</span><span>zstd-${X.ls?.level??job?.level??''}</span><span>${X.ls?.blocks??'—'} blokker indeksert</span><span>0 B pakket ut på disk</span><span>lest fra ${esc(S.self.name)}</span></div>
+  </div>
+  <div id="prev" style="border-left:1px solid var(--line);display:flex;flex-direction:column;min-width:0;background:#FCFCFB">${previewHTML()}</div></div></section>`}
+const fileIcon=n=>/\.(png|jpe?g|gif|webp|heic|bmp|svg|tiff?)$/i.test(n)?'image':/\.(txt|md|conf|cfg|ini|ya?ml|json|xml|log|sh|py|js|ts|css|html?|env|toml|csv|sql)$/i.test(n)?'file-text':'file-box';
+const kindOf=n=>/\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(n)?'image':/\.pdf$/i.test(n)?'pdf':fileIcon(n)==='file-text'?'text':'bin';
+const relPath=n=>[...X.path,n].filter(Boolean).join('/');
+async function pickFile(name){X.file=name;X.stat=null;X.preview=null;X.restoreKey=null;X.dl=false;const job=S.jobs.find(j=>j.id===X.job);X.target=X.ls?.src?.node||job.node;X.targetPath=(X.ls?.src?.path||job.path).replace(/\/$/,'')+'/'+relPath(name);render();
+ const base=`/api/archive/${encodeURIComponent(X.job)}/${X.snap}`,rp=encodeURIComponent(relPath(name));X.stat=await api(`${base}/stat?path=${rp}`);
+ if(kindOf(name)==='text'||(kindOf(name)==='bin'&&X.stat.size<65536)){const t=await fetch(`${base}/file?path=${rp}&head=16384`).then(r=>r.text());X.preview=/[\x00-\x08\x0E-\x1F]/.test(t.slice(0,2000))?null:t}drawPreview()}
+function drawPreview(){const el=$('#prev');if(el)el.innerHTML=previewHTML()}
+function previewHTML(){
+ if(!X.file){const here=X.path.length?X.path.join('/'):'';return`<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:30px;text-align:center;color:var(--fa)">${I('file-search',22)}<span style="font-size:12.5px;line-height:1.6">Velg en fil for å lese den<br>direkte fra arkivet</span>${here?`<button class="b2" style="margin-top:10px" onclick="restoreFolder()">${I('rotate-ccw',13)}Gjenopprett denne mappen</button>`:''}</div>`}
+ const s=X.stat,k=kindOf(X.file),base=`/api/archive/${encodeURIComponent(X.job)}/${X.snap}/file?path=${encodeURIComponent(relPath(X.file))}`,src=X.ls?.src||{},R=X.restoreKey&&S.restores[X.restoreKey];
+ const snapL=(X.snaps||[]).find(x=>x.id===X.snap),nodes=S.nodes.filter(n=>n.name!==S.self.name);
+ return`<div style="padding:14px 16px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:4px"><span class="m" style="font-weight:500;font-size:13px;word-break:break-all">${esc(X.file)}</span><span class="m" style="font-size:11px;color:var(--fa);word-break:break-all">${esc(src.node)}:${esc((src.path||'').replace(/\/$/,'')+'/'+relPath(X.file))}</span></div>
+ <div style="padding:14px 16px;border-bottom:1px solid var(--line)">${!s?'<div class="hatch" style="height:150px;border:1px solid var(--line);border-radius:6px"></div>':X.preview!=null?`<pre class="code">${esc(X.preview)}${s.size>16384?'\n…':''}</pre>`:k==='image'?`<div style="border:1px solid var(--line);border-radius:6px;background:var(--bg);display:grid;place-items:center;max-height:240px;overflow:hidden"><img src="${base}" alt="" style="max-width:100%;max-height:240px;display:block"></div>`
+  :`<div class="hatch m" style="height:150px;border:1px solid var(--line);border-radius:6px;display:grid;place-items:center;font-size:11px;color:var(--fa)">${k==='pdf'?'pdf-forhåndsvisning':'binærfil · ingen forhåndsvisning'}</div>`}</div>
+ <div class="kv" style="padding:14px 16px;border-bottom:1px solid var(--line)"><span>Original</span><span>${s?fB(s.size):'—'}</span><span>Komprimert</span><span>${s?fB(s.csize):'—'}</span><span>Ratio</span><span style="color:var(--ok)">${s&&s.csize?(s.size/s.csize).toFixed(2)+'×':'—'}</span><span>Blokker</span><span>${s?s.blocks+' × 4 MiB':'—'}</span><span>SHA-256</span><span title="${esc(s?.sha256||'')}">${s?.sha256?s.sha256.slice(0,8)+'…'+s.sha256.slice(-6):'—'}</span><span>Snapshot</span><span>${snapL?dm(snapL.createdAt)+' '+hm(snapL.createdAt):''}</span></div>
+ <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px"><span class="lbl">GJENOPPRETT TIL NODE</span>
+  <div style="display:flex;flex-wrap:wrap;gap:4px">${nodes.map(n=>`<button class="chip ${X.target===n.name?'on':''}" onclick="X.target='${jq(n.name)}';drawPreview()" ${n.online?'':'disabled'}><span class="dot" style="width:5px;height:5px;background:${n.online?'var(--ok)':'var(--fa)'}"></span>${esc(n.name)}</button>`).join('')}</div>
+  <input class="inp" value="${esc(X.targetPath)}" oninput="X.targetPath=this.value" style="background:var(--bg);font-size:11.5px">
+  ${R?`<div style="display:flex;flex-direction:column;gap:5px"><span style="display:block;height:2px;background:var(--line)"><span style="display:block;height:100%;width:${R.pct||0}%;background:${R.status==='fail'?'var(--err)':'var(--ok)'}"></span></span><span class="m" style="font-size:11px;color:${R.status==='fail'?'var(--err)':'var(--mu)'}">${R.status==='ok'?`Gjenopprettet til ${esc(R.node)}${R.check?' · '+esc(R.check):''}`:R.status==='fail'?esc(R.error||'Feilet'):`Strømmer fra ${esc(S.self.name)} via tailnet…`}</span></div>`:''}</div>
+ <div style="margin-top:auto;padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px"><a class="b2" style="flex:1" href="${base}&download" onclick="X.dl=true;setTimeout(drawPreview,50)">${I(X.dl?'check':'download',13)}${X.dl?'Lastet ned':'Last ned'}</a><button class="b1" style="flex:1" onclick="doRestore()" ${R&&R.status==='running'?'disabled':''}>${I('rotate-ccw',13)}Gjenopprett</button></div>`}
+async function doRestore(){const rel=relPath(X.file);if(!X.target)return toast('Velg en node');
+ if(!confirm(`Gjenopprette til ${X.target}:${X.targetPath}?\nEn fil med samme navn der blir overskrevet.`))return;
+ try{const r=await api('/api/restore',{body:{job:X.job,snap:X.snap,path:rel,node:X.target,targetPath:X.targetPath}});X.restoreKey=r.key;S.restores[r.key]={pct:0,status:'running',node:X.target};drawPreview()}catch(e){toast(e.message)}}
+function restoreFolder(){const job=S.jobs.find(j=>j.id===X.job),src=X.ls?.src||{},rel=X.path.join('/');
+ const t=prompt('Gjenopprett mappen til (node:sti)',`${src.node||job.node}:${(src.path||job.path).replace(/\/$/,'')}/${rel}_gjenopprettet`);if(!t)return;const i=t.indexOf(':');if(i<1)return toast('Skriv node:sti');
+ api('/api/restore',{body:{job:X.job,snap:X.snap,path:rel,node:t.slice(0,i),targetPath:t.slice(i+1)}}).then(r=>{toast('Gjenoppretter mappen…');const iv=setInterval(()=>{const R=S.restores[r.key];if(R&&R.status&&R.status!=='running'){clearInterval(iv);toast(R.status==='ok'?'Mappen er gjenopprettet':'Feilet: '+(R.error||''))}},1500)}).catch(e=>toast(e.message))}
 
-// ── Innstillinger ──
-function settingsView(){const r=S.remote,s=S.settings;
- const T=[['emailSummary','E-postvarsel','Send oppsummering hver morgen kl. 07:00'],['notifyOnFail','Varsle ved feil','Umiddelbart varsel når en jobb feiler'],['verifyAfterRun','Verifiser etter kjøring','Sammenlign sjekksummer på et utvalg filer'],['autoPrune','Automatisk opprydding','Slett snapshots eldre enn oppbevaringsgrensen']];
- const sec=(t,sub,body)=>`<section class="card" style="padding:22px;display:flex;flex-direction:column;gap:18px"><div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:15px;font-weight:600">${t}</span><span style="font-size:13px;color:#7d7d86">${sub}</span></div>${body}</section>`;
- return`<div style="display:flex;flex-direction:column;gap:14px;max-width:820px">
- ${sec('Tilkobling','SSH-tilgang til Unraid-serveren.',`<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-   <label class="fl">Vert<input class="inp" id="h" value="${esc(r.host)}" placeholder="100.x.x.x (Tailscale)"></label><label class="fl">Bruker<input class="inp" id="u" value="${esc(r.user||'root')}"></label>
-   <label class="fl" style="grid-column:1 / -1">Mål-sti<input class="inp" value="${esc(S.destRoot)}" readonly style="color:#8b8b93"></label></div>
-   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="bp" style="padding:9px 16px;font-size:13px" onclick="saveConn()">Lagre</button><button class="br" style="padding:9px 14px;font-size:13px" onclick="testConn()">Test tilkobling</button><span id="tr" style="font-size:12.5px"></span></div>`)}
- <section class="card" style="padding:8px 22px">${T.map(([k,l,sub])=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:20px;padding:16px 0;border-bottom:1px solid #1f1f24"><div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:14px;font-weight:500">${l}</span><span style="font-size:12.5px;color:#7d7d86">${sub}</span></div><button class="tg ${s[k]?'on':''}" onclick="flip('${k}')"><span></span></button></div>`).join('')}
-  <div style="padding:14px 0;font-size:12.5px;color:#6b6b74">Varsler sendes som Unraid-varsler og følger varslingsoppsettet der (f.eks. e-post). <a href="#" onclick="api('/api/notify-test',{method:'POST'}).then(()=>toast('Testvarsel sendt'));return false">Send testvarsel</a></div></section>
- ${sec('SSH-nøkkel','Lim inn i Unraid under Users → root → SSH authorized keys.',`<div class="key">${esc(S.pubkey||'Lages…')}</div><div><button class="br" style="padding:9px 14px;font-size:13px" onclick="navigator.clipboard.writeText(S.pubkey).then(()=>toast('Kopiert'))">Kopier nøkkel</button></div>`)}
- ${sec('Sikkerhet','Passord for dette panelet.',`<div style="display:flex;gap:8px;flex-wrap:wrap"><input class="inp" type="password" id="np" placeholder="Nytt passord" style="max-width:280px"><button class="br" style="padding:9px 14px;font-size:13px" onclick="setPw()">Bytt passord</button><button class="br mut" style="padding:9px 14px;font-size:13px;margin-left:auto" onclick="api('/api/logout').then(()=>showLogin(false))">Logg ut</button></div>`)}
- </div>`}
-async function saveConn(q){await api('/api/settings',{body:{remote:{host:$('#h').value,user:$('#u').value,port:S.remote.port||22}}});if(!q){toast('Lagret');document.activeElement.blur();refresh()}}
-async function testConn(){await saveConn(true);$('#tr').innerHTML='<span style="color:#7d7d86">Kobler til…</span>';const r=await api('/api/test',{method:'POST'});
- const html=r.ok?`<span style="color:${col('ok')}">✓ ${esc(r.host)} · ${r.pingMs} ms</span>`:`<span style="color:${col('fail')}">✕ ${esc(r.error)}</span>`;document.activeElement.blur();await refresh();if($('#tr'))$('#tr').innerHTML=html}
-async function flip(k){S.settings[k]=!S.settings[k];render();await api('/api/settings',{body:{settings:{[k]:S.settings[k]}}})}
-async function setPw(){try{await api('/api/password',{body:{password:$('#np').value}});toast('Passord byttet');$('#np').value=''}catch(e){toast(e.message)}}
-
-// ── Ny / rediger jobb ──
-let D=null;const SCH=[['hourly','Hver time'],['6h','Hver 6. time'],['daily','Daglig'],['weekly','Ukentlig']];
-function openJob(id){if(!S.remote.host){toast('Koble til Unraid først');return go('settings')}
- const j=id&&S.jobs.find(x=>x.id===id);
- D=j?{...JSON.parse(JSON.stringify(j)),browse:j.src.replace(/\/[^/]+\/?$/,'')||'/mnt/user'}:{src:'',name:'',schedule:{type:'daily',time:'02:00',day:0},retentionDays:30,excludes:[],mirror:true,enabled:true,bwlimit:'',browse:'/mnt/user'};
- D.dirs=null;D.adv=false;drawJob();browse(D.browse)}
-function closeOv(){ovl.innerHTML=''}document.addEventListener('keydown',e=>{if(e.key==='Escape')closeOv()});
-function drawJob(){const s=D.schedule,parts=D.browse.split('/').filter(Boolean),ed=!!D.id,top=D.browse==='/mnt/user';
- const shares=D.dirs===null?'<span style="color:#6b6b74;font-size:12.5px;grid-column:1/-1">Laster mapper…</span>':D.err?`<span style="color:${col('fail')};font-size:12.5px;grid-column:1/-1">${esc(D.err)}</span>`:D.dirs.length?D.dirs.map(d=>`<button class="share ${D.src===d.path?'on':''}" onclick="pick('${jsq(d.path)}')" title="${esc(d.path)}"><span>${esc(top?d.path:d.name)}</span><span style="display:flex;align-items:center;flex:none"><span style="color:#6b6b74">${d.size!=null?fmtB(d.size):''}</span><span class="open" onclick="event.stopPropagation();browse('${jsq(d.path)}')" title="Åpne mappen">›</span></span></button>`).join(''):'<span style="color:#6b6b74;font-size:12.5px;grid-column:1/-1">Ingen undermapper her.</span>';
- ovl.innerHTML=`<div class="ov" onclick="if(event.target===this)closeOv()"><div class="dlg">
- <div class="dh"><div style="display:flex;flex-direction:column;gap:3px"><b>${ed?'Rediger backup-jobb':'Ny backup-jobb'}</b><small>Velg en mappe på Unraid som skal sikkerhetskopieres.</small></div><button class="x" onclick="closeOv()">×</button></div>
- <div class="db">
-  <div style="display:flex;flex-direction:column;gap:8px"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><span class="lbl" style="color:#7d7d86">KILDEMAPPE</span>
-    <div class="crumb">${parts[0]==='mnt'&&parts[1]==='user'?`<a onclick="browse('/mnt/user')">/mnt/user</a>${parts.slice(2).map((x,i)=>`<span>/</span><a onclick="browse('/${jsq(parts.slice(0,i+3).join('/'))}')">${esc(x)}</a>`).join('')}`:`<a onclick="browse('/mnt/user')">/mnt/user</a><span>·</span><span>${esc(D.browse)}</span>`}</div></div>
-   <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">${shares}</div>
-   <form onsubmit="event.preventDefault();typed()" style="display:flex;gap:6px"><input class="inp" id="pp" placeholder="…eller lim inn en sti, f.eks. /mnt/user/Media/immich" value="${esc(D.typed||'')}" oninput="D.typed=this.value" style="font-size:12.5px;padding:8px 10px"><button class="br" type="submit">Bruk</button></form></div>
-  <div style="display:flex;flex-direction:column;gap:8px"><div style="display:flex;justify-content:space-between;align-items:center"><span class="lbl" style="color:#7d7d86">TIDSPLAN</span>
-   ${s.type==='daily'||s.type==='weekly'?`<span style="display:flex;gap:6px;align-items:center">${s.type==='weekly'?`<select class="inp" style="width:auto;padding:4px 8px;font-size:12px" onchange="D.schedule.day=+this.value;drawJob()">${DAYS.map((d,i)=>`<option value="${i}" ${+s.day===i?'selected':''}>${d}</option>`).join('')}</select>`:''}<input class="inp" type="time" value="${esc(s.time)}" onchange="D.schedule.time=this.value;drawJob()" style="width:auto;padding:4px 8px;font-size:12px"></span>`:''}</div>
-   <div class="seg">${SCH.map(([k,l])=>`<button class="${s.type===k?'on':''}" onclick="D.schedule.type='${k}';drawJob()">${l}</button>`).join('')}</div></div>
-  <div style="display:flex;flex-direction:column;gap:8px"><span class="lbl" style="color:#7d7d86">BEHOLD VERSJONER</span><div class="seg">${[7,30,90,365].map(n=>`<button class="${D.retentionDays===n?'on':''}" onclick="D.retentionDays=${n};drawJob()">${n} dager</button>`).join('')}</div></div>
-  <div><button onclick="D.adv=!D.adv;drawJob()" style="border:0;background:none;color:#8b8b93;font-size:12.5px;cursor:pointer;padding:0">${D.adv?'▾':'▸'} Avansert</button>
-  ${D.adv?`<div style="display:flex;flex-direction:column;gap:14px;margin-top:14px">
-   <label class="fl">Navn<input class="inp" value="${esc(D.name)}" oninput="D.name=this.value" placeholder="Fra mappenavnet"></label>
-   <div class="fl">Hopp over<div style="display:flex;flex-wrap:wrap;gap:6px">${D.excludes.map((x,i)=>`<span class="chip">${esc(x)}<button onclick="D.excludes.splice(${i},1);drawJob()">✕</button></span>`).join('')}${['thumbs/','encoded-video/','*.tmp','.Trash*/'].filter(x=>!D.excludes.includes(x)).map(x=>`<span class="chip add" onclick="D.excludes.push('${x}');drawJob()">+ ${x}</span>`).join('')}<span class="chip add" onclick="const v=prompt('Mønster, f.eks. cache/ eller *.log');if(v){D.excludes.push(v.trim());drawJob()}">+ eget…</span></div></div>
-   <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;font-size:13px"><span>Speil slettinger<br><small style="color:#7d7d86;font-size:12px">Filer slettet på Unraid slettes også her (finnes fortsatt i snapshots)</small></span><button class="tg ${D.mirror?'on':''}" onclick="D.mirror=!D.mirror;drawJob()"><span></span></button></div>
-   ${ed?`<div style="display:flex;justify-content:space-between;align-items:center;gap:16px;font-size:13px"><span>Aktiv<br><small style="color:#7d7d86;font-size:12px">Kjører etter planen</small></span><button class="tg ${D.enabled?'on':''}" onclick="D.enabled=!D.enabled;drawJob()"><span></span></button></div>`:''}
-   <label class="fl">Båndbreddegrense (f.eks. 10M = 10 MB/s)<input class="inp" value="${esc(D.bwlimit)}" oninput="D.bwlimit=this.value" placeholder="ingen grense"></label>
-   ${ed?`<div><button class="br" style="color:${col('fail')}" onclick="delJob()">Slett jobben</button></div>`:''}</div>`:''}</div>
- </div>
- <div class="df"><span class="mono" style="font-size:12px;color:#7d7d86;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${D.src?esc(D.src)+' · '+sched(s).toLowerCase():'Ingen mappe valgt'}</span>
-  <div style="display:flex;gap:8px;flex:none"><button class="br" style="padding:9px 14px;font-size:13px" onclick="closeOv()">Avbryt</button><button class="bp" style="padding:9px 16px;font-size:13px" onclick="saveJob()" ${D.src?'':'disabled'}>${ed?'Lagre':'Opprett og kjør'}</button></div></div>
- </div></div>`}
-async function browse(p){p=(p||'/mnt/user').replace(/\/+$/,'')||'/';D.browse=p;D.dirs=null;D.err='';drawJob();
- try{const r=await api('/api/browse?path='+encodeURIComponent(p));if(!D||D.browse!==p)return;D.dirs=r.dirs;D.err=r.error||''}catch(e){D.err=e.message}if(ovl.innerHTML)drawJob()}
-function pick(path){D.src=path;if(/immich/i.test(path))for(const x of['thumbs/','encoded-video/'])if(!D.excludes.includes(x))D.excludes.push(x);drawJob()}
-function typed(){const v=(D.typed||'').trim().replace(/\/+$/,'');if(!v.startsWith('/'))return toast('Stien må starte med /');pick(v);browse(v)}
-async function saveJob(){try{const b={...D,runNow:!D.id};delete b.dirs;await api('/api/jobs',{body:b});closeOv();toast(D.id?'Lagret':'Backup opprettet og startet');go('overview');refresh()}catch(e){toast(e.message)}}
-async function delJob(){if(!confirm(`Slette jobben «${D.name}»? Filene og snapshotene som allerede er tatt, blir liggende.`))return;await api('/api/jobs/'+D.id,{method:'DELETE'});closeOv();toast('Slettet');refresh()}
+// ── Modaler ──
+function closeOv(){ovl.innerHTML=''}
+const dlg=(title,icon,body,foot,w)=>{ovl.innerHTML=`<div class="ov" onclick="if(event.target===this)closeOv()"><div class="dlg" style="${w?'width:'+w+'px':''}"><div class="dh">${I(icon,15)}<b>${title}</b><button class="bi" style="margin-left:auto;border:0" onclick="closeOv()">${I('x',15)}</button></div><div class="db">${body}</div><div class="df">${foot}</div></div></div>`};
+const segH=(opts,cur,fn)=>`<div class="seg">${opts.map(([v,l])=>`<button class="${String(cur)===String(v)?'on':''}" onclick="${fn}('${v}')">${l}</button>`).join('')}</div>`;
+let J=null;
+function openJob(id){const j=id&&S.jobs.find(x=>x.id===id);const first=S.nodes.find(n=>n.online&&n.name!==S.self.name);
+ J=j?{orig:j.id,id:j.id,node:j.node,path:j.path,schedule:{...j.schedule},level:j.level,retentionDays:j.retentionDays,excludes:[...j.excludes],enabled:j.enabled}:{id:'',node:first?first.name:'',path:'',schedule:{type:'daily',time:'02:00',day:0},level:6,retentionDays:30,excludes:[],enabled:true};
+ J.browse=J.path?J.path.replace(/\/[^/]+\/?$/,'')||'/':'/mnt/user';J.dirs=null;drawJob();if(J.node)jBrowse(J.browse)}
+function drawJob(){const ed=!!J.orig,s=J.schedule,nodes=S.nodes.filter(n=>n.name!==S.self.name);
+ const dirs=!J.node?'<span style="color:var(--fa);font-size:12px">Velg en node først.</span>':J.dirs===null?'<span style="color:var(--fa);font-size:12px">Laster…</span>':J.err?`<span style="color:var(--err);font-size:12px">${esc(J.err)}</span><span style="font-size:11.5px;color:var(--fa);line-height:1.6">Legg SSH-nøkkelen inn på noden (Innstillinger → SSH-nøkkel), eller sjekk bruker med blyanten på noden.</span>`
+  :J.dirs.map(d=>`<button class="row" style="grid-template-columns:1fr auto;height:36px;padding:0 10px;background:${J.path===d.path?'rgba(47,158,107,.07)':'transparent'};box-shadow:inset 2px 0 0 ${J.path===d.path?'var(--ok)':'transparent'}" onclick="jBrowse('${jq(d.path)}')"><span style="display:flex;align-items:center;gap:8px">${I('folder',14)}<span class="m" style="font-size:12.5px">${esc(d.name)}</span></span><span style="display:flex;gap:6px;align-items:center"><span class="chip" onclick="event.stopPropagation();jPick('${jq(d.path)}')" style="height:22px">${J.path===d.path?I('check',11)+' Valgt':'Velg'}</span>${I('chevron-right',12)}</span></button>`).join('')||'<span style="color:var(--fa);font-size:12px">Ingen undermapper.</span>';
+ const crumbs=J.browse.split('/').filter(Boolean);
+ dlg(ed?'Rediger jobb':'Ny jobb','list-checks',`
+  <div class="fld"><span class="lbl">KILDENODE</span><div style="display:flex;flex-wrap:wrap;gap:4px">${nodes.map(n=>`<button class="chip ${J.node===n.name?'on':''}" onclick="J.node='${jq(n.name)}';J.path='';jBrowse('/mnt/user')"><span class="dot" style="width:5px;height:5px;background:${n.online?'var(--ok)':'var(--fa)'}"></span>${esc(n.name)}</button>`).join('')}<button class="chip" onclick="openNode()">${I('plus',11)} Annen vert</button></div></div>
+  <div class="fld"><span class="lbl">MAPPE</span><div style="border:1px solid var(--line);border-radius:8px;overflow:hidden">
+   <div class="m" style="display:flex;align-items:center;gap:2px;height:34px;padding:0 8px;border-bottom:1px solid var(--line);background:var(--bg);font-size:12px;overflow-x:auto"><button onclick="jBrowse('/')" style="border:0;background:none;padding:3px 5px;font:inherit;cursor:pointer;color:var(--mu)">/</button>${crumbs.map((c,i)=>`<button onclick="jBrowse('/${jq(crumbs.slice(0,i+1).join('/'))}')" style="border:0;background:none;padding:3px 5px;font:inherit;cursor:pointer;color:${i===crumbs.length-1?'var(--t)':'var(--mu)'}">${esc(c)}</button>${i<crumbs.length-1?'<span style="color:#C4C4CA">/</span>':''}`).join('')}<span class="chip" style="margin-left:auto;height:22px" onclick="jPick(J.browse)">Velg denne</span></div>
+   <div style="max-height:220px;overflow:auto;display:flex;flex-direction:column;${J.dirs&&J.dirs.length?'':'padding:10px;gap:6px'}">${dirs}</div></div>
+   <form onsubmit="event.preventDefault();const v=this.p.value.trim().replace(/\\/+$/,'');if(v.startsWith('/')){jPick(v);jBrowse(v)}" style="display:flex;gap:6px"><input class="inp" name="p" placeholder="…eller lim inn en sti, f.eks. /mnt/user/Media/immich"><button class="b2" style="height:32px">Bruk</button></form></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px"><label class="fld"><span class="lbl">JOBB-ID</span><input class="inp" value="${esc(J.id)}" oninput="J.id=this.value" placeholder="${esc(J.node&&J.path?(J.node+'-'+J.path.split('/').pop()).toLowerCase():'f.eks. nas-bilder')}"></label>
+   <div class="fld"><span class="lbl">KLOKKESLETT</span><input class="inp" type="time" value="${esc(s.time)}" onchange="J.schedule.time=this.value" ${s.type==='hourly'?'disabled':''}></div></div>
+  <div class="fld"><span class="lbl">PLAN</span>${segH([['hourly','Hver time'],['6h','Hver 6. time'],['daily','Daglig'],['weekly','Ukentlig']],s.type,'jSet.t')}${s.type==='weekly'?segH(DAYS.map((d,i)=>[i,d]),s.day,'jSet.d'):''}</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px"><div class="fld"><span class="lbl">KOMPRESJON</span>${segH([[1,'zstd-1'],[6,'zstd-6'],[9,'zstd-9'],[19,'zstd-19']],J.level,'jSet.l')}</div><div class="fld"><span class="lbl">BEHOLD VERSJONER</span>${segH([[7,'7 d'],[30,'30 d'],[90,'90 d'],[365,'365 d']],J.retentionDays,'jSet.r')}</div></div>
+  <div class="fld"><span class="lbl">HOPP OVER</span><div style="display:flex;flex-wrap:wrap;gap:4px">${J.excludes.map((x,i)=>`<span class="chip on">${esc(x)}<span style="cursor:pointer;color:var(--fa)" onclick="J.excludes.splice(${i},1);drawJob()">${I('x',11)}</span></span>`).join('')}${['thumbs/','encoded-video/','*.tmp','.Trash*/','cache/'].filter(x=>!J.excludes.includes(x)).map(x=>`<span class="chip" onclick="J.excludes.push('${x}');drawJob()">${I('plus',11)}${x}</span>`).join('')}<span class="chip" onclick="const v=prompt('Mønster, f.eks. logs/ eller *.iso');if(v){J.excludes.push(v.trim());drawJob()}">${I('plus',11)}eget…</span></div></div>
+  ${ed?`<div style="display:flex;align-items:center;justify-content:space-between;gap:16px"><span style="font-size:12.5px">Aktiv<br><span style="font-size:11.5px;color:var(--fa)">Kjører etter planen</span></span><button class="tg ${J.enabled?'on':''}" onclick="J.enabled=!J.enabled;drawJob()"><span></span></button></div>`:''}`,
+  `${ed?`<button class="b2" style="color:var(--err)" onclick="delJob()">${I('trash-2',13)}Slett</button>`:''}<span class="m" style="font-size:11.5px;color:var(--mu);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0 8px">${J.node&&J.path?esc(J.node+':'+J.path)+' → '+esc(S.self.name):''}</span><button class="b2" style="margin-left:auto" onclick="closeOv()">Avbryt</button><button class="b1" onclick="saveJob()" ${J.node&&J.path?'':'disabled'}>${ed?'Lagre':'Opprett og kjør'}</button>`,680)}
+const jSet={t:v=>{J.schedule.type=v;drawJob()},d:v=>{J.schedule.day=+v;drawJob()},l:v=>{J.level=+v;drawJob()},r:v=>{J.retentionDays=+v;drawJob()}};
+async function jBrowse(p){p=(p||'/').replace(/\/+$/,'')||'/';J.browse=p;J.dirs=null;J.err='';drawJob();try{const r=await api(`/api/browse?node=${encodeURIComponent(J.node)}&path=${encodeURIComponent(p)}`);if(J.browse!==p)return;if(r.error&&/No such file/.test(r.error)&&p==='/mnt/user')return jBrowse('/');J.dirs=r.dirs;J.err=r.error||''}catch(e){J.err=e.message}if(ovl.innerHTML&&J)drawJob()}
+function jPick(p){J.path=p;if(/immich/i.test(p))for(const x of['thumbs/','encoded-video/'])if(!J.excludes.includes(x))J.excludes.push(x);drawJob()}
+async function saveJob(){try{await api('/api/jobs',{body:{...J,dirs:undefined,runNow:!J.orig}});closeOv();toast(J.orig?'Lagret':'Jobben er opprettet og startet');refresh()}catch(e){toast(e.message)}}
+async function delJob(){if(!confirm(`Slette jobben ${J.orig}? Arkivet og snapshotene blir liggende.`))return;await api('/api/jobs/'+encodeURIComponent(J.orig),{method:'DELETE'});closeOv();toast('Slettet');refresh()}
+let backToJob=false;
+function openNode(name){backToJob=!!(J&&ovl.innerHTML&&!name);const n=name&&S.nodes.find(x=>x.name===name)||{};const isNew=!name;
+ dlg(isNew?'Legg til vert':'Rediger '+esc(name),'server',`${isNew?`<span style="font-size:12px;color:var(--mu);line-height:1.6">For maskiner som ikke er på tailnetet. Noder på tailnetet dukker opp av seg selv.</span><label class="fld"><span class="lbl">NAVN</span><input class="inp" id="nn" placeholder="f.eks. gammel-nas"></label><label class="fld"><span class="lbl">ADRESSE</span><input class="inp" id="nh" placeholder="IP eller vertsnavn"></label>`:''}
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px"><label class="fld"><span class="lbl">LOKASJON</span><input class="inp" id="nl" value="${esc(n.loc||'')}" placeholder="f.eks. Hjemme"></label><label class="fld"><span class="lbl">SSH-BRUKER</span><input class="inp" id="nu" value="${esc(n.user||'root')}"></label><label class="fld"><span class="lbl">PORT</span><input class="inp" id="np" value="${esc(n.port||22)}"></label></div>
+  <div id="nt" class="m" style="font-size:11.5px;color:var(--mu)"></div>`,
+  `${isNew?'':`<button class="b2" onclick="testNode('${jq(name)}')">${I('plug',13)}Test SSH</button>`}<button class="b2" style="margin-left:auto" onclick="closeNode()">Avbryt</button><button class="b1" onclick="saveNode(${isNew?'null':`'${jq(name)}'`})">Lagre</button>`,520)}
+function closeNode(){if(backToJob){backToJob=false;drawJob()}else closeOv()}
+async function saveNode(name){const b={loc:$('#nl').value,user:$('#nu').value,port:$('#np').value};if(!name){name=$('#nn').value.trim();b.host=$('#nh').value.trim();if(!name||!b.host)return toast('Fyll inn navn og adresse')}
+ await api('/api/nodes/'+encodeURIComponent(name),{method:'PATCH',body:b});toast('Lagret');await refresh();if(backToJob){backToJob=false;J.node=name;J.path='';jBrowse('/mnt/user')}else closeOv()}
+async function testNode(name){await api('/api/nodes/'+encodeURIComponent(name),{method:'PATCH',body:{loc:$('#nl').value,user:$('#nu').value,port:$('#np').value}});$('#nt').textContent='Kobler til…';const r=await api('/api/nodes/'+encodeURIComponent(name)+'/test',{method:'POST'});$('#nt').innerHTML=r.ok?`<span style="color:var(--ok)">✓ ${esc(r.info.join(' · '))}</span>`:`<span style="color:var(--err)">✕ ${esc(r.error)}</span>`}
+function openVault(){const cand=S.nodes.filter(n=>n.name!==S.self.name&&!S.jobs.some(j=>j.node===n.name));
+ dlg('Nytt backupsted','hard-drive',`<div class="fld"><span class="lbl">ENHETER PÅ TAILNET UTEN HYTTE-ROLLE</span><div style="border:1px solid var(--line);border-radius:8px;overflow:hidden">${cand.length?cand.map(n=>`<div class="row" style="grid-template-columns:20px 1.4fr 1fr 1fr;cursor:default"><span class="dot" style="background:${n.online?'var(--ok)':'var(--fa)'}"></span><span class="m" style="font-size:12.5px">${esc(n.name)}</span><span class="m" style="font-size:12px;color:var(--mu)">${esc(n.ip)}</span><span style="font-size:12px;color:var(--fa)">${esc(n.os||'')}</span></div>`).join(''):'<div style="padding:14px;color:var(--fa);font-size:12px">Ingen ledige enheter.</div>'}</div></div>
+  <div style="padding:12px 14px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-size:12px;color:var(--t2);line-height:1.6">Flere backupsteder med leder, kvorum og replikering mellom seg kommer i neste versjon. Da installerer du Hytte på enheten og velger den her.</div>`,
+  `<button class="b2" style="margin-left:auto" onclick="closeOv()">Lukk</button><button class="b1" disabled>Legg til og synk</button>`)}
+function openSettings(){const s=S.settings,T=[['emailSummary','Morgenoppsummering','Varsel kl. 07:00 med status for siste døgn'],['notifyOnFail','Varsle ved feil','Varsel med en gang en jobb feiler'],['verifyAfterRun','Verifiser etter kjøring','Sammenlign sjekksummer på et utvalg filer'],['autoPrune','Automatisk opprydding','Slett snapshots eldre enn grensen og frigjør blokker']];
+ dlg('Innstillinger','settings',`<div class="fld"><span class="lbl">SSH-NØKKEL</span><span style="font-size:12px;color:var(--mu);line-height:1.6">Legg denne inn på hver node du vil ta backup av. Unraid: Users → root → SSH authorized keys. Linux: ~/.ssh/authorized_keys.</span><div class="m" style="padding:10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);font-size:11px;word-break:break-all;color:var(--t2)">${esc(S.pubkey||'Lages…')}</div><div><button class="b2" onclick="navigator.clipboard.writeText(S.pubkey).then(()=>toast('Kopiert'))">${I('copy',13)}Kopier</button></div></div>
+  <div class="fld"><span class="lbl">VARSLER</span>${T.map(([k,l,d])=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:8px 0;border-bottom:1px solid var(--row)"><span style="font-size:12.5px">${l}<br><span style="font-size:11.5px;color:var(--fa)">${d}</span></span><button class="tg ${s[k]?'on':''}" onclick="flip('${k}')"><span></span></button></div>`).join('')}
+   <label style="display:flex;align-items:center;gap:10px;font-size:12px;color:var(--mu);padding-top:6px">Send varsler via Unraid på<select class="inp" style="width:auto" onchange="api('/api/settings',{body:{notifyNode:this.value}}).then(refresh)"><option value="">ingen</option>${S.nodes.filter(n=>n.name!==S.self.name).map(n=>`<option ${s.notifyNode===n.name?'selected':''}>${esc(n.name)}</option>`).join('')}</select></label></div>
+  <div class="fld"><span class="lbl">PASSORD</span><div style="display:flex;gap:6px"><input class="inp" type="password" id="np2" placeholder="Nytt passord"><button class="b2" style="height:32px" onclick="api('/api/password',{body:{password:$('#np2').value}}).then(()=>toast('Byttet')).catch(e=>toast(e.message))">Bytt</button></div></div>`,
+  `<button class="b2" onclick="api('/api/logout').then(()=>{closeOv();showLogin(false)})">${I('log-out',13)}Logg ut</button><button class="b2" onclick="api('/api/prune',{method:'POST'}).then(()=>toast('Opprydding kjørt'))">${I('trash-2',13)}Rydd nå</button><button class="b1" style="margin-left:auto" onclick="closeOv()">Ferdig</button>`,560)}
+async function flip(k){S.settings[k]=!S.settings[k];await api('/api/settings',{body:{[k]:S.settings[k]}});openSettings()}
 boot();
 </script>
 </body>
