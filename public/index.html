@@ -13,7 +13,8 @@
 <x-dc>
 <helmet>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
-<title>Labdeck</title>
+<title>Skjold Stack</title>
+<link rel="apple-touch-icon" href="icon.png">
 <style>@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:400;font-display:swap;src:url(/fonts/jetbrains-mono-latin-400-normal.woff2) format('woff2')}@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:500;font-display:swap;src:url(/fonts/jetbrains-mono-latin-500-normal.woff2) format('woff2')}@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:700;font-display:swap;src:url(/fonts/jetbrains-mono-latin-700-normal.woff2) format('woff2')}</style>
 <style>:root{--bg:#141416;--bg2:#18181a;--card:#1b1b1e;--line:#232326;--line2:#2a2a2e;--line3:#3a3a3e;--accent:#e8c46a;--text:#e6e4df;--text2:#c9c7c2;--soft:#a9a7a2;--muted:#8a877f;--dim:#6d6b66;--dim2:#55544f;--neg:#e0716a;--stripe1:#1f1f23;--stripe2:#232327;--hover:#212124}body{margin:0;background:var(--bg);color:var(--text2);font-family:'JetBrains Mono',monospace}.noscroll{scrollbar-width:none;-ms-overflow-style:none}.noscroll::-webkit-scrollbar{display:none}a{color:var(--accent)}a:hover{color:#f3d68e}input,textarea,select,button{font:inherit}</style>
 </helmet>
@@ -21,7 +22,7 @@
 <div style="zoom:{{zoom}};max-width:{{maxW}};margin:0 auto;padding:16px;box-sizing:border-box;display:flex;flex-direction:column;gap:18px">
 
 <header style="display:flex;align-items:center;gap:20px;padding:0 12px;height:40px;border:1px solid var(--line);border-radius:4px;background:var(--bg2)">
-  <div onClick="{{goHome}}" title="Hjem" style="width:14px;height:14px;display:grid;grid-template-columns:1fr 1fr;gap:1px;cursor:pointer"><span style="background:var(--muted)"></span><span style="background:var(--accent)"></span><span style="background:var(--accent)"></span><span style="background:var(--muted)"></span></div>
+  <div onClick="{{goHome}}" title="Skjold Stack" style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:none"><span style="display:flex;align-items:flex-end;gap:1.5px;height:14px"><span style="width:2.5px;height:7px;border-radius:2px;background:var(--text2)"></span><span style="width:2.5px;height:10px;border-radius:2px;background:var(--text2)"></span><span style="width:2.5px;height:14px;border-radius:2px;background:var(--accent)"></span><span style="width:2.5px;height:10px;border-radius:2px;background:var(--text2)"></span><span style="width:2.5px;height:7px;border-radius:2px;background:var(--text2)"></span></span><span style="font-size:10px;letter-spacing:.14em;color:var(--text);white-space:nowrap">SKJOLD STACK</span></div>
   <nav style="display:flex;gap:16px;height:100%;overflow-x:auto">
     <sc-for list="{{tabs}}" as="t" hint-placeholder-count="4">
       <button onClick="{{t.select}}" style="background:none;border:0;border-bottom:2px solid {{t.line}};color:{{t.color}};padding:0 2px;cursor:pointer;font-size:11px;white-space:nowrap">{{t.name}}</button>
@@ -485,7 +486,7 @@
 </div>
 </sc-for>
 </div>
-<span style="text-align:center;font-size:9.5px;color:var(--dim2);padding:10px">labdeck v0.1</span>
+<span style="text-align:center;font-size:9.5px;color:var(--dim2);padding:10px">Skjold Stack · av Skjold Lab</span>
 </div>
 
 <sc-if value="{{libOpen}}" hint-placeholder-val="{{false}}">
@@ -732,7 +733,7 @@ function mergeDns(list){const n=Math.max(...list.map(x=>x.hours.length)),hours=[
 async function loadDns(o){
  if(o.service==='pihole')return loadPihole(o.url,o.key);
  if(o.service==='adguard + pihole'){const r=await Promise.allSettled([loadAdguard(o.url,o.user,o.key),loadPihole(o.url2,o.key2)]),ok=r.filter(x=>x.status==='fulfilled').map(x=>x.value);
-  if(!ok.length)throw new Error('AdGuard: '+r[0].reason.message+' · Pi-hole: '+r[1].reason.message);r.forEach((x,i)=>{if(x.status==='rejected')console.warn('[Labdeck DNS] '+['AdGuard','Pi-hole'][i]+': '+x.reason.message)});return mergeDns(ok)}
+  if(!ok.length)throw new Error('AdGuard: '+r[0].reason.message+' · Pi-hole: '+r[1].reason.message);r.forEach((x,i)=>{if(x.status==='rejected')console.warn('[Skjold Stack DNS] '+['AdGuard','Pi-hole'][i]+': '+x.reason.message)});return mergeDns(ok)}
  return loadAdguard(o.url,o.user,o.key)}
 const DEMO_DNS=(()=>{const now=Date.now(),hours=[...Array(24)].map((_,i)=>{const t=now-(23-i)*3600e3,hr=new Date(t).getHours(),q=Math.round(900+Math.sin((hr-4)/24*Math.PI*2-Math.PI/2)*700+((i*37)%11)*40+700);return{q,b:Math.round(q*(.14+((i*13)%7)/100)),t}});
  return{total:hours.reduce((a,x)=>a+x.q,0),blocked:hours.reduce((a,x)=>a+x.b,0),lat:4.2,hours,top:[['doubleclick.net',1284],['app-measurement.com',902],['graph.facebook.com',611],['telemetry.microsoft.com',433],['ads.tiktok.com',219]].map(([d,n])=>({d,n}))}})();
@@ -843,7 +844,7 @@ class Component extends DCLogic{
  discCfg(){try{return JSON.parse(localStorage.getItem('labdeck-discover'))||{}}catch(e){return{}}}
  discSave(c){localStorage.setItem('labdeck-discover',JSON.stringify(c));this.forceUpdate()}
  discFetch(fresh){return fetch('/api/discover'+(fresh?'?fresh':''),{cache:'no-store'}).then(r=>r.json())}
- discOpen(){this.setState({discOpen:true,discBusy:true,discSel:{}});this.discFetch(true).then(v=>this.setState({disc:v,discBusy:false})).catch(e=>this.setState({disc:{items:[],errors:['Labdeck: '+e.message],sources:{}},discBusy:false}))}
+ discOpen(){this.setState({discOpen:true,discBusy:true,discSel:{}});this.discFetch(true).then(v=>this.setState({disc:v,discBusy:false})).catch(e=>this.setState({disc:{items:[],errors:['Skjold Stack: '+e.message],sources:{}},discBusy:false}))}
  discEx(boards){const keys=new Set(),urls=new Set();for(const t in boards)for(const col of boards[t])for(const w of col)if(w.type==='apps')for(const a of w.apps||[]){if(!a||typeof a!=='object')continue;if(a.disc)keys.add(a.disc);const k=urlKey(a.url);if(k)urls.add(k)}return{keys,urls}}
  discIsNew(it,ex){return!ex.keys.has(it.key)&&!(it.url&&ex.urls.has(urlKey(it.url)))}
  discTile(it,auto){return{name:it.name,url:it.url,icon:it.icon||'',status:'auto',disc:it.key,...(auto?{auto:true}:{})}}
