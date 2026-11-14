@@ -62,11 +62,6 @@ systemctl restart backup-gui
 sleep 1
 echo "Hytte oppdatert til ${SHA:0:7} ✓  ($(curl -s localhost:${PORT:-8090}/api/health))"
 UPD
-#!/usr/bin/env bash
-set -e
-for f in server.js store.js public/index.html public/icon.svg public/icon-180.png public/vendor/lucide.min.js; do curl -fsSL "$RAW/\$f?\$(date +%s)" -o "/opt/backup-gui/\$f"; done
-systemctl restart backup-gui && echo "Hytte Backup oppdatert ✓"
-UPD
 chmod +x /usr/local/bin/update-backup-gui
 ln -sf /usr/local/bin/update-backup-gui /usr/bin/update-backup-gui
 systemctl daemon-reload
