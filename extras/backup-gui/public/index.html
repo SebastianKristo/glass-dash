@@ -69,7 +69,8 @@ button:disabled{opacity:.45;cursor:default!important}
 @keyframes lgDrift{0%,100%{transform:translate(0,0)}50%{transform:translate(-36px,-10px)}}
 .lg-mote{position:absolute;width:6px;height:6px;border-radius:50%;background:#fff;box-shadow:0 0 12px 4px rgba(255,255,255,.8);opacity:0;animation:lgMote 13s ease-in-out infinite}
 @keyframes lgMote{0%{opacity:0;transform:translateY(20px)}30%,70%{opacity:.9}100%{opacity:0;transform:translateY(-60px)}}
-.lg-card{border-radius:40px;box-shadow:0 40px 80px rgba(20,22,31,.10),0 2px 0 rgba(255,255,255,.8) inset;animation:lgIn .7s cubic-bezier(.2,.8,.2,1) both}
+.lg-card{visibility:hidden;border-radius:40px;box-shadow:0 40px 80px rgba(20,22,31,.10),0 2px 0 rgba(255,255,255,.8) inset}
+.lg-card.ready{visibility:visible;animation:lgIn .7s cubic-bezier(.2,.8,.2,1) both}
 @keyframes lgIn{from{opacity:0;transform:translateY(14px) scale(.98)}}
 @media(max-width:700px){.lg-shield{left:6%;top:6%}.lg-cloud{right:-12%;top:auto;bottom:6%}}
 @media(prefers-reduced-motion:reduce){.lg *,.lg{animation:none!important}}
@@ -130,12 +131,12 @@ function route(){const p=location.pathname.replace(/\/$/,'')||'/';view=Object.ke
 function go(v){view=v;history.pushState({},'',VIEWS[v][2]);render();if(v==='files')initFiles();window.scrollTo(0,0)}
 window.onpopstate=()=>{route();render();if(view==='files')initFiles()};
 async function boot(){route();const w=await fetch('/api/whoami').then(r=>r.json());if(!w.authed)return showLogin(w.setup);await refresh();if(view==='files')initFiles();sse()}
-function showLogin(setup){clearTimeout(poll);app.innerHTML=`<div class="lg"><iframe class="lg-bg" src="/ambient.html?bare-bakgrunn" title="" aria-hidden="true" tabindex="-1"></iframe>
+function showLogin(setup){clearTimeout(poll);if($('#lf')&&!setup)return;app.innerHTML=`<div class="lg"><iframe class="lg-bg" src="/ambient.html?bare-bakgrunn" title="" aria-hidden="true" tabindex="-1"></iframe>
  <form id="lf" class="card lg-card" style="width:min(420px,100%);padding:36px 40px 40px;gap:20px;position:relative;z-index:2">
  <div style="display:flex;align-items:center;gap:14px">${SKJOLD(30)}<div style="display:flex;flex-direction:column;line-height:1.2"><span style="font-weight:700;letter-spacing:.14em;font-size:12px">HYTTE</span><span style="font-weight:600;letter-spacing:.1em;font-size:10px;color:var(--mu)">SKJOLD LAB</span></div></div>
  <span class="t22">${setup?'Velg et passord':'Logg inn'}</span><input class="inp" type="password" id="pw" autocomplete="current-password" enterkeyhint="go" placeholder="${setup?'Minst 6 tegn':'Passord'}" autofocus>
  <button type="submit" class="bp" style="justify-content:space-between">${setup?'Lagre og fortsett':'Logg inn'}<span class="ar">${I('arrow-right',16,2)}</span></button><span id="le" style="color:var(--err);font-size:13px"></span></form></div>`;
- const pw=$('#pw');pw.focus();pw.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('#lf').requestSubmit()}};$('#lf').onsubmit=async e=>{e.preventDefault();if(!pw.value)return;try{await api('/api/login',{body:{password:$('#pw').value}});boot()}catch(x){$('#le').textContent=x.message}}}
+ const pw=$('#pw');const card=$('#lf');Promise.race([document.fonts?document.fonts.ready:Promise.resolve(),new Promise(r=>setTimeout(r,1200))]).then(()=>{card.classList.add('ready');pw.focus()});pw.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('#lf').requestSubmit()}};$('#lf').onsubmit=async e=>{e.preventDefault();if(!pw.value)return;try{await api('/api/login',{body:{password:$('#pw').value}});boot()}catch(x){$('#le').textContent=x.message}}}
 async function refresh(){try{[S]=await Promise.all([api('/api/state'),loadDevices()])}catch(e){return}const a=document.activeElement;if(!$('aside')||!(a&&a.tagName==='INPUT'&&app.contains(a)))render();clearTimeout(poll);poll=setTimeout(refresh,S.running?2000:10000)}
 let rt=null;const soon=()=>{clearTimeout(rt);rt=setTimeout(refresh,300)};
 function sse(){try{const es=new EventSource('/api/events');es.addEventListener('coord.log',e=>{S&&S.log.push(JSON.parse(e.data));if(view==='sync')drawLog();soon()});
