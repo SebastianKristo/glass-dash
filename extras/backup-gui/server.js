@@ -7,7 +7,7 @@ const http = require('http'), fs = require('fs'), path = require('path'), crypto
 const { spawn, execFile } = require('child_process');
 const { Store, TarReader, tarHeader, tarPad, BLOCK } = require('./store');
 
-const VERSION = '3.1.0';
+const VERSION = '3.2.0';
 const PORT = +process.env.PORT || 8090;
 const DATA = process.env.DATA_DIR || '/opt/backup-gui/data';
 const DEST_ROOT = process.env.DEST_ROOT || '/mnt/unraid';

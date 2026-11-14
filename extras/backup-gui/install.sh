@@ -4,7 +4,8 @@
 set -euo pipefail
 CTID="${CTID:-103}"
 BRANCH="${BRANCH:-backup-gui}"
-RAW="https://raw.githubusercontent.com/SebastianKristo/glass-dash/${BRANCH}/extras/backup-gui"
+SHA=$(curl -fsSL "https://api.github.com/repos/SebastianKristo/glass-dash/commits/$BRANCH" | grep -m1 '"sha"' | cut -d'"' -f4 || true)
+RAW="https://raw.githubusercontent.com/SebastianKristo/glass-dash/${SHA:-$BRANCH}/extras/backup-gui"
 PORT="${PORT:-8090}"
 DEST_ROOT="${DEST_ROOT:-/mnt/unraid}"
 
@@ -25,7 +26,7 @@ if ! node -e "process.exit(typeof require('zlib').zstdCompressSync==='function'?
   apt-get install -y -qq nodejs >/dev/null
 fi
 mkdir -p /opt/backup-gui/public/vendor /opt/backup-gui/data
-for f in server.js store.js public/index.html public/icon.svg public/icon-180.png public/vendor/lucide.min.js; do curl -fsSL "$RAW/$f?$(date +%s)" -o "/opt/backup-gui/$f"; done
+for f in server.js store.js public/index.html public/icon.svg public/icon-180.png public/vendor/lucide.min.js; do curl -fsSL "$RAW/$f" -o "/opt/backup-gui/$f"; done
 chmod 700 /opt/backup-gui/data
 cat >/etc/systemd/system/backup-gui.service <<UNIT
 [Unit]
@@ -44,7 +45,22 @@ Restart=always
 [Install]
 WantedBy=multi-user.target
 UNIT
-cat >/usr/local/bin/update-backup-gui <<UPD
+cat >/usr/local/bin/update-backup-gui <<'UPD'
+#!/usr/bin/env bash
+# Henter nyeste commit direkte (unngår GitHub raw-cache), laster filene og restarter.
+set -euo pipefail
+BRANCH="${BRANCH:-backup-gui}"
+SHA=$(curl -fsSL "https://api.github.com/repos/SebastianKristo/glass-dash/commits/$BRANCH" | grep -m1 '"sha"' | cut -d'"' -f4)
+[ -n "$SHA" ] || { echo "Fant ikke siste commit på GitHub"; exit 1; }
+RAW="https://raw.githubusercontent.com/SebastianKristo/glass-dash/$SHA/extras/backup-gui"
+mkdir -p /opt/backup-gui/public/vendor
+for f in server.js store.js public/index.html public/icon.svg public/icon-180.png public/vendor/lucide.min.js; do
+  curl -fsSL "$RAW/$f" -o "/opt/backup-gui/$f.new" && mv "/opt/backup-gui/$f.new" "/opt/backup-gui/$f"
+done
+systemctl restart backup-gui
+sleep 1
+echo "Hytte oppdatert til ${SHA:0:7} ✓  ($(curl -s localhost:${PORT:-8090}/api/health))"
+UPD
 #!/usr/bin/env bash
 set -e
 for f in server.js store.js public/index.html public/icon.svg public/icon-180.png public/vendor/lucide.min.js; do curl -fsSL "$RAW/\$f?\$(date +%s)" -o "/opt/backup-gui/\$f"; done
