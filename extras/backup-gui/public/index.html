@@ -8,10 +8,12 @@
 <link rel="alternate icon" type="image/png" href="/icon-180.png">
 <link rel="apple-touch-icon" href="/icon-180.png">
 <meta name="theme-color" content="#EEEEEA">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="preload" href="/fonts/onest-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/onest-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/jetbrains-mono-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <script src="/vendor/lucide.min.js"></script>
 <style>
+@font-face{font-family:Onest;font-style:normal;font-weight:400;font-display:block;src:url(/fonts/onest-latin-400-normal.woff2) format('woff2')}@font-face{font-family:Onest;font-style:normal;font-weight:500;font-display:block;src:url(/fonts/onest-latin-500-normal.woff2) format('woff2')}@font-face{font-family:Onest;font-style:normal;font-weight:600;font-display:block;src:url(/fonts/onest-latin-600-normal.woff2) format('woff2')}@font-face{font-family:Onest;font-style:normal;font-weight:700;font-display:block;src:url(/fonts/onest-latin-700-normal.woff2) format('woff2')}@font-face{font-family:Onest;font-style:normal;font-weight:800;font-display:block;src:url(/fonts/onest-latin-800-normal.woff2) format('woff2')}@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:400;font-display:block;src:url(/fonts/jetbrains-mono-latin-400-normal.woff2) format('woff2')}@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:500;font-display:block;src:url(/fonts/jetbrains-mono-latin-500-normal.woff2) format('woff2')}
 :root{--page:#E3E3DE;--canvas:#EEEEEA;--sf:#FFFFFF;--soft:#F6F6F3;--softh:#F0F0EC;--line:#E6E6E1;--ctl:#D8D8D2;--ink:#14161F;--ink2:#4A4D57;--mu:#8A8C93;--fh:#A3A59F;--or:#FF6B3D;--ort:#FFF0E9;--pe:#FFE3D6;--pe2:#FF9F7A;--pet:#C2552B;--bl:#3D6BFF;--bls:#C9D6FF;--ye:#FFD27A;--li:#B9A8FF;--gold:#D9A441;--ok:#4E9A2A;--warn:#E39A2D;--err:#E5484D;--off:#B4B5BA;--mono:'JetBrains Mono',ui-monospace,monospace}
 *{box-sizing:border-box}
 body{margin:0;background:var(--page);color:var(--ink);font-family:Onest,system-ui,sans-serif;font-size:14px;-webkit-font-smoothing:antialiased}
@@ -70,7 +72,7 @@ button:disabled{opacity:.45;cursor:default!important}
 .lg-mote{position:absolute;width:6px;height:6px;border-radius:50%;background:#fff;box-shadow:0 0 12px 4px rgba(255,255,255,.8);opacity:0;animation:lgMote 13s ease-in-out infinite}
 @keyframes lgMote{0%{opacity:0;transform:translateY(20px)}30%,70%{opacity:.9}100%{opacity:0;transform:translateY(-60px)}}
 .lg-card{visibility:hidden;border-radius:40px;box-shadow:0 40px 80px rgba(20,22,31,.10),0 2px 0 rgba(255,255,255,.8) inset}
-.lg-card.ready{visibility:visible;animation:lgIn .7s cubic-bezier(.2,.8,.2,1) both}
+.lg-card.ready{visibility:visible}
 @keyframes lgIn{from{opacity:0;transform:translateY(14px) scale(.98)}}
 @media(max-width:700px){.lg-shield{left:6%;top:6%}.lg-cloud{right:-12%;top:auto;bottom:6%}}
 @media(prefers-reduced-motion:reduce){.lg *,.lg{animation:none!important}}
@@ -131,12 +133,12 @@ function route(){const p=location.pathname.replace(/\/$/,'')||'/';view=Object.ke
 function go(v){view=v;history.pushState({},'',VIEWS[v][2]);render();if(v==='files')initFiles();window.scrollTo(0,0)}
 window.onpopstate=()=>{route();render();if(view==='files')initFiles()};
 async function boot(){route();const w=await fetch('/api/whoami').then(r=>r.json());if(!w.authed)return showLogin(w.setup);await refresh();if(view==='files')initFiles();sse()}
-function showLogin(setup){clearTimeout(poll);if($('#lf')&&!setup)return;app.innerHTML=`<div class="lg"><iframe class="lg-bg" id="lgbg" src="/ambient.html?bare-bakgrunn&v=4" title="" aria-hidden="true" tabindex="-1"></iframe>
+function showLogin(setup){clearTimeout(poll);if($('#lf'))return;app.innerHTML=`<div class="lg"><iframe class="lg-bg" id="lgbg" src="/ambient.html?bare-bakgrunn&v=4" title="" aria-hidden="true" tabindex="-1"></iframe>
  <form id="lf" class="card lg-card" style="width:min(420px,100%);padding:36px 40px 40px;gap:20px;position:relative;z-index:2">
  <div style="display:flex;align-items:center;gap:14px">${SKJOLD(30)}<div style="display:flex;flex-direction:column;line-height:1.2"><span style="font-weight:700;letter-spacing:.14em;font-size:12px">HYTTE</span><span style="font-weight:600;letter-spacing:.1em;font-size:10px;color:var(--mu)">SKJOLD LAB</span></div></div>
  <span class="t22">${setup?'Velg et passord':'Logg inn'}</span><input class="inp" type="password" id="pw" autocomplete="current-password" enterkeyhint="go" placeholder="${setup?'Minst 6 tegn':'Passord'}" autofocus>
  <button type="submit" class="bp" style="justify-content:space-between">${setup?'Lagre og fortsett':'Logg inn'}<span class="ar">${I('arrow-right',16,2)}</span></button><span id="le" style="color:var(--err);font-size:13px"></span></form></div>`;
- const pw=$('#pw');const card=$('#lf');const bg=$('#lgbg'),bgReady=new Promise(r=>{bg.onload=r});Promise.race([Promise.all([document.fonts?document.fonts.ready:0,bgReady]),new Promise(r=>setTimeout(r,1800))]).then(()=>{bg.classList.add('on');card.classList.add('ready');pw.focus()});pw.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('#lf').requestSubmit()}};$('#lf').onsubmit=async e=>{e.preventDefault();if(!pw.value)return;try{await api('/api/login',{body:{password:$('#pw').value}});boot()}catch(x){$('#le').textContent=x.message}}}
+ const pw=$('#pw');const card=$('#lf');const bg=$('#lgbg'),bgReady=new Promise(r=>{bg.onload=r});Promise.race([Promise.all([document.fonts?document.fonts.ready:0,bgReady]),new Promise(r=>setTimeout(r,1800))]).then(()=>{const first=!window.__lgShown;window.__lgShown=1;if(!first)bg.style.transition='none';bg.classList.add('on');card.classList.add('ready');if(first)try{card.animate([{opacity:0,transform:'translateY(14px) scale(.98)'},{opacity:1,transform:'none'}],{duration:700,easing:'cubic-bezier(.2,.8,.2,1)'})}catch(e){}pw.focus()});pw.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('#lf').requestSubmit()}};$('#lf').onsubmit=async e=>{e.preventDefault();if(!pw.value)return;try{await api('/api/login',{body:{password:$('#pw').value}});boot()}catch(x){$('#le').textContent=x.message}}}
 async function refresh(){try{[S]=await Promise.all([api('/api/state'),loadDevices()])}catch(e){return}const a=document.activeElement;if(!$('aside')||!(a&&a.tagName==='INPUT'&&app.contains(a)))render();clearTimeout(poll);poll=setTimeout(refresh,S.running?2000:10000)}
 let rt=null;const soon=()=>{clearTimeout(rt);rt=setTimeout(refresh,300)};
 function sse(){try{const es=new EventSource('/api/events');es.addEventListener('coord.log',e=>{S&&S.log.push(JSON.parse(e.data));if(view==='sync')drawLog();soon()});

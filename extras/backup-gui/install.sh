@@ -27,7 +27,8 @@ if ! node -e "process.exit(typeof require('zlib').zstdCompressSync==='function'?
   apt-get install -y -qq nodejs >/dev/null
 fi
 mkdir -p /opt/backup-gui/public/vendor /opt/backup-gui/data
-for f in server.js store.js public/index.html public/ambient.html public/icon.svg public/icon-180.png public/vendor/lucide.min.js; do curl -fsSL "$RAW/$f" -o "/opt/backup-gui/$f"; done
+FILES=$(curl -fsSL "$RAW/files.txt" 2>/dev/null || echo "server.js store.js public/index.html public/ambient.html public/icon.svg public/icon-180.png public/vendor/lucide.min.js")
+for f in $FILES; do mkdir -p "/opt/backup-gui/$(dirname "$f")"; curl -fsSL "$RAW/$f" -o "/opt/backup-gui/$f"; done
 chmod 700 /opt/backup-gui/data
 cat >/etc/systemd/system/backup-gui.service <<UNIT
 [Unit]

@@ -259,7 +259,7 @@ function disk() { return new Promise(ok => execFile('df', ['-B1', '--output=size
 // ── HTTP ─────────────────────────────────────────────────────────────────────
 const json = (res, code, o) => { res.writeHead(code, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(o)) };
 const body = req => new Promise(r => { let b = ''; req.on('data', d => { b += d; if (b.length > 1e6) req.destroy() }); req.on('end', () => { try { r(JSON.parse(b || '{}')) } catch (e) { r({}) } }) });
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.webmanifest': 'application/manifest+json', '.txt': 'text/plain; charset=utf-8' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json', '.txt': 'text/plain; charset=utf-8' };
 const rest = {}; // gjenoppretting-progresjon
 
 http.createServer(async (req, res) => {
@@ -268,7 +268,7 @@ http.createServer(async (req, res) => {
     if (!p.startsWith('/api/')) {
       const f = path.join(PUB, /^\/(backupsteder|filer)?\/?$/.test(p) ? 'index.html' : path.normalize(p).replace(/^(\.\.[/\\])+/, ''));
       if (!f.startsWith(PUB) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); return res.end() }
-      res.writeHead(200, { 'Content-Type': MIME[path.extname(f)] || 'application/octet-stream', 'Cache-Control': f.includes('/vendor/') ? 'max-age=604800' : 'no-cache' }); return fs.createReadStream(f).pipe(res);
+      res.writeHead(200, { 'Content-Type': MIME[path.extname(f)] || 'application/octet-stream', 'Cache-Control': (f.includes('/vendor/') || f.includes('/fonts/')) ? 'max-age=604800' : 'no-cache' }); return fs.createReadStream(f).pipe(res);
     }
     if (p === '/api/health') return json(res, 200, { ok: true, app: 'hytte', version: VERSION });
     if (p === '/api/whoami') return json(res, 200, { authed: authed(req), setup: !cfg.auth });
