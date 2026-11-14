@@ -8,7 +8,8 @@ Backup-containeren *henter* filene med rsync over SSH, så Unraid trenger bare e
 - Live fremdrift, stopp/fortsett, historikk og logg per kjøring
 - Unntak (Immich: `thumbs/` og `encoded-video/` legges til automatisk)
 - Speiling av slettinger, båndbreddegrense
-- Viser ledig plass og ZFS-snapshots (sanoid på verten)
+- ZFS-snapshot etter hver kjøring (per jobb, med oppbevaring 7/30/90/365 dager) og gjenoppretting fra GUI-et
+- Varsler og morgenoppsummering via Unraid-varsler, verifisering med sjekksummer
 - Passordbeskyttet, ingen avhengigheter (Node + rsync + ssh)
 
 ## Installere
@@ -20,4 +21,6 @@ CTID=103 bash -c "$(curl -fsSL https://raw.githubusercontent.com/SebastianKristo
 ```
 
 Åpne `http://<CT-IP>:8090`, velg passord, og følg stegene under **Innstillinger**.
-Oppdatere: `pct exec 103 -- update-backup-gui`.
+Installasjonen legger også inn en liten ZFS-hjelper på verten (`/usr/local/sbin/hytte-zfs`, systemd `hytte-zfs.path`/`.timer`) som tar og rydder snapshots på datasettet bak `/mnt/unraid`. Den rører bare snapshots som heter `hytte-…`.
+
+Oppdatere: kjør installasjonskommandoen på nytt.
