@@ -50,6 +50,28 @@ button:disabled{opacity:.45;cursor:default!important}
 .toast{position:fixed;bottom:26px;left:50%;transform:translate(-50%,100px);background:var(--ink);color:#fff;padding:12px 20px;border-radius:999px;font-size:13.5px;font-weight:500;transition:.25s;z-index:60;opacity:0;pointer-events:none}.toast.on{transform:translate(-50%,0);opacity:1}
 .fr{display:grid;grid-template-columns:minmax(0,2.4fr) .8fr .9fr .6fr .9fr;gap:12px;align-items:center;height:54px;padding:0 14px 0 8px;border:0;border-radius:999px;text-align:left;cursor:pointer;background:transparent;width:100%}.fr:hover{background:var(--soft)}
 .odc .oda{display:none}.odc:hover .oda{display:grid}.odc:hover .odl{visibility:hidden}
+
+.lg{position:relative;min-height:100dvh;display:grid;place-items:center;padding:20px;overflow:hidden;background:radial-gradient(120% 80% at 50% 0%,#EDEDE8 0%,#E2E2DC 60%,#DDDDD6 100%)}
+.lg-arcs{position:absolute;inset:0;width:100%;height:100%}
+.lg-s1,.lg-s2{stroke-dasharray:14 86;animation:lgRun 9s linear infinite}.lg-s2{animation-duration:7s;animation-delay:-3s}
+@keyframes lgRun{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}
+.lg-a1,.lg-a2{animation:lgBreath 8s ease-in-out infinite}.lg-a2{animation-delay:-4s}
+@keyframes lgBreath{50%{stroke-opacity:.95}}
+.lg-sweep{animation:lgSweep 14s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+@keyframes lgSweep{50%{opacity:.18;transform:rotate(14deg) translateX(30px)}}
+.lg-shadow{animation:lgShadow 10s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+@keyframes lgShadow{50%{transform:scaleX(1.08);opacity:.32}}
+.lg-shield{position:absolute;left:10.5%;top:17%;width:clamp(90px,7.8vw,160px);filter:drop-shadow(0 26px 30px rgba(20,22,31,.12));animation:lgFloat 7s ease-in-out infinite}
+.lg-shield svg,.lg-cloud svg{display:block;width:100%;height:auto}
+@keyframes lgFloat{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-16px) rotate(2deg)}}
+.lg-cloud{position:absolute;right:3.5%;top:46%;width:clamp(200px,21vw,440px);filter:drop-shadow(0 30px 40px rgba(20,22,31,.10));animation:lgDrift 16s ease-in-out infinite}
+@keyframes lgDrift{0%,100%{transform:translate(0,0)}50%{transform:translate(-36px,-10px)}}
+.lg-mote{position:absolute;width:6px;height:6px;border-radius:50%;background:#fff;box-shadow:0 0 12px 4px rgba(255,255,255,.8);opacity:0;animation:lgMote 13s ease-in-out infinite}
+@keyframes lgMote{0%{opacity:0;transform:translateY(20px)}30%,70%{opacity:.9}100%{opacity:0;transform:translateY(-60px)}}
+.lg-card{border-radius:40px;box-shadow:0 40px 80px rgba(20,22,31,.10),0 2px 0 rgba(255,255,255,.8) inset;animation:lgIn .7s cubic-bezier(.2,.8,.2,1) both}
+@keyframes lgIn{from{opacity:0;transform:translateY(14px) scale(.98)}}
+@media(max-width:700px){.lg-shield{left:6%;top:6%}.lg-cloud{right:-12%;top:auto;bottom:6%}}
+@media(prefers-reduced-motion:reduce){.lg *,.lg{animation:none!important}}
 .dirrow{display:flex;align-items:center;gap:12px;height:48px;padding:0 8px;border:0;border-radius:999px;cursor:pointer;background:transparent;width:100%;text-align:left}.dirrow:hover{background:var(--soft)}
 
 :root{--pad:clamp(12px,1.2vw,24px);--gap:clamp(12px,1vw,20px)}
@@ -107,7 +129,25 @@ function route(){const p=location.pathname.replace(/\/$/,'')||'/';view=Object.ke
 function go(v){view=v;history.pushState({},'',VIEWS[v][2]);render();if(v==='files')initFiles();window.scrollTo(0,0)}
 window.onpopstate=()=>{route();render();if(view==='files')initFiles()};
 async function boot(){route();const w=await fetch('/api/whoami').then(r=>r.json());if(!w.authed)return showLogin(w.setup);await refresh();if(view==='files')initFiles();sse()}
-function showLogin(setup){clearTimeout(poll);app.innerHTML=`<div style="min-height:100vh;display:grid;place-items:center;padding:20px"><form id="lf" class="card" style="width:380px;padding:32px;gap:18px">
+function showLogin(setup){clearTimeout(poll);app.innerHTML=`<div class="lg">
+ <svg class="lg-arcs" viewBox="0 0 2048 1152" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs><linearGradient id="lgS" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".95"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <filter id="lgB2" x="-30%" y="-200%" width="160%" height="500%"><feGaussianBlur stdDeviation="14"/></filter><radialGradient id="lgH" cx=".5" cy="0" r=".7"><stop offset="0" stop-color="#F7F7F3"/><stop offset="1" stop-color="#E9E9E4"/></radialGradient></defs>
+  <path class="lg-a1" d="M30 290 C 200 470, 700 620, 1060 600 C 1450 580, 1900 330, 2048 10" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="3"/>
+  <path class="lg-a2" d="M1180 330 C 1450 260, 1640 120, 1730 0" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="2.5"/>
+  <path class="lg-s1" d="M30 290 C 200 470, 700 620, 1060 600 C 1450 580, 1900 330, 2048 10" fill="none" stroke="url(#lgS)" stroke-width="5" pathLength="100"/>
+  <path class="lg-s2" d="M1180 330 C 1450 260, 1640 120, 1730 0" fill="none" stroke="url(#lgS)" stroke-width="4" pathLength="100"/>
+  <ellipse class="lg-sweep" cx="380" cy="300" rx="390" ry="40" fill="#D8D8D2" opacity=".35" filter="url(#lgB2)" transform="rotate(14 380 300)"/>
+  <path d="M-100 1152 L-100 860 Q 1024 740 2148 860 L2148 1152 Z" fill="url(#lgH)"/>
+  <filter id="lgB" x="-50%" y="-200%" width="200%" height="500%"><feGaussianBlur stdDeviation="40"/></filter><ellipse class="lg-shadow" cx="1150" cy="900" rx="560" ry="60" fill="#B9B9B2" opacity=".28" filter="url(#lgB)"/>
+ </svg>
+ <div class="lg-shield" aria-hidden="true"><svg viewBox="0 0 160 190"><defs><linearGradient id="lgSh" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E4E4DE"/></linearGradient></defs>
+  <path d="M80 6 L148 32 Q152 34 152 40 L152 92 Q152 150 80 184 Q8 150 8 92 L8 40 Q8 34 12 32 Z" fill="url(#lgSh)" stroke="#fff" stroke-width="6"/>
+  <path d="M50 96 L72 118 L114 72" fill="none" stroke="#9A9B96" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+ <div class="lg-cloud" aria-hidden="true"><svg viewBox="0 0 440 260"><defs><radialGradient id="lgC" cx=".4" cy=".25" r=".9"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".6" stop-color="#F1F1ED"/><stop offset="1" stop-color="#D9D9D3"/></radialGradient></defs>
+  <path d="M80 250 Q 0 250 0 175 Q 0 100 78 96 Q 100 0 222 0 Q 330 0 342 98 Q 440 96 440 175 Q 440 250 360 250 Z" fill="url(#lgC)"/></svg></div>
+ <div class="lg-mote" style="left:22%;top:70%"></div><div class="lg-mote" style="left:63%;top:22%;animation-delay:-4s"></div><div class="lg-mote" style="left:82%;top:48%;animation-delay:-9s"></div>
+ <form id="lf" class="card lg-card" style="width:min(420px,100%);padding:36px 40px 40px;gap:20px;position:relative;z-index:2">
  <div style="display:flex;align-items:center;gap:14px">${SKJOLD(30)}<div style="display:flex;flex-direction:column;line-height:1.2"><span style="font-weight:700;letter-spacing:.14em;font-size:12px">HYTTE</span><span style="font-weight:600;letter-spacing:.1em;font-size:10px;color:var(--mu)">SKJOLD LAB</span></div></div>
  <span class="t22">${setup?'Velg et passord':'Logg inn'}</span><input class="inp" type="password" id="pw" autocomplete="current-password" enterkeyhint="go" placeholder="${setup?'Minst 6 tegn':'Passord'}" autofocus>
  <button type="submit" class="bp" style="justify-content:space-between">${setup?'Lagre og fortsett':'Logg inn'}<span class="ar">${I('arrow-right',16,2)}</span></button><span id="le" style="color:var(--err);font-size:13px"></span></form></div>`;
