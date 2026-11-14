@@ -4,7 +4,8 @@
 set -euo pipefail
 CTID="${CTID:-103}"
 BRANCH="${BRANCH:-backup-gui}"
-SHA=$(curl -fsSL "https://api.github.com/repos/SebastianKristo/glass-dash/commits/$BRANCH" | grep -m1 '"sha"' | cut -d'"' -f4 || true)
+SHA=$(curl -fsSL -H 'Accept: application/vnd.github.sha' "https://api.github.com/repos/SebastianKristo/glass-dash/commits/$BRANCH" 2>/dev/null | tr -dc '0-9a-f' || true)
+[ ${#SHA} -eq 40 ] || SHA=""
 RAW="https://raw.githubusercontent.com/SebastianKristo/glass-dash/${SHA:-$BRANCH}/extras/backup-gui"
 PORT="${PORT:-8090}"
 DEST_ROOT="${DEST_ROOT:-/mnt/unraid}"
@@ -50,8 +51,8 @@ cat >/usr/local/bin/update-backup-gui <<'UPD'
 # Henter nyeste commit direkte (unngår GitHub raw-cache), laster filene og restarter.
 set -euo pipefail
 BRANCH="${BRANCH:-backup-gui}"
-SHA=$(curl -fsSL "https://api.github.com/repos/SebastianKristo/glass-dash/commits/$BRANCH" | grep -m1 '"sha"' | cut -d'"' -f4)
-[ -n "$SHA" ] || { echo "Fant ikke siste commit på GitHub"; exit 1; }
+SHA=$(curl -fsSL -H 'Accept: application/vnd.github.sha' "https://api.github.com/repos/SebastianKristo/glass-dash/commits/$BRANCH" 2>/dev/null | tr -dc '0-9a-f' || true)
+[ ${#SHA} -eq 40 ] || { echo "Fant ikke siste commit på GitHub, bruker $BRANCH"; SHA="$BRANCH"; }
 RAW="https://raw.githubusercontent.com/SebastianKristo/glass-dash/$SHA/extras/backup-gui"
 mkdir -p /opt/backup-gui/public/vendor
 for f in server.js store.js public/index.html public/icon.svg public/icon-180.png public/vendor/lucide.min.js; do
