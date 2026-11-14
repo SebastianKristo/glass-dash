@@ -53,6 +53,8 @@ input:focus,select:focus{border-color:var(--accent)}
 .dirs{max-height:240px;overflow:auto}
 .dir{display:flex;align-items:center;gap:10px;padding:8px 12px;cursor:pointer;border-bottom:1px solid #ffffff06}.dir:hover{background:var(--card)}
 .dir.sel{background:#e8c46a14;color:var(--accent)}.dir svg{flex:none;opacity:.7}.dir .go{margin-left:auto;color:var(--dim);font-size:18px;line-height:1}
+.pathbar{display:flex;gap:6px;padding:8px;border-bottom:1px solid var(--line);background:var(--card)}.pathbar input{flex:1;padding:7px 10px;font-size:12.5px}
+.dir .pk{margin-left:auto;opacity:0;transition:.15s}.dir:hover .pk,.dir.sel .pk{opacity:1}
 .chosen{display:flex;align-items:center;gap:10px;padding:10px 12px;border-top:1px solid var(--line);background:var(--card);font-size:13px}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .chip{background:var(--card);border:1px solid var(--line2);border-radius:20px;padding:4px 10px;font-size:12px;display:inline-flex;gap:6px;align-items:center}
@@ -140,8 +142,8 @@ function editJob(id){
  E.browse=E.src?E.src.replace(/\/[^/]+\/?$/,'')||'/mnt/user':'/mnt/user';drawEdit();browse(E.browse)}
 function drawEdit(){const s=E.schedule;
  openM(`<h3>${E.id?'Rediger backup':'Ny backup'}</h3>
- <label class="f"><span>Velg mappe på Unraid</span><div class="browser"><div class="crumbs" id="cr"></div><div class="dirs" id="dirs"><div class="dir" style="color:var(--muted)">Laster…</div></div>
-  <div class="chosen">${E.src?`<span style="color:var(--accent)">✓</span><span class="mono" style="flex:1">${esc(E.src)}</span><button class="btn sm ghost" onclick="calcSize()" id="szb">Beregn størrelse</button>`:'<span style="color:var(--muted)">Trykk på en mappe for å velge den, eller pila for å gå inn i den.</span>'}</div></div></label>
+ <label class="f"><span>Velg mappe på Unraid</span><div class="browser"><form class="pathbar" onsubmit="event.preventDefault();goPath()"><input type="text" id="pp" class="mono" placeholder="Lim inn en sti, f.eks. /mnt/user/Media/immich"><button class="btn sm" type="submit">Gå</button><button class="btn sm pri" type="button" onclick="pickHere()">Velg denne</button></form><div class="crumbs" id="cr"></div><div class="dirs" id="dirs"><div class="dir" style="color:var(--muted)">Laster…</div></div>
+  <div class="chosen">${E.src?`<span style="color:var(--accent)">✓</span><span class="mono" style="flex:1">${esc(E.src)}</span><button class="btn sm ghost" onclick="calcSize()" id="szb">Beregn størrelse</button>`:'<span style="color:var(--muted)">Klikk på en mappe for å åpne den. Trykk «Velg» på mappen du vil ta backup av.</span>'}</div></div></label>
  <div class="row2"><label class="f"><span>Navn</span><input type="text" id="nm" value="${esc(E.name)}" placeholder="F.eks. Immich"></label>
   <label class="f"><span>Lagres i</span><input type="text" id="ds" class="mono" value="${esc(E.dest)}" placeholder="mappenavn"></label></div>
  <label class="f"><span>Når</span><div class="seg" id="seg">${['manual:Manuelt','hourly:Hver time','daily:Daglig','weekly:Ukentlig'].map(x=>{const[k,n]=x.split(':');return`<button type="button" class="${s.type===k?'on':''}" onclick="E.schedule.type='${k}';sync();drawEdit();browse(E.browse)">${n}</button>`}).join('')}</div></label>
@@ -157,14 +159,16 @@ const PRESETS=['thumbs/','encoded-video/','*.tmp','.Trash*/','.DS_Store'];
 function drawEx(){const sugg=PRESETS.filter(p=>!E.excludes.includes(p));
  $('#ex').innerHTML=E.excludes.map((x,i)=>`<span class="chip mono">${esc(x)}<button onclick="sync();E.excludes.splice(${i},1);drawEx()">✕</button></span>`).join('')+sugg.map(p=>`<span class="chip add mono" onclick="sync();E.excludes.push('${p}');drawEx()">+ ${esc(p)}</span>`).join('')+`<span class="chip add" onclick="addEx()">+ eget…</span>`}
 function addEx(){const v=prompt('Mønster å hoppe over (f.eks. cache/ eller *.log)');if(v){sync();E.excludes.push(v.trim());drawEx()}}
-async function browse(p){E.browse=p;const parts=p.split('/').filter(Boolean);
+async function browse(p){p=(p||'/').replace(/\/+$/,'')||'/';E.browse=p;if($('#pp'))$('#pp').value=p;const parts=p.split('/').filter(Boolean);
  $('#cr').innerHTML=`<a onclick="browse('/')">/</a>`+parts.map((x,i)=>`<span class="s">›</span><a onclick="browse('/${parts.slice(0,i+1).map(esc).join('/')}')">${esc(x)}</a>`).join('');
  $('#dirs').innerHTML='<div class="dir" style="color:var(--muted)">Laster…</div>';
  try{const r=await api('/api/browse?path='+encodeURIComponent(p));if(E.browse!==p)return;
   if(r.error)return $('#dirs').innerHTML=`<div class="dir" style="color:var(--bad)">${esc(r.error)}</div>`;
   $('#dirs').innerHTML=(r.dirs.length?'':'<div class="dir" style="color:var(--muted)">Ingen undermapper</div>')+r.dirs.map(d=>{const full=(p==='/'?'':p)+'/'+d;
-   return`<div class="dir ${E.src===full?'sel':''}" onclick="pick('${esc(full).replace(/'/g,"\\'")}')">${FOLDER}<span>${esc(d)}</span><span class="go" onclick="event.stopPropagation();browse('${esc(full).replace(/'/g,"\\'")}')">›</span></div>`}).join('')}
+   const a=esc(full).replace(/'/g,"\\'");return`<div class="dir ${E.src===full?'sel':''}" onclick="browse('${a}')">${FOLDER}<span>${esc(d)}</span><button class="btn sm pk" onclick="event.stopPropagation();pick('${a}')">${E.src===full?'✓ Valgt':'Velg'}</button><span class="go">›</span></div>`}).join('')}
  catch(e){}}
+function goPath(){const v=$('#pp').value.trim();if(v)browse(v)}
+function pickHere(){const v=($('#pp').value.trim()||E.browse).replace(/\/+$/,'');if(!v||v==='/')return toast('Velg en mappe');browse(v);pick(v)}
 function pick(full){sync();const base=full.split('/').pop();if(!E.name||E.name===E.src.split('/').pop())E.name=base;if(!E.dest||E.dest===E.src.split('/').pop())E.dest=base;
  if(/immich/i.test(full))for(const x of['thumbs/','encoded-video/'])if(!E.excludes.includes(x))E.excludes.push(x);
  E.src=full;drawEdit();browse(E.browse)}
