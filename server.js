@@ -1,4 +1,4 @@
-// Glass Dash / Labdeck backend: statiske filer, config-lagring, secrets og proxy. Ingen avhengigheter.
+// Skjold Stack (tidl. Labdeck) backend — Skjold Lab: statiske filer, config-lagring, secrets og proxy. Ingen avhengigheter.
 const http=require('http'),fs=require('fs'),path=require('path');
 const PORT=+process.env.PORT||7575,DATA=process.env.DATA_DIR||'/app/data',PUB=path.join(__dirname,'public');
 const SEC_KEY='labdeck-secrets',KV_FILE=path.join(DATA,'config.json'),SEC_FILE=path.join(DATA,'secrets.json');
@@ -197,7 +197,7 @@ const KNOWN={
   grafana:S('Grafana',[3000]),prometheus:S('Prometheus',[9090]),influxdb:S('InfluxDB',[8086]),nodered:S('Node-RED',[1880],{icon:'node-red'}),
   zigbee2mqtt:S('Zigbee2MQTT',[8080]),esphome:S('ESPHome',[6052]),unifi:S('UniFi',[8443]),immich:S('Immich',[2283]),immichserver:S('Immich',[2283],{icon:'immich'}),
   nextcloud:S('Nextcloud',[443,80]),vaultwarden:S('Vaultwarden',[80]),paperless:S('Paperless',[8000],{icon:'paperless-ngx'}),paperlessngx:S('Paperless',[8000],{icon:'paperless-ngx'}),
-  syncthing:S('Syncthing',[8384]),homarr:S('Homarr',[7575]),homepage:S('Homepage',[3000]),dashy:S('Dashy',[4000]),labdeck:S('Labdeck',[80,7575],{icon:'',self:true}),
+  syncthing:S('Syncthing',[8384]),homarr:S('Homarr',[7575]),homepage:S('Homepage',[3000]),dashy:S('Dashy',[4000]),skjoldstack:S('Skjold Stack',[8080]),labdeck:S('Skjold Stack',[80,7575],{icon:'',self:true}),
   glances:S('Glances',[61208]),speedtesttracker:S('Speedtest Tracker',[80,8080],{icon:'speedtest-tracker'}),musicassistant:S('Music Assistant',[8095],{icon:'music-assistant'}),
   lyrion:S('Lyrion',[9000],{icon:'lyrion-music-server'}),lms:S('Lyrion',[9000],{icon:'lyrion-music-server'}),scrypted:S('Scrypted',[10443]),go2rtc:S('go2rtc',[1984]),
   silo:S('Silo',[80,3000,8080]),navidrome:S('Navidrome',[4533]),hyttebackup:S('Hytte Backup',[8090],{icon:'proxmox-backup-server'}),hytte:S('Hytte Backup',[8090],{icon:'proxmox-backup-server'}),backup:S('Hytte Backup',[8090],{icon:'proxmox-backup-server'}),backupgui:S('Hytte Backup',[8090],{icon:'proxmox-backup-server'}),subwave:S('SUB/WAVE',[3000,8080],{icon:'subwave'}),dispatcharr:S('Dispatcharr',[9191]),minio:S('MinIO',[9001]),n8n:S('n8n',[5678]),
@@ -379,4 +379,4 @@ http.createServer(async(req,res)=>{
     if(!f.startsWith(PUB)||!fs.existsSync(f)||fs.statSync(f).isDirectory())f=path.join(PUB,'index.html');
     return serveStatic(req,res,f);
   }catch(e){json(res,500,{error:e.message})}
-}).listen(PORT,()=>console.log('Labdeck kjører på port '+PORT+', data i '+DATA));
+}).listen(PORT,()=>console.log('Skjold Stack kjører på port '+PORT+', data i '+DATA));

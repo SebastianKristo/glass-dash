@@ -1,8 +1,9 @@
 <p align="center">
-  <img src="public/icon.png" width="96" alt="Labdeck-ikon">
+  <img src="public/icon.png" width="96" alt="Skjold Stack-ikon">
 </p>
 
-<h1 align="center">Labdeck</h1>
+<h1 align="center">Skjold Stack</h1>
+<p align="center"><b>av Skjold Lab</b> · tidligere Labdeck</p>
 
 <p align="center">
   Et selvhostet homelab-dashboard med <b>GUI-editor</b> – dra og slipp widgets, ingen YAML.<br>
@@ -16,12 +17,12 @@
 </p>
 
 <p align="center">
-  <img src="docs/dashboard.png" alt="Labdeck-dashbordet" width="900">
+  <img src="docs/dashboard.png" alt="Skjold Stack-dashbordet" width="900">
 </p>
 
 > **Inspirert av [Glance](https://github.com/glanceapp/glance).** Utseendet, widgetene og `custom-api`-oppsettene
 > (Plex-historikk, Media Releases, qBittorrent, Prowlarr, Cloudflared tunnels m.fl.) er hentet fra Glance og
-> fellesskapets widgets. Forskjellen er at Labdeck konfigureres i nettleseren i stedet for i en YAML-fil.
+> fellesskapets widgets. Forskjellen er at Skjold Stack konfigureres i nettleseren i stedet for i en YAML-fil.
 > Takk til Glance-prosjektet og alle som har delt widgets!
 
 ---
@@ -73,7 +74,7 @@
 Imaget bygges automatisk av GitHub Actions og ligger på
 `ghcr.io/sebastiankristo/glass-dash:latest` (amd64 og arm64).
 
-Labdeck trenger bare to ting:
+Skjold Stack trenger bare to ting:
 
 | Hva | Verdi | Forklaring |
 |---|---|---|
@@ -174,11 +175,11 @@ Trykk **Install**.
 
 **Oppdatere på TrueNAS:** **Apps** → velg `labdeck` → **Update** når den vises, eller **⋮ → Pull Image** og så **Restart**.
 
-> Eldre TrueNAS SCALE (23.10 *Cobia* / 24.04 *Dragonfish*) bruker Kubernetes. Bruk da **Custom App**-skjemaet over – feltene er de samme. *TrueNAS CORE* har ikke Docker; kjør Labdeck i en VM eller på en annen maskin.
+> Eldre TrueNAS SCALE (23.10 *Cobia* / 24.04 *Dragonfish*) bruker Kubernetes. Bruk da **Custom App**-skjemaet over – feltene er de samme. *TrueNAS CORE* har ikke Docker; kjør Skjold Stack i en VM eller på en annen maskin.
 
 ### Proxmox (LXC)
 
-Et helper-script lager en liten Debian 12-container og installerer Labdeck direkte (Node.js, uten Docker).
+Et helper-script lager en liten Debian 12-container og installerer Skjold Stack direkte (Node.js, uten Docker).
 
 1. Åpne **Shell** på Proxmox-noden (ikke inne i en VM/LXC).
 2. Kjør:
@@ -351,11 +352,11 @@ Uten secrets viser API-widgetene **demo-data**, merket *«Demo-data · sett secr
 
 ## Finn tjenester automatisk
 
-I edit mode finner du **⌕ finn nye tjenester**. Labdeck spør da Proxmox, Unraid og Portainer og viser alt som ennå ikke er på dashbordet, med adresse og ikon. Huk av det du vil ha, velg gruppe og trykk **Legg til valgte**.
+I edit mode finner du **⌕ finn nye tjenester**. Skjold Stack spør da Proxmox, Unraid og Portainer og viser alt som ennå ikke er på dashbordet, med adresse og ikon. Huk av det du vil ha, velg gruppe og trykk **Legg til valgte**.
 
-Nederst i panelet kan du slå på **Legg til nye automatisk**. Da sjekker Labdeck hvert 5. minutt (mens dashbordet er åpent), og nye CT-er, VM-er og containere havner i gruppen *Nye tjenester* på første fane. Fliser som ble lagt til automatisk, forsvinner når CT-en eller containeren slettes. Fliser du har lagt til selv, røres aldri. Er en kilde nede, fjernes ingenting fra den.
+Nederst i panelet kan du slå på **Legg til nye automatisk**. Da sjekker Skjold Stack hvert 5. minutt (mens dashbordet er åpent), og nye CT-er, VM-er og containere havner i gruppen *Nye tjenester* på første fane. Fliser som ble lagt til automatisk, forsvinner når CT-en eller containeren slettes. Fliser du har lagt til selv, røres aldri. Er en kilde nede, fjernes ingenting fra den.
 
-**Begge veier:** Kjører Labdeck på Unraid, legger du inn Proxmox-token så den også finner CT-er og VM-er der. Kjører den på Proxmox, legger du inn Unraid-adresse og API-nøkkel så den finner containerne og VM-ene på Unraid.
+**Begge veier:** Kjører Skjold Stack på Unraid, legger du inn Proxmox-token så den også finner CT-er og VM-er der. Kjører den på Proxmox, legger du inn Unraid-adresse og API-nøkkel så den finner containerne og VM-ene på Unraid.
 
 **Oppsett** (under Secrets):
 
@@ -371,8 +372,8 @@ Nederst i panelet kan du slå på **Legg til nye automatisk**. Da sjekker Labdec
 Du trenger bare de kildene du har. Selvsignerte sertifikater godtas.
 
 **Unraid:**
-- **Labdeck på Unraid:** Templaten monterer `/var/run/docker.sock` (kun lesing), så containerne på samme server finnes uten oppsett. Fyll inn `UNRAID_URL` + `UNRAID_API_KEY` for å få med VM-ene også.
-- **Labdeck et annet sted (f.eks. Proxmox):** Fyll inn `UNRAID_URL` + `UNRAID_API_KEY`. Krever Unraid 7.2 eller nyere (innebygd API).
+- **Skjold Stack på Unraid:** Templaten monterer `/var/run/docker.sock` (kun lesing), så containerne på samme server finnes uten oppsett. Fyll inn `UNRAID_URL` + `UNRAID_API_KEY` for å få med VM-ene også.
+- **Skjold Stack et annet sted (f.eks. Proxmox):** Fyll inn `UNRAID_URL` + `UNRAID_API_KEY`. Krever Unraid 7.2 eller nyere (innebygd API).
 - VM-er på Unraid har ingen IP i API-et. De vises i listen, men adressen må legges inn selv.
 
 **Docker inne i en Proxmox-CT/VM:** Proxmox ser bare selve CT-en, ikke containerne i den. Kjør en skrivebeskyttet socket-proxy i CT-en:
@@ -416,7 +417,7 @@ pveum user token add labdeck@pve dash --privsep 0
 
 | Hvor | Slik gjør du |
 |---|---|
-| **Unraid** | Docker-fanen → klikk Labdeck-ikonet → **Force update** |
+| **Unraid** | Docker-fanen → klikk Skjold Stack-ikonet → **Force update** |
 | **Proxmox LXC** | `pct exec <ID> -- update-labdeck` |
 | **TrueNAS** | Apps → labdeck → **Update** (eller **⋮ → Pull Image** + Restart) |
 | **Portainer (Git)** | Stacks → labdeck → **Pull and redeploy** |
