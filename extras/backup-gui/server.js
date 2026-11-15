@@ -266,7 +266,7 @@ http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x'), p = url.pathname;
   try {
     if (!p.startsWith('/api/')) {
-      const f = path.join(PUB, /^\/(backupsteder|filer)?\/?$/.test(p) ? 'index.html' : path.normalize(p).replace(/^(\.\.[/\\])+/, ''));
+      const f = path.join(PUB, /^\/(backupsteder|synk|filer|innstillinger)?\/?$/.test(p) ? 'index.html' : path.normalize(p).replace(/^(\.\.[/\\])+/, ''));
       if (!f.startsWith(PUB) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); return res.end() }
       res.writeHead(200, { 'Content-Type': MIME[path.extname(f)] || 'application/octet-stream', 'Cache-Control': (f.includes('/vendor/') || f.includes('/fonts/')) ? 'max-age=604800' : 'no-cache' }); return fs.createReadStream(f).pipe(res);
     }
