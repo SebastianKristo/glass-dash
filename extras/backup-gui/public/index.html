@@ -86,6 +86,7 @@ html[data-theme=dark] .lg-card{background:var(--sf);box-shadow:0 40px 80px rgba(
 html[data-theme=dark] ::-webkit-scrollbar-thumb{background:#333844}
 html[data-theme=dark] .ov{background:rgba(0,0,0,.5)}
 html[data-theme=dark] .dlg{box-shadow:0 40px 80px rgba(0,0,0,.5),inset 0 0 0 1px #2A2E38}
+@keyframes updbar{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}.updbar{animation:updbar 1.4s ease-in-out infinite}
 .dirrow{display:flex;align-items:center;gap:12px;height:48px;padding:0 8px;border:0;border-radius:999px;cursor:pointer;background:transparent;width:100%;text-align:left}.dirrow:hover{background:var(--soft)}
 
 :root{--pad:clamp(12px,1.2vw,24px);--gap:clamp(12px,1vw,20px)}
@@ -133,7 +134,7 @@ const ago=t=>{if(!t)return'—';const s=(Date.now()-t)/1e3;return s<60?'nå':s<3
 const DAYS=['søn','man','tir','ons','tor','fre','lør'],DAYL=['Søndag','Mandag','Tirsdag','Onsdag','Torsdag','Fredag','Lørdag'],MON=['januar','februar','mars','april','mai','juni','juli','august','september','oktober','november','desember'];
 const sched=s=>!s?'—':s.type==='hourly'?'Hver time':s.type==='6h'?'Hver 6. time':s.type==='weekly'?`Ukentlig ${DAYS[s.day||0]} ${s.time}`:`Daglig ${s.time}`;
 const ST={ok:['OK','var(--ok)'],running:['Kjører','var(--bl)'],queued:['I kø','var(--bl)'],scheduled:['Planlagt','var(--mu)'],warn:['Advarsel','var(--warn)'],fail:['Feilet','var(--err)'],waiting:['Venter på node','var(--off)']};
-const VIEWS={overview:['Oversikt','network','/'],sync:['Synk','hard-drive','/synk'],files:['Filer','folder-archive','/filer'],settings:['Innstillinger','settings-2','/innstillinger']};
+const VIEWS={overview:['Oversikt','network','/'],sync:['Synk','hard-drive','/synk'],files:['Filer','folder-archive','/filer'],logs:['Logg','scroll-text','/logg'],settings:['Innstillinger','settings-2','/innstillinger']};
 const LOCC=['var(--or)','var(--bl)','var(--ye)'],LOCH=['#FF6B3D','#3D6BFF','#FFD27A'];
 const nodeIcon=n=>{const s=(n.name+' '+(n.os||'')).toLowerCase();return/db|postgres|sql/.test(s)?'database':/nas|unraid|truenas|synology/.test(s)?'hard-drive-download':/mac|mbp|ios|ipad/.test(s)?'laptop':/windows|pc/.test(s)?'monitor':'server'};
 const SKJOLD=(h=40)=>{const k=h/40;return`<span title="Skjold Lab" style="display:flex;align-items:flex-end;gap:${5*k}px;height:${h}px">${[20,29,40,29,20].map((x,i)=>`<span style="width:${6*k}px;height:${x*k}px;border-radius:${3*k}px;background:${i===2?'var(--gold)':'var(--ink)'}"></span>`).join('')}</span>`};
@@ -147,9 +148,9 @@ const isDark=()=>document.documentElement.dataset.theme==='dark';
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{if(getTheme()==='system'){applyTheme();if(S)render()}});
 let S=null,view='overview',selNode=null,selDay=null,poll=null,X={job:null,snaps:null,snap:null,path:[],ls:null,file:null,stat:null,preview:null,target:null,targetPath:'',restoreKey:null,dl:false},search='',pinged={};
 function route(){const p=location.pathname.replace(/\/$/,'')||'/';view=Object.keys(VIEWS).find(k=>VIEWS[k][2]===p)||'overview'}
-function go(v){view=v;history.pushState({},'',VIEWS[v][2]);render();if(v==='files')initFiles();window.scrollTo(0,0)}
-window.onpopstate=()=>{route();render();if(view==='files')initFiles()};
-async function boot(){route();const w=await fetch('/api/whoami').then(r=>r.json());if(!w.authed)return showLogin(w.setup);await refresh();if(view==='files')initFiles();sse()}
+function go(v){view=v;history.pushState({},'',VIEWS[v][2]);render();if(v==='files')initFiles();if(v==='logs')loadLogs();if(v==='settings')loadUpd();window.scrollTo(0,0)}
+window.onpopstate=()=>{route();render();if(view==='files')initFiles();if(view==='logs')loadLogs();if(view==='settings')loadUpd()};
+async function boot(){route();const w=await fetch('/api/whoami').then(r=>r.json());if(!w.authed)return showLogin(w.setup);await refresh();if(view==='files')initFiles();if(view==='logs')loadLogs();loadUpd();sse()}
 function showLogin(setup){clearTimeout(poll);if($('#lf'))return;app.innerHTML=`<div class="lg"><iframe class="lg-bg" id="lgbg" src="/ambient.html?bare-bakgrunn&v=4" title="" aria-hidden="true" tabindex="-1"></iframe>
  <form id="lf" class="card lg-card" style="width:min(420px,100%);padding:36px 40px 40px;gap:20px;position:relative;z-index:2">
  <div style="display:flex;align-items:center;gap:14px">${SKJOLD(30)}<div style="display:flex;flex-direction:column;line-height:1.2"><span style="font-weight:700;letter-spacing:.14em;font-size:12px">HYTTE</span><span style="font-weight:600;letter-spacing:.1em;font-size:10px;color:var(--mu)">SKJOLD LAB</span></div></div>
@@ -158,7 +159,7 @@ function showLogin(setup){clearTimeout(poll);if($('#lf'))return;app.innerHTML=`<
  const pw=$('#pw');const card=$('#lf');const bg=$('#lgbg'),bgReady=new Promise(r=>{bg.onload=r});Promise.race([Promise.all([document.fonts?document.fonts.ready:0,bgReady]),new Promise(r=>setTimeout(r,1800))]).then(()=>{const first=!window.__lgShown;window.__lgShown=1;if(!first)bg.style.transition='none';bg.classList.add('on');card.classList.add('ready');if(first)try{card.animate([{opacity:0,transform:'translateY(14px) scale(.98)'},{opacity:1,transform:'none'}],{duration:700,easing:'cubic-bezier(.2,.8,.2,1)'})}catch(e){}pw.focus()});pw.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('#lf').requestSubmit()}};$('#lf').onsubmit=async e=>{e.preventDefault();if(!pw.value)return;try{await api('/api/login',{body:{password:$('#pw').value}});boot()}catch(x){$('#le').textContent=x.message}}}
 async function refresh(){try{[S]=await Promise.all([api('/api/state'),loadDevices()])}catch(e){return}const a=document.activeElement;if(!$('aside')||!(a&&a.tagName==='INPUT'&&app.contains(a)))render();clearTimeout(poll);poll=setTimeout(refresh,S.running?2000:10000)}
 let rt=null;const soon=()=>{clearTimeout(rt);rt=setTimeout(refresh,300)};
-function sse(){try{const es=new EventSource('/api/events');es.addEventListener('coord.log',e=>{S&&S.log.push(JSON.parse(e.data));if(view==='sync')drawLog();soon()});
+function sse(){try{const es=new EventSource('/api/events');es.addEventListener('coord.log',e=>{const l=JSON.parse(e.data);S&&S.log.push(l);if(LG.src==='app'&&LG.lines){LG.lines.push(l);if(view==='logs')drawLogs()}if(view==='sync')drawLog();soon()});
  es.addEventListener('job.status',soon);es.addEventListener('node.status',e=>{const d=JSON.parse(e.data);for(const L of[TD,S&&S.nodes])if(L){const n=L.find(x=>x.name===d.name);if(n)Object.assign(n,d)}if(view==='overview'&&!(document.activeElement&&document.activeElement.id==='odq'))render()});es.addEventListener('job.progress',e=>{const d=JSON.parse(e.data);if(S&&S.running&&S.running.id===d.id){S.running.pct=d.pct;S.running.phase=d.phase;const j=S.jobs.find(x=>x.id===d.id);if(j){j.progress=d.pct;j.phase=d.phase}const a=document.activeElement;if(view==='overview'&&!(a&&a.tagName==='INPUT'))render()}});
  es.addEventListener('restore.progress',e=>{const d=JSON.parse(e.data);if(S){S.restores[d.key]={...(S.restores[d.key]||{}),pct:d.pct,status:d.status||'running'};if(view==='files')drawPreview()}if(d.status)soon()});}catch(e){}}
 
@@ -171,7 +172,7 @@ const locColorOfNode=name=>{const g=locs().find(g=>g.nodes.some(n=>n.name===name
 function render(){if(!S)return;const d=new Date(),tn=S.tailnet;
  app.innerHTML=`<div class="frame"><aside>
   <div style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0 14px;margin-bottom:6px;border-bottom:1px solid var(--line);width:56px">${SKJOLD()}<span style="font-size:10px;font-weight:700;letter-spacing:.14em;margin-top:6px">HYTTE</span><span style="font-size:8.5px;font-weight:600;letter-spacing:.1em;color:var(--mu);white-space:nowrap">SKJOLD LAB</span></div>
-  ${['overview','sync','files'].map(k=>`<button class="navb ${view===k?'on':''}" onclick="go('${k}')" title="${VIEWS[k][0]}"><span class="c">${I(VIEWS[k][1],20)}</span><span class="l">${VIEWS[k][0]}</span></button>`).join('')}
+  ${['overview','sync','files','logs'].map(k=>`<button class="navb ${view===k?'on':''}" onclick="go('${k}')" title="${VIEWS[k][0]}"><span class="c">${I(VIEWS[k][1],20)}</span><span class="l">${VIEWS[k][0]}</span></button>`).join('')}
   <button class="navb ${view==='settings'?'on':''}" style="margin-top:auto" onclick="go('settings')" title="Innstillinger"><span class="c" style="${view==='settings'?'':'background:var(--soft)'}">${I('settings-2',20)}</span></button>
  </aside><main>
   <header style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:6px 4px 0">
@@ -182,9 +183,9 @@ function render(){if(!S)return;const d=new Date(),tn=S.tailnet;
     <button class="cb" title="${isDark()?'Lyst tema':'Mørkt tema'}" onclick="setTheme(isDark()?'light':'dark')" style="width:48px;height:48px;background:var(--sf);color:var(--ink)">${I(isDark()?'sun':'moon',18)}</button>
     <span class="m" style="display:flex;align-items:center;gap:8px;height:48px;padding:0 18px;border-radius:999px;background:var(--inv);color:#fff;font-size:12.5px;font-weight:500;white-space:nowrap" title="${tn.ok?'Tailnet':'tailscale svarer ikke'}"><span class="dot" style="background:${tn.ok?'var(--bl)':'var(--off)'}"></span>${esc((tn.suffix||'uten tailscale').split('.')[0])}</span>
    </div></header>
-  ${view==='overview'?overview():view==='sync'?syncView():view==='files'?filesView():settingsView()}
+  ${view==='overview'?overview():view==='sync'?syncView():view==='files'?filesView():view==='logs'?logsView():settingsView()}
  </main></div>`;
- if(view==='sync')drawLog()}
+ if(view==='sync')drawLog();if(view==='logs')drawLogs()}
 function doSearch(v){search=v.trim();const s=search.toLowerCase();if(!s)return;const n=S.nodes.find(x=>x.name.toLowerCase().includes(s));const j=S.jobs.find(x=>x.id.includes(s)||x.path.toLowerCase().includes(s));
  if(j&&(!n||j.id.includes(s))){X.job=j.id;X.snap=null;X.path=[];go('files')}else if(n){selNode=n.name;go('overview')}else toast('Ingen treff')}
 document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();$('#q')&&$('#q').focus()}if(e.key==='Escape')closeOv()});
@@ -380,6 +381,51 @@ async function doRestore(){if(!X.target)return toast('Velg en node');if(!confirm
 function restoreFolder(){const job=S.jobs.find(j=>j.id===X.job),sp=X.ls?.src||{},rel=X.path.join('/');const t=prompt('Gjenopprett mappen til (node:sti)',`${sp.node||job.node}:${(sp.path||job.path).replace(/\/$/,'')}/${rel}_gjenopprettet`);if(!t)return;const i=t.indexOf(':');if(i<1)return toast('Skriv node:sti');
  api('/api/restore',{body:{job:X.job,snap:X.snap,path:rel,node:t.slice(0,i),targetPath:t.slice(i+1)}}).then(r=>{toast('Gjenoppretter mappen…');const iv=setInterval(()=>{const R=S.restores[r.key];if(R&&R.status&&R.status!=='running'){clearInterval(iv);toast(R.status==='ok'?'Mappen er gjenopprettet':'Feilet: '+(R.error||''))}},1500)}).catch(e=>toast(e.message))}
 
+
+// ── Logg ──
+let LG={src:'app',lines:null,text:null,q:'',lvl:'all',follow:true,err:null};
+async function loadLogs(){LG.lines=LG.text=null;LG.err=null;if(view==='logs')render();try{const r=await api('/api/logs?src='+LG.src+'&n=800');LG.lines=r.lines||null;LG.text=r.text??null}catch(e){LG.err=e.message}if(view==='logs')render()}
+const LVC={ok:'var(--ok)',warn:'var(--warn)',fail:'var(--err)',info:'var(--mu)'};
+function logsView(){
+ const tabs=[['app','Hendelser','activity'],['service','Tjeneste','server'],['update','Oppdatering','download']];
+ return`<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:6px 4px"><h1>Logg <span>${LG.src==='app'?'hendelser':LG.src==='service'?'fra systemd':'for oppdateringer'}</span></h1>
+  <div style="display:flex;gap:8px"><button class="bs" onclick="loadLogs()">${I('refresh-cw',15)}Oppdater</button>${LG.src==='app'?'':''}<button class="bs" onclick="dlLog()">${I('download',15)}Last ned</button></div></div>
+ <section class="card" style="padding:22px 24px;gap:14px;min-height:clamp(420px,70dvh,1100px)">
+  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><div class="seg" style="flex:0 1 auto">${tabs.map(([k,l,ic])=>`<button class="${LG.src===k?'on':''}" onclick="LG.src='${k}';loadLogs()" style="display:flex;align-items:center;gap:8px;padding:0 16px">${I(ic,15)}${l}</button>`).join('')}</div>
+   ${LG.src==='app'?`<div style="display:flex;gap:6px">${[['all','Alle'],['ok','OK'],['warn','Advarsler'],['fail','Feil']].map(([k,l])=>`<button onclick="LG.lvl='${k}';drawLogs()" class="pill lgl" data-k="${k}" style="border:0;cursor:pointer;height:36px;padding:0 14px;background:${LG.lvl===k?'var(--inv)':'var(--soft)'};color:${LG.lvl===k?'#fff':'var(--ink2)'}">${l}</button>`).join('')}</div>`:''}
+   <label style="margin-left:auto;display:flex;align-items:center;gap:8px;height:40px;padding:0 16px;border-radius:999px;background:var(--soft);color:var(--mu);flex:0 1 280px">${I('search',15)}<input id="lgq" value="${esc(LG.q)}" placeholder="Filtrer" oninput="LG.q=this.value;drawLogs()" style="border:0;outline:0;background:transparent;width:100%;color:var(--ink);font-size:13px"></label>
+   <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--mu);cursor:pointer"><button class="tg ${LG.follow?'on':''}" onclick="LG.follow=!LG.follow;this.classList.toggle('on');drawLogs()"><span></span></button>Følg</label></div>
+  <div id="lgbox" class="m" style="flex:1;overflow:auto;max-height:clamp(380px,64dvh,1000px);background:var(--inv);color:#D9DBD2;border-radius:22px;padding:16px 18px;font-size:12px;line-height:1.7;white-space:pre-wrap;word-break:break-word"></div>
+ </section>`}
+function drawLogs(){const el=$('#lgbox');if(!el)return;document.querySelectorAll('.lgl').forEach(b=>{const on=b.dataset.k===LG.lvl;b.style.background=on?'var(--inv)':'var(--soft)';b.style.color=on?'#fff':'var(--ink2)'});
+ if(LG.err){el.innerHTML=`<span style="color:var(--err)">${esc(LG.err)}</span>`;return}
+ if(LG.lines==null&&LG.text==null){el.innerHTML='<span style="opacity:.6">Laster…</span>';return}
+ const q=LG.q.toLowerCase();let html;
+ if(LG.lines){const L=LG.lines.filter(l=>(LG.lvl==='all'||l.kind===LG.lvl)&&(!q||(l.node+' '+l.msg).toLowerCase().includes(q)));
+  html=L.map(l=>{const d=new Date(l.t);return`<span style="opacity:.5">${d.toLocaleDateString('nb-NO',{day:'2-digit',month:'2-digit'})} ${hms(l.t)}</span>  <span style="color:${LVC[l.kind]||'#D9DBD2'}">●</span> <b style="color:#fff;font-weight:500">${esc(l.node)}</b>  ${esc(l.msg)}`}).join('\n')||'<span style="opacity:.6">Ingen linjer.</span>'}
+ else{const L=(LG.text||'').split('\n').filter(x=>!q||x.toLowerCase().includes(q));html=L.map(x=>{const c=/error|feil|failed|klarte ikke/i.test(x)?'var(--err)':/warn|advarsel/i.test(x)?'var(--warn)':/✓|oppdatert|startet|started/i.test(x)?'#9BD27A':'';return c?`<span style="color:${c}">${esc(x)}</span>`:esc(x)}).join('\n')||'<span style="opacity:.6">Tom logg.</span>'}
+ el.innerHTML=html;if(LG.follow)el.scrollTop=el.scrollHeight}
+function dlLog(){const t=LG.lines?LG.lines.map(l=>new Date(l.t).toISOString()+' ['+l.kind+'] '+l.node+': '+l.msg).join('\n'):(LG.text||'');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'text/plain'}));a.download='hytte-'+LG.src+'-'+new Date().toISOString().slice(0,10)+'.log';a.click()}
+
+// ── Oppdatering ──
+let UPD=null,updWatch=null;
+async function loadUpd(force){try{UPD=await api('/api/update'+(force?'?force':''))}catch(e){UPD={error:e.message}}if(view==='settings')render();else{const b=document.querySelector('.navb[title=Innstillinger] .c');if(b)b.style.boxShadow=UPD&&UPD.behind>0?'0 0 0 3px var(--or)':''}}
+async function doUpdate(){if(!confirm('Oppdatere Hytte nå? Tjenesten starter på nytt, og en kjøring som pågår blir avbrutt.'))return;
+ try{await api('/api/update',{method:'POST'});UPD={...UPD,running:true,startedAt:Date.now()};render();toast('Oppdaterer… siden lastes på nytt når det er ferdig');
+  const before=(UPD.current||'').slice(0,7);let seenDown=false;clearInterval(updWatch);
+  updWatch=setInterval(async()=>{try{const h=await fetch('/api/health',{cache:'no-store'}).then(r=>r.json());if((seenDown||h.build&&h.build!==before)&&h.ok){clearInterval(updWatch);toast('Oppdatert til '+(h.build||h.version)+' ✓');setTimeout(()=>location.reload(),900)}}catch(e){seenDown=true}
+   if(Date.now()-UPD.startedAt>180e3){clearInterval(updWatch);toast('Oppdateringen tok for lang tid, se Logg → Oppdatering');UPD.running=false;render()}},2000)}catch(e){toast(e.message)}}
+function updCard(){const u=UPD;
+ const rows=!u?'<span class="mu">Sjekker GitHub…</span>':u.error&&!u.latest?`<span style="color:var(--err);font-size:13px">${esc(u.error)}</span>`:
+  `<div class="kv"><span>Installert</span><span class="m" style="font-weight:500">${esc((u.current||'ukjent').slice(0,7))} · v${esc(u.version||S.version)}</span><span>Nyeste på GitHub</span><span class="m" style="font-weight:500">${esc((u.latest||'').slice(0,7))}</span><span>Gren</span><span>${esc(u.branch||'')}</span></div>
+  ${u.behind>0?`<div style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow:auto"><span class="lbl">${u.behind} ${u.behind===1?'endring':'endringer'}</span>${u.commits.map(c=>`<div style="display:flex;gap:10px;font-size:12.5px;line-height:1.45"><span class="m mu" style="font-size:11px;flex:none">${esc(c.sha)}</span><span>${esc(c.msg)}</span></div>`).join('')}</div>`:u.behind===0?`<div class="pill" style="align-self:flex-start;color:var(--ok)"><span class="dot" style="background:var(--ok)"></span>Du har nyeste versjon</div>`:`<span class="mu" style="font-size:12.5px">Installert versjon er ukjent (eldre installasjon). Oppdater én gang, så vises endringene her.</span>`}`;
+ const busy=u&&u.running;
+ return`<section class="card" style="padding:26px 28px;gap:16px"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><div style="display:flex;flex-direction:column;gap:4px"><span class="t22">Oppdatering</span><span class="mu" style="font-size:13px">Henter nyeste versjon fra GitHub og starter tjenesten på nytt.</span></div><button class="cb" title="Sjekk nå" onclick="UPD=null;render();loadUpd(true)" style="width:44px;height:44px;background:var(--soft)">${I('refresh-cw',16)}</button></div>
+  ${rows}
+  ${busy?`<div style="display:flex;flex-direction:column;gap:8px"><span style="display:block;height:8px;border-radius:999px;background:var(--softh);overflow:hidden"><span class="updbar" style="display:block;height:100%;width:40%;border-radius:999px;background:var(--bl)"></span></span><span class="mu" style="font-size:12.5px">Oppdaterer… siden lastes på nytt av seg selv.</span></div>`:''}
+  <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="bp" onclick="doUpdate()" ${!u||busy||u.canUpdate===false?'disabled':''}>${u&&u.behind===0?'Installer på nytt':'Oppdater nå'}<span class="ar">${I('download',16,2)}</span></button><button class="bs" onclick="LG.src='update';go('logs');loadLogs()">${I('scroll-text',15)}Se logg</button></div>
+  ${u&&u.canUpdate===false?'<span style="font-size:12.5px;color:var(--warn)">Fant ikke update-backup-gui i containeren. Kjør installeren én gang fra Proxmox, så virker knappen.</span>':''}</section>`}
+
 // ── Innstillinger ──
 function settingsView(){const s=S.settings,tn=S.tailnet;
  const T=[['dedup','Deduplisering','Like blokker lagres bare én gang, på tvers av jobber',true,true],['encrypt','Krypter før overføring','Kommer i neste versjon. Trafikken er allerede kryptert av WireGuard/SSH.',false,true],['stagger','Spre kjøringer automatisk','Starter planlagte jobber med opptil 10 min spredning',s.stagger],['notifyOnFail','Varsle ved feil','Varsel med en gang en jobb feiler',s.notifyOnFail],['verifyAfterRun','Verifiser etter kjøring','Sammenlign sjekksummer på et utvalg filer',s.verifyAfterRun],['emailSummary','Morgenoppsummering','Varsel kl. 07:00 med status for siste døgn',s.emailSummary],['autoPrune','Automatisk opprydding','Slett snapshots eldre enn grensen og frigjør blokker',s.autoPrune]];
@@ -398,6 +444,7 @@ function settingsView(){const s=S.settings,tn=S.tailnet;
    <div class="m" style="padding:14px 18px;border-radius:22px;background:var(--soft);font-size:11.5px;word-break:break-all;color:var(--ink2)">${esc(S.apiKey||'')}</div>
    <button class="bs" onclick="navigator.clipboard.writeText(S.apiKey).then(()=>toast('API-nøkkel kopiert'))">${I('copy',16)}Kopier API-nøkkel</button></section></div>
  <div style="flex:1 1 420px;display:flex;flex-direction:column;gap:20px">
+  ${updCard()}
   <section class="card" style="padding:26px 28px;gap:18px"><div style="display:flex;flex-direction:column;gap:4px"><span class="t22">Utseende</span><span class="mu" style="font-size:13px">Lagres i denne nettleseren.</span></div>
    <div class="seg">${[['light','Lys','sun'],['dark','Mørk','moon'],['system','System','monitor']].map(([k,l,ic])=>`<button class="${getTheme()===k?'on':''}" onclick="setTheme('${k}')" style="display:flex;align-items:center;justify-content:center;gap:8px">${I(ic,15)}${l}</button>`).join('')}</div></section>
   <section class="card" style="padding:26px 28px;gap:18px"><div style="display:flex;flex-direction:column;gap:4px"><span class="t22">Komprimering</span><span class="mu" style="font-size:13px">Standard for nye jobber. Kan overstyres per jobb.</span></div>

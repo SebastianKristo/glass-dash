@@ -7,7 +7,7 @@ const http = require('http'), fs = require('fs'), path = require('path'), crypto
 const { spawn, execFile } = require('child_process');
 const { Store, TarReader, tarHeader, tarPad, BLOCK } = require('./store');
 
-const VERSION = '3.2.0';
+const VERSION = '3.3.0';
 const PORT = +process.env.PORT || 8090;
 const DATA = process.env.DATA_DIR || '/opt/backup-gui/data';
 const DEST_ROOT = process.env.DEST_ROOT || '/mnt/unraid';
@@ -32,7 +32,29 @@ const slug = s => String(s).toLowerCase().normalize('NFKD').replace(/[^\w-]+/g, 
 // ── Logg (koordineringslogg) + SSE ──────────────────────────────────────────
 const logBuf = [], clients = new Set();
 function emit(type, data) { const s = `event: ${type}\ndata: ${JSON.stringify(data)}\n\n`; for (const c of clients) c.write(s) }
-function log(node, msg, kind = 'info') { const l = { t: Date.now(), node, msg, kind }; logBuf.push(l); if (logBuf.length > 200) logBuf.shift(); emit('coord.log', l) }
+const LOGF = () => path.join(DATA, 'hytte.log');
+function log(node, msg, kind = 'info') {
+  const l = { t: Date.now(), node, msg, kind }; logBuf.push(l); if (logBuf.length > 200) logBuf.shift(); emit('coord.log', l);
+  try { fs.appendFileSync(LOGF(), JSON.stringify(l) + '\n'); const st = fs.statSync(LOGF()); if (st.size > 4e6) { fs.renameSync(LOGF(), LOGF() + '.1') } } catch (e) {}
+}
+function tailFile(f, n) { try { const st = fs.statSync(f), len = Math.min(st.size, 1.5e6), fd = fs.openSync(f, 'r'), b = Buffer.alloc(len); fs.readSync(fd, b, 0, len, st.size - len); fs.closeSync(fd); return b.toString('utf8').split('\n').filter(Boolean).slice(-n) } catch (e) { return [] } }
+// ── Oppdatering fra GUI ──
+const REPO = 'SebastianKristo/glass-dash', UPD_BRANCH = process.env.HYTTE_BRANCH || 'backup-gui', UPD_LOG = '/var/log/hytte-update.log', UPD_BIN = '/usr/local/bin/update-backup-gui';
+const BUILD = (() => { try { return fs.readFileSync(path.join(__dirname, 'VERSION'), 'utf8').trim() } catch (e) { return '' } })();
+let updCache = null, updRunning = 0;
+async function gh(u) { const r = await fetch('https://api.github.com/repos/' + REPO + u, { headers: { 'User-Agent': 'hytte', Accept: 'application/vnd.github+json' }, signal: AbortSignal.timeout(8000) }); if (!r.ok) throw new Error('GitHub svarte ' + r.status); return r.json() }
+async function updateInfo(force) {
+  if (!force && updCache && Date.now() - updCache.at < 5 * 60e3) return updCache;
+  const out = { at: Date.now(), current: BUILD, version: VERSION, branch: UPD_BRANCH, latest: null, behind: null, commits: [], canUpdate: fs.existsSync(UPD_BIN), error: null };
+  try {
+    const head = await gh('/commits/' + UPD_BRANCH); out.latest = head.sha; out.latestDate = head.commit.committer.date;
+    if (BUILD && /^[0-9a-f]{7,40}$/.test(BUILD)) {
+      if (head.sha.startsWith(BUILD)) out.behind = 0;
+      else { const c = await gh('/compare/' + BUILD + '...' + head.sha); out.behind = c.ahead_by; out.commits = c.commits.filter(x => (x.files || []).length === 0 || true).slice(-30).reverse().map(x => ({ sha: x.sha.slice(0, 7), msg: x.commit.message.split('\n')[0], date: x.commit.committer.date })) }
+    } else { out.commits = [{ sha: head.sha.slice(0, 7), msg: head.commit.message.split('\n')[0], date: out.latestDate }] }
+  } catch (e) { out.error = e.message }
+  return (updCache = out);
+}
 let selfName = 'hytte';
 
 // ── Tailscale ────────────────────────────────────────────────────────────────
@@ -266,11 +288,11 @@ http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x'), p = url.pathname;
   try {
     if (!p.startsWith('/api/')) {
-      const f = path.join(PUB, /^\/(backupsteder|synk|filer|innstillinger)?\/?$/.test(p) ? 'index.html' : path.normalize(p).replace(/^(\.\.[/\\])+/, ''));
+      const f = path.join(PUB, /^\/(backupsteder|synk|filer|logg|innstillinger)?\/?$/.test(p) ? 'index.html' : path.normalize(p).replace(/^(\.\.[/\\])+/, ''));
       if (!f.startsWith(PUB) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); return res.end() }
       res.writeHead(200, { 'Content-Type': MIME[path.extname(f)] || 'application/octet-stream', 'Cache-Control': (f.includes('/vendor/') || f.includes('/fonts/')) ? 'max-age=604800' : 'no-cache' }); return fs.createReadStream(f).pipe(res);
     }
-    if (p === '/api/health') return json(res, 200, { ok: true, app: 'hytte', version: VERSION });
+    if (p === '/api/health') return json(res, 200, { ok: true, app: 'hytte', version: VERSION, build: BUILD.slice(0, 7) });
     if (p === '/api/whoami') return json(res, 200, { authed: authed(req), setup: !cfg.auth });
     if (p === '/api/login' && req.method === 'POST') {
       const b = await body(req); if (!b.password || b.password.length < 6) return json(res, 400, { error: 'Minst 6 tegn' });
@@ -310,6 +332,26 @@ http.createServer(async (req, res) => {
         running: running && { id: running.id, pct: running.pct, phase: running.phase, done: running.done, total: running.total }, log: logBuf.slice(-40), history: cfg.history.slice(-500),
         restores: rest,
       });
+    }
+    if (p === '/api/update' && req.method === 'GET') return json(res, 200, { ...(await updateInfo(url.searchParams.has('force'))), running: Date.now() - updRunning < 5 * 60e3 });
+    if (p === '/api/update' && req.method === 'POST') {
+      if (!fs.existsSync(UPD_BIN)) return json(res, 400, { error: 'Fant ikke update-backup-gui. Kjør installeren én gang fra Proxmox.' });
+      if (Date.now() - updRunning < 60e3) return json(res, 409, { error: 'En oppdatering kjører allerede' });
+      updRunning = Date.now(); log(selfName, 'Oppdatering startet fra GUI', 'info');
+      try { fs.appendFileSync(UPD_LOG, `\n=== ${new Date().toISOString()} oppdatering startet fra GUI ===\n`) } catch (e) {}
+      // systemd-run gjør at skriptet overlever at tjenesten restartes
+      const cmd = `${UPD_BIN} >> ${UPD_LOG} 2>&1`;
+      let fell = false; const fallback = () => { if (fell) return; fell = true; spawn('setsid', ['/bin/bash', '-c', cmd], { detached: true, stdio: 'ignore' }).unref() };
+      const child = spawn('systemd-run', ['--unit=hytte-update-' + Date.now(), '--collect', '--quiet', '/bin/bash', '-c', cmd], { stdio: 'ignore' });
+      child.on('error', fallback); child.on('exit', code => { if (code) fallback() });
+      return json(res, 200, { ok: true });
+    }
+    if (p === '/api/logs') {
+      const src = url.searchParams.get('src') || 'app', n = Math.min(2000, +url.searchParams.get('n') || 400);
+      if (src === 'app') { const lines = [...tailFile(LOGF() + '.1', n), ...tailFile(LOGF(), n)].slice(-n).map(l => { try { return JSON.parse(l) } catch (e) { return null } }).filter(Boolean); return json(res, 200, { src, lines }) }
+      if (src === 'update') return json(res, 200, { src, text: tailFile(UPD_LOG, n).join('\n') });
+      if (src === 'service') return execFile('journalctl', ['-u', 'backup-gui', '-n', String(n), '--no-pager', '-o', 'short-iso'], { timeout: 8000, maxBuffer: 8e6 }, (e, out, err) => json(res, 200, { src, text: e ? 'journalctl er ikke tilgjengelig her: ' + (err || e.message) : out }));
+      return json(res, 400, { error: 'ukjent kilde' });
     }
     if (p === '/api/settings' && req.method === 'POST') { const b = await body(req); for (const k of ['emailSummary', 'notifyOnFail', 'verifyAfterRun', 'autoPrune', 'stagger']) if (k in b) cfg.settings[k] = !!b[k]; if ([1, 3, 6, 9, 19].includes(+b.defaultLevel)) cfg.settings.defaultLevel = +b.defaultLevel; if ('notifyNode' in b) cfg.settings.notifyNode = b.notifyNode || null; saveCfg(); return json(res, 200, { ok: true }) }
     if (p === '/api/password' && req.method === 'POST') { const b = await body(req); if (!b.password || b.password.length < 6) return json(res, 400, { error: 'Minst 6 tegn' }); const salt = crypto.randomBytes(16).toString('hex'); cfg.auth = { salt, hash: hash(b.password, salt) }; saveCfg(); return json(res, 200, { ok: true }) }

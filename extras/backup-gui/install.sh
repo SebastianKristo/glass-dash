@@ -29,6 +29,7 @@ fi
 mkdir -p /opt/backup-gui/public/vendor /opt/backup-gui/data
 FILES=$(curl -fsSL "$RAW/files.txt" 2>/dev/null || echo "server.js store.js public/index.html public/ambient.html public/icon.svg public/icon-180.png public/vendor/lucide.min.js")
 for f in $FILES; do mkdir -p "/opt/backup-gui/$(dirname "$f")"; curl -fsSL "$RAW/$f" -o "/opt/backup-gui/$f"; done
+echo "$RAW" | sed -E 's#.*/glass-dash/([^/]+)/extras.*#\1#' > /opt/backup-gui/VERSION
 chmod 700 /opt/backup-gui/data
 cat >/etc/systemd/system/backup-gui.service <<UNIT
 [Unit]
@@ -64,6 +65,8 @@ for f in $FILES; do
 done
 # Oppdater også dette skriptet selv fra installeren
 curl -fsSL "$RAW/install.sh" | sed -n "/^cat >\/usr\/local\/bin\/update-backup-gui <<'UPD'$/,/^UPD$/p" | sed '1d;$d' > /tmp/ubg.new && [ -s /tmp/ubg.new ] && install -m 755 /tmp/ubg.new /usr/local/bin/update-backup-gui || true
+echo "$SHA" > /opt/backup-gui/VERSION
+echo "$(date -Is) installerte ${SHA:0:7}"
 systemctl restart backup-gui
 sleep 1
 echo "Hytte oppdatert til ${SHA:0:7} ✓  ($(curl -s localhost:${PORT:-8090}/api/health))"
