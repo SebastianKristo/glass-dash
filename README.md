@@ -2,6 +2,7 @@
   <img src="public/icon.png" width="96" alt="Skjold Stack-ikon">
 </p>
 
+<p align="center"><img src="public/icons/skjold-stack.svg" width="96" alt="Skjold Stack"></p>
 <h1 align="center">Skjold Stack</h1>
 <p align="center"><b>av Skjold Lab</b> · tidligere Labdeck</p>
 
@@ -473,3 +474,9 @@ Oppsettet ditt i `/app/data` beholdes.
 <p align="center">
   <sub>Design laget med Claude Design · Inspirert av <a href="https://github.com/glanceapp/glance">Glance</a> · Ikoner fra <a href="https://github.com/homarr-labs/dashboard-icons">dashboard-icons</a></sub>
 </p>
+
+## Hytte Backup
+
+<img src="public/icons/hytte-backup.svg" width="48" align="left" alt="Hytte Backup">
+
+Skjold Stack kjenner igjen [Hytte Backup](extras/backup-gui) automatisk (port 8090, `/api/health`) og viser den med egen logo. Legg til widgeten «Hytte Backup» for status, med URL og API-nøkkel fra Hytte → Innstillinger.
