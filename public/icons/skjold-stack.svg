@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Skjold Stack · Skjold Lab</title>
+  <rect width="64" height="64" rx="15" fill="#151516"/>
+  <!-- Skjold-søylene (20/29/40/29/20, gull i midten) -->
+  <rect x="13" y="25" width="5.5" height="12" rx="2.75" fill="#F2F2EE"/>
+  <rect x="21.75" y="19.5" width="5.5" height="17.5" rx="2.75" fill="#F2F2EE"/>
+  <rect x="30.5" y="13" width="5.5" height="24" rx="2.75" fill="#D9A441"/>
+  <rect x="39.25" y="19.5" width="5.5" height="17.5" rx="2.75" fill="#F2F2EE"/>
+  <rect x="48" y="25" width="5.5" height="12" rx="2.75" fill="#F2F2EE"/>
+  <!-- Stakken: lagene tjenestene står på -->
+  <rect x="11" y="41" width="44.5" height="5" rx="2.5" fill="#F2F2EE"/>
+  <rect x="15" y="49" width="36.5" height="4" rx="2" fill="#F2F2EE" opacity=".45"/>
+</svg>
