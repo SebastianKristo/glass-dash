@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="NRK-opptak">
+  <rect width="64" height="64" rx="16" fill="#2747F5"/>
+  <rect x="11" y="15" width="34" height="24" rx="6" fill="none" stroke="#fff" stroke-width="4.5"/>
+  <path d="M22 45h12" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/>
+  <circle cx="44" cy="43" r="13" fill="#D6F25E" stroke="#2747F5" stroke-width="4"/>
+  <path d="M44 36v12m-5.5-5.5L44 48l5.5-5.5" fill="none" stroke="#12141C" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
