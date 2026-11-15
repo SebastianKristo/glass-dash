@@ -310,7 +310,7 @@ http.createServer(async (req, res) => {
       return json(res, 200, { app: 'hytte', version: VERSION, node: selfName,
         jobs: { total: jobs.length, ok: jobs.filter(j => j.status === 'ok').length, fail: jobs.filter(j => j.status === 'fail').length, running: jobs.filter(j => j.status === 'running').length },
         lastOk: last ? last.end || last.start : null, next: next ? { id: next.id, at: next.nextRun } : null,
-        orig, stored: store.bytes, saved: orig ? Math.max(0, 1 - store.bytes / orig) : 0,
+        orig, stored: store.bytes, saved: (() => { const d = jobs.filter(j => j.orig > 0), o = d.reduce((a, j) => a + j.orig, 0), st = d.reduce((a, j) => a + (j.stored || 0), 0); return o ? Math.max(0, 1 - st / o) : 0 })(),
         disk: { used: d.used, size: d.size }, today: { runs: day.length, fail: day.filter(h => h.status === 'fail').length, bytes: day.reduce((a, h) => a + (h.newBytes || 0), 0) },
         nodes: { total: nodeList().length, online: nodeList().filter(n => n.online).length },
         list: jobs.map(j => ({ id: j.id, node: j.node, status: j.status, last: j.last ? j.last.end : null })) });
