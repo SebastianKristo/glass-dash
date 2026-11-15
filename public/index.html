@@ -521,17 +521,18 @@
 </sc-if>
 
 <sc-if value="{{discOpen}}" hint-placeholder-val="{{false}}">
-  <div onClick="{{closeAll}}" style="position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;justify-content:flex-end;z-index:10">
-    <div onClick="{{stop}}" style="width:400px;max-width:100%;height:100%;background:var(--bg2);border-left:1px solid var(--line);padding:18px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px;overflow:auto;font-size:11px">
+  <div onClick="{{closeAll}}" style="position:fixed;inset:0;background:{{disc.ovBg}};pointer-events:{{disc.ovPE}};display:flex;justify-content:flex-end;z-index:10;transition:background .2s">
+    <div onClick="{{stop}}" style="opacity:{{disc.drOp}};transform:{{disc.drTf}};pointer-events:{{disc.ovPE}};transition:opacity .2s,transform .25s;width:400px;max-width:100%;height:100%;background:var(--bg2);border-left:1px solid var(--line);padding:18px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px;overflow:auto;font-size:11px">
       <div style="display:flex;align-items:center;gap:8px"><span style="font-size:13px;color:var(--text);flex:1">Finn nye tjenester</span>
         <button onClick="{{disc.refresh}}" style="background:none;border:1px solid var(--line2);color:var(--text2);border-radius:3px;padding:4px 8px;cursor:pointer;font-size:10px">↻ søk igjen</button></div>
       <span style="color:var(--muted)">CT-er og VM-er fra Proxmox, containere og VM-er fra Unraid, og containere fra Portainer.</span>
+      <span style="color:var(--text2);line-height:1.5">↔ {{disc.hint}}</span>
       <sc-if value="{{disc.none}}"><span style="color:var(--neg);line-height:1.5">Ingen kilder satt opp. Fyll inn <b>PROXMOX_URL</b> + <b>PROXMOX_TOKEN</b>, <b>UNRAID_URL</b> + <b>UNRAID_API_KEY</b> <b>DOCKER_HOSTS</b> og/eller <b>PORTAINER_URL</b> + <b>PORTAINER_API_KEY</b> under Secrets.</span></sc-if>
       <sc-if value="{{disc.hasErr}}"><span style="color:var(--neg);line-height:1.5">{{disc.errors}}</span></sc-if>
       <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--accent);flex:1">{{disc.summary}}</span>
         <button onClick="{{disc.toggleAll}}" style="background:none;border:0;color:var(--muted);cursor:pointer;font-size:10px;text-decoration:underline">{{disc.allLabel}}</button></div>
       <sc-for list="{{disc.rows}}" as="dr">
-        <label style="display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:4px;padding:8px;cursor:pointer;opacity:{{dr.op}}">
+        <label draggable="{{dr.drag}}" onDragStart="{{dr.onDragStart}}" onDragEnd="{{dr.onDragEnd}}" style="display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:4px;padding:8px;cursor:{{dr.dcur}};opacity:{{dr.op}}">
           <input type="checkbox" checked="{{dr.checked}}" disabled="{{dr.off}}" onChange="{{dr.toggle}}" style="accent-color:var(--accent)">
           <span style="width:22px;height:22px;flex:none;display:flex;align-items:center;justify-content:center"><img src="{{dr.icon}}" alt="" ref="{{dr.imgRef}}" style="width:22px;height:22px;object-fit:contain;display:{{dr.imgDisp}}"></span>
           <span style="display:flex;flex-direction:column;gap:2px;min-width:0">
@@ -914,10 +915,12 @@ class Component extends DCLogic{
   const s=this.state,m=s.mobile,cols=s.boards[s.tab]||s.boards[Object.keys(s.boards)[0]]||[[],[],[]];if(!s.boards[s.tab]&&Object.keys(s.boards)[0])s.tab=Object.keys(s.boards)[0];
   const day=(()=>{const n=new Date();return((n.getHours()*60+n.getMinutes())/1440*100)})();
   const mk=w=>({...w,['is'+w.type[0].toUpperCase()+w.type.slice(1)]:true,gridCols:(()=>{const c=((w.opts||{}).cols)||'auto';return c==='auto'||m?'repeat(auto-fill,minmax(180px,1fr))':'repeat('+c+',minmax(0,1fr))'})(),apps:(w.apps||[]).map((a,i)=>this.svcView(a,i,w)),addSvc:()=>{this.svcMut(w.id,a=>a.push({name:'Ny tjeneste',url:'',icon:'',status:'auto',demo:'o',ms:'1ms'}));this.setState({selId:w.id})},
-   draggable:s.editing,cur:s.editing?'grab':'default',op:s.dragW===w.id?.4:1,dropShadow:s.dropW&&s.dropW.id===w.id?(s.dropW.after?'0 3px 0 var(--accent)':'0 -3px 0 var(--accent)'):'none',
+   draggable:s.editing,cur:s.editing?'grab':'default',op:s.dragW===w.id?.4:1,dropShadow:s.discDragging&&w.type==='apps'?(s.discOver===w.id?'0 0 0 2px var(--accent), 0 0 24px color-mix(in srgb,var(--accent) 35%,transparent)':'0 0 0 1px color-mix(in srgb,var(--accent) 45%,transparent)'):s.dropW&&s.dropW.id===w.id?(s.dropW.after?'0 3px 0 var(--accent)':'0 -3px 0 var(--accent)'):'none',
    onDragStart:e=>{if(this.svcDrag)return;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',w.id);this.setState({dragW:w.id})},
-   onOver:e=>{if(!s.dragW||this.svcDrag)return;e.preventDefault();e.stopPropagation();const r=e.currentTarget.getBoundingClientRect(),after=e.clientY>r.top+r.height/2;const d=s.dropW;if(!d||d.id!==w.id||d.after!==after)this.setState({dropW:{id:w.id,after}})},
-   onDrop:e=>{if(!s.dragW||this.svcDrag)return;e.preventDefault();e.stopPropagation();const after=s.dropW&&s.dropW.after,src=s.dragW;this.setState({dragW:null,dropW:null});if(src===w.id)return;
+   onOver:e=>{if(w.type==='apps'&&(this.discDrag||this.svcDrag)){e.preventDefault();e.stopPropagation();if(this.discDrag&&s.discOver!==w.id)this.setState({discOver:w.id});return}if(!s.dragW||this.svcDrag)return;e.preventDefault();e.stopPropagation();const r=e.currentTarget.getBoundingClientRect(),after=e.clientY>r.top+r.height/2;const d=s.dropW;if(!d||d.id!==w.id||d.after!==after)this.setState({dropW:{id:w.id,after}})},
+   onDrop:e=>{if(w.type==='apps'&&this.discDrag){e.preventDefault();e.stopPropagation();const items=this.discDrag;this.discDrag=null;this.setState({discDragging:false,discOver:null,discSel:{}});this.discAdd(items,w.id);return}
+    if(w.type==='apps'&&this.svcDrag){e.preventDefault();e.stopPropagation();const f=this.svcDrag;this.svcDrag=null;this.setState({svcDrop:null});if(f.wid===w.id)return;this.mut(cs=>{const fw=cs.flat().find(x=>x.id===f.wid),tw=cs.flat().find(x=>x.id===w.id);const[it]=fw.apps.splice(f.i,1);tw.apps=[...(tw.apps||[]),it]});return}
+    if(!s.dragW||this.svcDrag)return;e.preventDefault();e.stopPropagation();const after=s.dropW&&s.dropW.after,src=s.dragW;this.setState({dragW:null,dropW:null});if(src===w.id)return;
     this.mut(cs=>{const[c,i]=this.find(cs,src);const[it]=cs[c].splice(i,1);const[tc,ti]=this.find(cs,w.id);cs[tc].splice(ti+(after?1:0),0,it)})},wx:w.type==='weather'?this.wxView(w.id,this.getWx({...DEFOPT.weather,...(w.city?{location:w.city}:{}),...(w.opts||{})})):null,d:LOADERS[w.type]?this.fmtData(w):null,cal:w.type==='calendar'?this.getCal(w):null,outline:s.editing?'1px dashed var(--line3)':'none',
    ctrls:[['⚙',()=>this.setState({selId:w.id,selSvc:null})],['✕',()=>this.mut(cs=>{const[c,i]=this.find(cs,w.id);cs[c].splice(i,1)}),R]].map(([icon,fn,color])=>({icon,fn,color:color||'var(--text2)'}))});
   const columns=m?[{items:[...cols[1].slice(0,1),...cols[2],...cols[1].slice(1),...cols[0]].map(mk)}]:cols.map((c,ci)=>({items:c.map(mk),minH:s.editing?'120px':'0',bg:s.dragW&&!c.length?'color-mix(in srgb,var(--accent) 6%,transparent)':'transparent',
@@ -974,10 +977,13 @@ openDisc:()=>this.discOpen(),discOpen:!!s.discOpen,
     const cols=s.boards[s.tab]||[],groups=cols.flat().filter(w=>w.type==='apps'),target=s.discTarget!=null&&(s.discTarget===''||groups.some(g=>g.id===s.discTarget))?s.discTarget:(groups[0]?groups[0].id:'');
     const fresh=v.items.filter(it=>this.discIsNew(it,ex)),picked=fresh.filter(it=>it.url&&sel[it.key]);
     const none=!s.discBusy&&v.sources&&!v.sources.proxmox&&!v.sources.portainer&&!v.sources.unraid&&!v.sources.docker;
-    return{busy:!!s.discBusy,none,errors:(v.errors||[]).join(' · '),hasErr:!!(v.errors||[]).length,
+    return{busy:!!s.discBusy,none,dragging:!!s.discDragging,ovBg:s.discDragging?'transparent':'rgba(0,0,0,.55)',ovPE:s.discDragging?'none':'auto',drOp:s.discDragging?.5:1,drTf:s.discDragging?'translateX(78%)':'none',hint:groups.length?'Dra en tjeneste (eller de valgte) inn i en gruppe på dashbordet, eller velg og trykk Legg til.':'Velg og trykk Legg til, så lages gruppen «Nye tjenester».',errors:(v.errors||[]).join(' · '),hasErr:!!(v.errors||[]).length,
      summary:s.discBusy?'Søker i Proxmox og Portainer…':fresh.length?fresh.length+' nye · '+(v.items.length-fresh.length)+' er allerede på dashbordet':v.items.length?'Alt er allerede på dashbordet ✓':'',
      rows:fresh.map(it=>({name:it.name,where:it.where,line:it.url||it.note||'',lineColor:it.url?'var(--muted)':'var(--neg)',icon:IMG(it.icon)||'data:,',imgDisp:it.icon?'block':'none',off:!it.url,op:it.url?1:.55,checked:!!sel[it.key],
-      imgRef:el=>{if(el&&!el.onerror)el.onerror=()=>{el.style.visibility='hidden'}},toggle:e=>this.setState({discSel:{...sel,[it.key]:e.target.checked}})})),
+      imgRef:el=>{if(el&&!el.onerror)el.onerror=()=>{el.style.visibility='hidden'}},toggle:e=>this.setState({discSel:{...sel,[it.key]:e.target.checked}}),
+      drag:!!it.url,dcur:it.url?'grab':'default',
+      onDragStart:e=>{if(!it.url)return e.preventDefault();e.dataTransfer.effectAllowed='copy';e.dataTransfer.setData('text/plain',it.name);this.discDrag=sel[it.key]&&picked.length?picked:[it];setTimeout(()=>this.setState({discDragging:true}),0)},
+      onDragEnd:()=>{this.discDrag=null;this.setState({discDragging:false,discOver:null})}})),
      allLabel:picked.length&&picked.length===fresh.filter(i=>i.url).length?'fjern alle':'velg alle',
      toggleAll:()=>{const all=fresh.filter(i=>i.url),on=!(picked.length===all.length&&all.length);const n={};if(on)all.forEach(i=>n[i.key]=true);this.setState({discSel:n})},
      targets:[...groups.map(g=>({v:g.id,n:g.title||'Tjenester'})),{v:'',n:'＋ ny gruppe «Nye tjenester»'}],target,setTarget:e=>this.setState({discTarget:e.target.value}),

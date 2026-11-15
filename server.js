@@ -222,6 +222,20 @@ async function iconIndex(){if(Date.now()-iconIdx.t<864e5)return iconIdx;
   try{const j=await getJSON('https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/tree.json',{},8000);
     iconIdx={t:Date.now(),svg:new Set((j.svg||[]).map(f=>f.replace(/\.svg$/,''))),png:new Set((j.png||[]).map(f=>f.replace(/\.png$/,'')))}}
   catch(e){iconIdx.t=Date.now()-864e5+3600e3}return iconIdx}
+// «silo-media-server» → silo, «nrk-downloader» → nrk, «linuxserver/sonarr» → sonarr
+function nameVariants(n){n=String(n||'').toLowerCase().replace(/^.*\//,'');const t=n.split(/[^a-z0-9]+/).filter(Boolean);const strip=t.filter(x=>!/^(server|media|app|web|ui|docker|ce|ee|official|lts|latest|backend|frontend|nedlaster|downloader|dl|svc|service)$/.test(x));
+  return[...new Set([strip.join('-'),strip.join(''),strip[0],t[0],t.slice(0,2).join('-')].filter(x=>x&&x.length>1))]}
+// Henter ikonet tjenesten selv oppgir (<link rel=icon> / apple-touch-icon / favicon.ico)
+const favCache=new Map();
+async function favicon(u){if(favCache.has(u))return favCache.get(u);let out='';
+  try{const r=await fetch(u,{signal:AbortSignal.timeout(2500),redirect:'follow'});const html=(await r.text()).slice(0,200000),base=r.url||u;
+    const links=[...html.matchAll(/<link\b[^>]*>/gi)].map(m=>m[0]).filter(l=>/rel=["']?[^"'>]*(icon|apple-touch-icon)/i.test(l));
+    const score=l=>(/apple-touch-icon/i.test(l)?3:0)+(/\.svg/i.test(l)?2:0)+(/(192|180|152|512)/.test(l)?1:0);
+    links.sort((a,b)=>score(b)-score(a));
+    for(const l of links){const h=(/href=["']?([^"' >]+)/i.exec(l)||[])[1];if(h&&!h.startsWith('data:')){out=new URL(h,base).href;break}}
+    if(!out){const f=new URL('/favicon.ico',base).href,fr=await fetch(f,{signal:AbortSignal.timeout(2000)});if(fr.ok&&/image|icon|octet/i.test(fr.headers.get('content-type')||''))out=f}
+  }catch(e){}
+  favCache.set(u,out);return out}
 function iconFor(idx,...cands){const base='https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/';
   const local=cands.find(c=>typeof c==='string'&&(c.startsWith('/')||/^https?:/.test(c)));if(local)return local;
   const list=cands.filter(Boolean).flatMap(c=>{const k=String(c).toLowerCase();return[k,k.replace(/[^a-z0-9]+/g,'-'),norm(k)]});
@@ -239,19 +253,19 @@ async function discoverProxmox(idx){
     if((v.tags||'').split(/[;,]/).includes('nodash'))return null;
     const[,known]=lookup(v.name,...(v.tags||'').split(/[;,]/));if(known&&known.hide)return null;
     const name=known&&known.name||pretty(v.name||kind+' '+v.vmid);
-    if(v.status!=='running')return{key,name,url:'',icon:iconFor(idx,known&&known.icon,v.name),source:'proxmox',where,note:'stoppet'};
+    if(v.status!=='running')return{key,name,url:'',icon:iconFor(idx,known&&known.icon,v.name,...nameVariants(v.name)),source:'proxmox',where,note:'stoppet'};
     let ip='';
     try{if(v.type==='lxc'){const j=await getJSON(`${base}/api2/json/nodes/${v.node}/lxc/${v.vmid}/interfaces`,H);
         const a=(j.data||[]).filter(i=>i.name!=='lo').map(i=>(i.inet||'').split('/')[0]).find(x=>x&&x!=='127.0.0.1');ip=a||''}
       else{const j=await getJSON(`${base}/api2/json/nodes/${v.node}/qemu/${v.vmid}/agent/network-get-interfaces`,H);
         for(const i of (j.data&&j.data.result)||[]){if(i.name==='lo')continue;const a=(i['ip-addresses']||[]).find(x=>x['ip-address-type']==='ipv4'&&!x['ip-address'].startsWith('127.')&&!x['ip-address'].startsWith('172.17.'));if(a){ip=a['ip-address'];break}}}}
     catch(e){}
-    if(!ip)return{key,name,url:'',icon:iconFor(idx,known&&known.icon,v.name),source:'proxmox',where,note:kind==='VM'?'fant ikke IP (installer qemu-guest-agent)':'fant ikke IP'};
+    if(!ip)return{key,name,url:'',icon:iconFor(idx,known&&known.icon,v.name,...nameVariants(v.name)),source:'proxmox',where,note:kind==='VM'?'fant ikke IP (installer qemu-guest-agent)':'fant ikke IP'};
     const tp=tagPort(v.tags);let port=tp?tp.port:await pickPort(ip,known);
-    if(!port)return{key,name,url:'',icon:iconFor(idx,known&&known.icon,v.name),source:'proxmox',where:where+' · '+ip,note:'ingen web-port funnet (legg til tag port-XXXX)'};
+    if(!port)return{key,name,url:'',icon:iconFor(idx,known&&known.icon,v.name,...nameVariants(v.name)),source:'proxmox',where:where+' · '+ip,note:'ingen web-port funnet (legg til tag port-XXXX)'};
     const url=tp&&tp.https?'https://'+ip+':'+port:mkUrl(ip,port,known&&known.path||'');
     const fp=(!known||port===8090||port===8020)&&await fingerprint(url);if(fp)return{key,name:fp.name,url,icon:fp.icon,source:'proxmox',where:where+' · '+ip};
-    return{key,name,url,icon:iconFor(idx,known&&known.icon,v.name),source:'proxmox',where:where+' · '+ip}}));
+    return{key,name,url,icon:iconFor(idx,known&&known.icon,v.name,...nameVariants(v.name)),source:'proxmox',where:where+' · '+ip}}));
   // Selve Proxmox-noden(e)
   const nodes=[...new Set(list.map(v=>v.node))];
   if(!nodes.length)nodes.push('pve');
@@ -266,7 +280,8 @@ async function dockerItems(cs,host,idx,source,keyOf,whereOf,noHostNote){const ou
       const k=keyOf(cname),where=whereOf(cname);
       const[,known]=lookup(L['labdeck.name'],cname,ib,L['com.docker.compose.service']);
       const name=L['labdeck.name']||L['homepage.name']||known&&known.name||pretty(cname);
-      const icon=L['labdeck.icon']||iconFor(idx,known&&known.icon,ib,cname);
+      const hp=L['homepage.icon'],ur=L['net.unraid.docker.icon'];
+      const icon=L['labdeck.icon']||(hp&&/^(https?:)?\//.test(hp)?hp:'')||iconFor(idx,known&&known.icon,hp&&hp.replace(/\.(svg|png)$/,''),ib,cname,...nameVariants(ib),...nameVariants(cname))||(ur&&/^https?:/.test(ur)?ur:'');
       const href=L['labdeck.url']||L['homepage.href'];
       if(href){out.push({key:k,name,url:href,icon,source,where});continue}
       if(known&&known.hide||known&&known.self)continue;
@@ -319,7 +334,7 @@ async function discoverUnraid(idx){
   catch(e){errs.push('Docker: '+e.message)}
   try{const d=await q('{ vms { domains { uuid name state } } }');
     for(const v of (d.vms||{}).domains||[]){if(!v.name)continue;const[,known]=lookup(v.name);if(known&&known.hide)continue;
-      out.push({key:'unraid-vm:'+(v.uuid||v.name),name:known&&known.name||pretty(v.name),url:'',icon:iconFor(idx,known&&known.icon,v.name),source:'unraid',
+      out.push({key:'unraid-vm:'+(v.uuid||v.name),name:known&&known.name||pretty(v.name),url:'',icon:iconFor(idx,known&&known.icon,v.name,...nameVariants(v.name)),source:'unraid',
         where:'VM · Unraid · '+v.name,note:/running/i.test(v.state||'')?'kjører – legg inn adressen selv':'stoppet'})}}
   catch(e){errs.push('VM: '+e.message)}
   if(out.length===1&&errs.length)throw new Error(errs.join(', '));
@@ -353,6 +368,7 @@ async function discover(res,force,reqHost){
   // Socket bare hvis Unraid-API-et ikke ga containere (samme nøkler, unngår dobbelt)
   const sk=(!u.skipped&&!u.error)?{items:[],skipped:true}:await run(discoverSocket,'Docker-socket');
   const seen=new Set(),items=[...p.items,...d.items,...u.items,...h.items,...sk.items].filter(i=>!seen.has(i.key)&&seen.add(i.key));
+  await Promise.all(items.filter(i=>i.url&&!i.icon).map(async i=>{i.icon=await favicon(i.url)}));
   const v={t:Date.now(),items,errors:[p.error,d.error,u.error,h.error,sk.error].filter(Boolean),
     sources:{proxmox:!p.skipped,portainer:!d.skipped,unraid:!u.skipped||!sk.skipped,docker:!h.skipped}};
   discCache={t:Date.now(),v};json(res,200,v)}
