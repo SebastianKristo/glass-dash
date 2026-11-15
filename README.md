@@ -309,6 +309,7 @@ Verdier i dashbordet går foran miljøvariabler.
 | `SPEEDTEST_URL` | Internet Speed | `http://10.69.1.202` |
 | `SPEEDTEST_TRACKER_API_TOKEN` | Internet Speed | API-token |
 | `IMMICH_URL` / `IMMICH_API_KEY` | Immich stats | `http://10.69.1.126:2283` |
+| `NRK_URL` / `NRK_TOKEN` | NRK-opptak | `http://10.69.1.244:8020` og `NRK_API_TOKEN` fra nedlasteren |
 | `CLOUDFLARE_ACCOUNT_ID` | Cloudflared Tunnels | Account ID |
 | `CLOUDFLARE_TUNNEL_ID` | Cloudflared Tunnels | Tunnel ID |
 | `CLOUDFLARE_API_KEY` | Cloudflared Tunnels | Token med *Cloudflare Tunnel: Read* |
@@ -342,6 +343,7 @@ Verdier i dashbordet går foran miljøvariabler.
 | **Cloudflared Tunnels** | Cloudflare API | Hostname → tjeneste. |
 | **Minecraft Java server** | Server List Ping (direkte TCP) | Online/offline, spillere, versjon, MOTD, spillerhoder. Lenke til binhex web-konsoll. |
 | **Immich stats** | Immich | Bilder, videoer, lagring. |
+| **NRK-opptak** | [NRK-nedlasteren](https://github.com/SebastianKristo/skjold-proxmox-media/blob/nrk-nedlaster/docs/09-nrk.md) | Det som tas opp eller komprimeres nå (bilde, prosent, fart), kø, serier du følger, opptak siste 7 dager, ledig plass, siste opptak og om VPN-en er i Norge. Finn tjenester kjenner den igjen på port 8020 og gir den NRK-opptak-logoen. |
 | **Portainer** | Portainer API | Containere og status. |
 | **Day progress** | Lokalt | Dag, måned eller år. |
 | **Random fact / Bible verse** | Offentlige API-er | |

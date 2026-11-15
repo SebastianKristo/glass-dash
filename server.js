@@ -7,7 +7,7 @@ const rd=(f,d)=>{try{return JSON.parse(fs.readFileSync(f,'utf8'))}catch(e){retur
 const wr=(f,o)=>{fs.writeFileSync(f+'.tmp',JSON.stringify(o,null,2));fs.renameSync(f+'.tmp',f)};
 let kv=rd(KV_FILE,{}),secrets=rd(SEC_FILE,{});
 // Miljøvariabler (f.eks. fra Unraid-template) brukes som fallback, men kun for kjente secret-navn
-const DEF=['PLEX_URL','PLEX_TOKEN','SONARR_URL','SONARR_KEY','RADARR_URL','RADARR_KEY','SPEEDTEST_URL','SPEEDTEST_TRACKER_API_TOKEN','CLOUDFLARE_API_TOKEN','CLOUDFLARE_ZONE_ID','IMMICH_URL','IMMICH_API_KEY','QBITTORRENT_IP','PROWLARR_URL','PROWLARR_API_URL','PROWLARR_KEY','PORTAINER_URL','PORTAINER_ENDPOINT_ID','PORTAINER_API_KEY','SONARR_API_URL','RADARR_API_URL','PROWLARR_COLLAPSE_AFTER','CLOUDFLARE_API_KEY','CLOUDFLARE_ACCOUNT_ID','CLOUDFLARE_TUNNEL_ID','ADGUARD_PASSWORD','DNS_URL','DNS_USER','DNS_PASSWORD','PIHOLE_URL','PIHOLE_PASSWORD','GLANCES_URL','PROXMOX_URL','PROXMOX_TOKEN','UNRAID_URL','UNRAID_API_KEY','DOCKER_HOST_IP','DOCKER_HOSTS','MINECRAFT_HOST','MINECRAFT_CONSOLE_URL'];
+const DEF=['PLEX_URL','PLEX_TOKEN','SONARR_URL','SONARR_KEY','RADARR_URL','RADARR_KEY','SPEEDTEST_URL','SPEEDTEST_TRACKER_API_TOKEN','CLOUDFLARE_API_TOKEN','CLOUDFLARE_ZONE_ID','IMMICH_URL','IMMICH_API_KEY','QBITTORRENT_IP','PROWLARR_URL','PROWLARR_API_URL','PROWLARR_KEY','PORTAINER_URL','PORTAINER_ENDPOINT_ID','PORTAINER_API_KEY','SONARR_API_URL','RADARR_API_URL','PROWLARR_COLLAPSE_AFTER','CLOUDFLARE_API_KEY','CLOUDFLARE_ACCOUNT_ID','CLOUDFLARE_TUNNEL_ID','ADGUARD_PASSWORD','DNS_URL','DNS_USER','DNS_PASSWORD','PIHOLE_URL','PIHOLE_PASSWORD','GLANCES_URL','PROXMOX_URL','PROXMOX_TOKEN','UNRAID_URL','UNRAID_API_KEY','DOCKER_HOST_IP','DOCKER_HOSTS','MINECRAFT_HOST','MINECRAFT_CONSOLE_URL','NRK_URL','NRK_TOKEN'];
 const known=n=>DEF.includes(n)||n in secrets;
 const sec=n=>!known(n)?'':secrets[n]!=null&&secrets[n]!==''?secrets[n]:(process.env[n]||'');
 const sub=s=>String(s).replace(/\$\{(\w+)\}/g,(_,n)=>sec(n));
@@ -200,7 +200,7 @@ const KNOWN={
   syncthing:S('Syncthing',[8384]),homarr:S('Homarr',[7575]),homepage:S('Homepage',[3000]),dashy:S('Dashy',[4000]),skjoldstack:S('Skjold Stack',[8080],{icon:'/icons/skjold-stack.svg'}),labdeck:S('Skjold Stack',[80,7575],{icon:'/icons/skjold-stack.svg'}),
   glances:S('Glances',[61208]),speedtesttracker:S('Speedtest Tracker',[80,8080],{icon:'speedtest-tracker'}),musicassistant:S('Music Assistant',[8095],{icon:'music-assistant'}),
   lyrion:S('Lyrion',[9000],{icon:'lyrion-music-server'}),lms:S('Lyrion',[9000],{icon:'lyrion-music-server'}),scrypted:S('Scrypted',[10443]),go2rtc:S('go2rtc',[1984]),
-  silo:S('Silo',[80,3000,8080]),navidrome:S('Navidrome',[4533]),hyttebackup:S('Hytte Backup',[8090],{icon:'/icons/hytte-backup.svg'}),hytte:S('Hytte Backup',[8090],{icon:'/icons/hytte-backup.svg'}),backup:S('Hytte Backup',[8090],{icon:'proxmox-backup-server'}),backupgui:S('Hytte Backup',[8090],{icon:'proxmox-backup-server'}),subwave:S('SUB/WAVE',[3000,8080],{icon:'subwave'}),dispatcharr:S('Dispatcharr',[9191]),minio:S('MinIO',[9001]),n8n:S('n8n',[5678]),
+  silo:S('Silo',[80,3000,8080]),navidrome:S('Navidrome',[4533]),hyttebackup:S('Hytte Backup',[8090],{icon:'/icons/hytte-backup.svg'}),hytte:S('Hytte Backup',[8090],{icon:'/icons/hytte-backup.svg'}),backup:S('Hytte Backup',[8090],{icon:'proxmox-backup-server'}),backupgui:S('Hytte Backup',[8090],{icon:'proxmox-backup-server'}),subwave:S('SUB/WAVE',[3000,8080],{icon:'subwave'}),'nrk-dl':S('NRK-opptak',[8020],{icon:'/icons/nrk-opptak.svg'}),nrkdl:S('NRK-opptak',[8020],{icon:'/icons/nrk-opptak.svg'}),dispatcharr:S('Dispatcharr',[9191]),minio:S('MinIO',[9001]),n8n:S('n8n',[5678]),
   // Uten web-side: skjules
   postgres:S('',[],{hide:true}),postgresql:S('',[],{hide:true}),mariadb:S('',[],{hide:true}),mysql:S('',[],{hide:true}),redis:S('',[],{hide:true}),valkey:S('',[],{hide:true}),
   mongo:S('',[],{hide:true}),mongodb:S('',[],{hide:true}),watchtower:S('',[],{hide:true}),gluetun:S('',[],{hide:true}),portaineragent:S('',[],{hide:true}),agent:S('',[],{hide:true}),
@@ -210,7 +210,8 @@ const KNOWN={
 const HTTPS_PORTS=new Set([443,8443,9443,8006,8007,8971,10443]);
 const PROBE=[80,443,8080,3000,8000,5000,9000,9443,8443,8096,8123,8081,5055,8888,8090];
 // Kjenn igjen tjenester som melder hvem de er på /api/health (Hytte Backup: {app:'hytte'})
-async function fingerprint(url){try{const r=await fetch(url.replace(/\/$/,'')+'/api/health',{signal:AbortSignal.timeout(1500)});const j=await r.json();if(j&&j.app==='hytte')return{name:'Hytte Backup',icon:'/icons/hytte-backup.svg'}}catch(e){}return null}
+async function fingerprint(url){try{const r=await fetch(url.replace(/\/$/,'')+'/api/health',{signal:AbortSignal.timeout(1500)});const j=await r.json();if(j&&j.app==='hytte')return{name:'Hytte Backup',icon:'/icons/hytte-backup.svg'}}catch(e){}
+  try{const r=await fetch(url.replace(/\/$/,'')+'/api/helse',{signal:AbortSignal.timeout(1500)});const j=await r.json();if(j&&j.app==='nrk-dl')return{name:'NRK-opptak',icon:'/icons/nrk-opptak.svg'}}catch(e){}return null}
 const lookup=(...names)=>{for(const n of names){const k=norm(n);if(KNOWN[k])return[k,KNOWN[k]]}
   for(const n of names){const k=norm(n);for(const key in KNOWN)if(key.length>3&&k.startsWith(key))return[key,KNOWN[key]]}return[null,null]};
 const pretty=s=>String(s).replace(/[-_.]+/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
@@ -249,7 +250,7 @@ async function discoverProxmox(idx){
     const tp=tagPort(v.tags);let port=tp?tp.port:await pickPort(ip,known);
     if(!port)return{key,name,url:'',icon:iconFor(idx,known&&known.icon,v.name),source:'proxmox',where:where+' · '+ip,note:'ingen web-port funnet (legg til tag port-XXXX)'};
     const url=tp&&tp.https?'https://'+ip+':'+port:mkUrl(ip,port,known&&known.path||'');
-    const fp=(!known||port===8090)&&await fingerprint(url);if(fp)return{key,name:fp.name,url,icon:fp.icon,source:'proxmox',where:where+' · '+ip};
+    const fp=(!known||port===8090||port===8020)&&await fingerprint(url);if(fp)return{key,name:fp.name,url,icon:fp.icon,source:'proxmox',where:where+' · '+ip};
     return{key,name,url,icon:iconFor(idx,known&&known.icon,v.name),source:'proxmox',where:where+' · '+ip}}));
   // Selve Proxmox-noden(e)
   const nodes=[...new Set(list.map(v=>v.node))];
